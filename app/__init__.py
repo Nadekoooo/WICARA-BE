@@ -1,0 +1,1 @@
+"""WICARA backend application package."""
