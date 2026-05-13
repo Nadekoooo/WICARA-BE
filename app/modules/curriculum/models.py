@@ -72,7 +72,7 @@ class KnowledgeConcept(Base):
         ForeignKey("subjects.id", ondelete="CASCADE"),
         nullable=False,
     )
-    code: Mapped[str] = mapped_column(String(64), nullable=False)
+    code: Mapped[str] = mapped_column(String(128), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     grade_band: Mapped[str | None] = mapped_column(String(64))

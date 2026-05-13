@@ -63,3 +63,23 @@ class KnowledgeMapResponse(BaseModel):
     groups: list[KnowledgeMapGroup]
     nodes: list[KnowledgeMapNode]
     edges: list[KnowledgeMapEdge]
+
+
+class ConceptRelation(BaseModel):
+    id: str
+    code: str
+    label: str
+    subject_code: str
+    subject_name: str
+    status: str
+    status_label: str
+
+
+class ConceptDetailResponse(BaseModel):
+    concept: KnowledgeMapNode
+    subject: SubjectRead
+    mastery_confidence: float
+    prerequisites: list[ConceptRelation]
+    related_concepts: list[ConceptRelation]
+    cross_subject_connections: list[ConceptRelation]
+    metadata: dict[str, Any] = Field(default_factory=dict)

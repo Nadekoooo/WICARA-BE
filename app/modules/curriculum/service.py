@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
 from app.modules.curriculum.schemas import (
+    ConceptDetailResponse,
+    ConceptRelation,
     KnowledgeMapEdge,
     KnowledgeMapGraph,
     KnowledgeMapGroup,
@@ -14,12 +16,14 @@ from app.modules.curriculum.schemas import (
     KnowledgeMapResponse,
     SubjectRead,
 )
+from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 
 STATUS_LABELS = {
     "mastered": "MASTERED",
     "active": "IN PROGRESS",
     "review": "REVIEW",
     "ready": "READY",
+    "gap": "GAP",
     "locked": "LOCKED",
 }
 
@@ -51,7 +55,7 @@ def get_knowledge_map(
     *,
     subject_code: str,
 ) -> KnowledgeMapResponse | None:
-    normalized_code = subject_code.strip().lower()
+    normalized_code = canonical_subject_code(subject_code)
     subject = session.scalar(
         select(Subject).where(
             Subject.code == normalized_code,
@@ -116,6 +120,90 @@ def get_knowledge_map(
     )
 
 
+def get_concept_detail(
+    session: Session,
+    *,
+    concept_code: str,
+    subject_code: str | None = None,
+) -> ConceptDetailResponse | None:
+    statement = (
+        select(KnowledgeConcept)
+        .join(KnowledgeConcept.subject)
+        .options(selectinload(KnowledgeConcept.subject))
+        .where(KnowledgeConcept.code == concept_code)
+    )
+    if subject_code:
+        statement = statement.where(Subject.code == canonical_subject_code(subject_code))
+
+    concept = session.scalar(statement)
+    if concept is None:
+        return None
+
+    incoming_edges = list(
+        session.scalars(
+            select(ConceptEdge)
+            .where(ConceptEdge.to_concept_id == concept.id)
+            .options(
+                selectinload(ConceptEdge.from_concept).selectinload(
+                    KnowledgeConcept.subject
+                )
+            )
+            .order_by(ConceptEdge.edge_type, ConceptEdge.weight.desc())
+        )
+    )
+    outgoing_edges = list(
+        session.scalars(
+            select(ConceptEdge)
+            .where(ConceptEdge.from_concept_id == concept.id)
+            .options(
+                selectinload(ConceptEdge.to_concept).selectinload(
+                    KnowledgeConcept.subject
+                )
+            )
+            .order_by(ConceptEdge.edge_type, ConceptEdge.weight.desc())
+        )
+    )
+
+    prerequisites = [
+        _concept_relation(edge.from_concept)
+        for edge in incoming_edges
+        if edge.from_concept.subject_id == concept.subject_id
+    ]
+    related_concepts = [
+        _concept_relation(edge.to_concept)
+        for edge in outgoing_edges
+        if edge.to_concept.subject_id == concept.subject_id
+    ]
+    cross_subject_connections = [
+        _concept_relation(related)
+        for related in [
+            *[
+                edge.from_concept
+                for edge in incoming_edges
+                if edge.from_concept.subject_id != concept.subject_id
+            ],
+            *[
+                edge.to_concept
+                for edge in outgoing_edges
+                if edge.to_concept.subject_id != concept.subject_id
+            ],
+        ]
+    ]
+
+    return ConceptDetailResponse(
+        concept=_concept_to_node(concept, _groups_for_subject(concept.subject)),
+        subject=subject_to_schema(concept.subject),
+        mastery_confidence=_mock_mastery_confidence(concept),
+        prerequisites=prerequisites[:5],
+        related_concepts=related_concepts[:5],
+        cross_subject_connections=cross_subject_connections[:5],
+        metadata={
+            "mock_mastery": True,
+            "source": "curriculum_graph",
+        },
+    )
+
+
 def _concept_to_node(
     concept: KnowledgeConcept,
     groups: list[KnowledgeMapGroup],
@@ -131,12 +219,48 @@ def _concept_to_node(
         description=concept.description,
         grade_band=concept.grade_band,
         status=status,
-        status_label=STATUS_LABELS.get(status, status.upper()),
+        status_label=_concept_status_label(metadata, status),
         x=concept.layout_x,
         y=concept.layout_y,
         group=_nearest_group_label(concept.layout_x, groups),
         metadata=metadata,
     )
+
+
+def _concept_relation(concept: KnowledgeConcept) -> ConceptRelation:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    status = str(metadata.get("default_status", "ready"))
+    return ConceptRelation(
+        id=concept.code,
+        code=concept.code,
+        label=concept.title,
+        subject_code=concept.subject.code,
+        subject_name=concept.subject.name,
+        status=status,
+        status_label=_concept_status_label(metadata, status),
+    )
+
+
+def _groups_for_subject(subject: Subject) -> list[KnowledgeMapGroup]:
+    graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
+    groups_payload = graph_metadata.get("groups", [])
+    return [
+        KnowledgeMapGroup(label=str(group["label"]), x=float(group["x"]))
+        for group in groups_payload
+    ]
+
+
+def _mock_mastery_confidence(concept: KnowledgeConcept) -> float:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    status = str(metadata.get("default_status", "ready"))
+    return {
+        "mastered": 0.92,
+        "active": 0.62,
+        "review": 0.48,
+        "ready": 0.34,
+        "gap": 0.18,
+        "locked": 0.08,
+    }.get(status, 0.34)
 
 
 def _nearest_group_label(
@@ -146,3 +270,18 @@ def _nearest_group_label(
     if x is None or not groups:
         return None
     return min(groups, key=lambda group: abs(group.x - x)).label
+
+
+def _concept_status_label(metadata: dict[str, Any], status: str) -> str:
+    if metadata.get("preview_status_only"):
+        return STATUS_LABELS.get(status, status.upper())
+
+    if metadata.get("source_curriculum_graph"):
+        phase = str(metadata.get("phase") or "").strip()
+        grade_range = str(metadata.get("grade_range") or "").strip()
+        if phase and grade_range:
+            return f"Fase {phase} / {grade_range}"
+        if phase:
+            return f"Fase {phase}"
+
+    return STATUS_LABELS.get(status, status.upper())

@@ -27,3 +27,25 @@ def get_knowledge_map(
             detail=f"Subject '{subject}' was not found or has no curriculum graph.",
         )
     return knowledge_map
+
+
+@router.get(
+    "/knowledge-map/concepts/{concept_code}",
+    response_model=schemas.ConceptDetailResponse,
+)
+def get_concept_detail(
+    concept_code: str,
+    subject: str | None = Query(default=None, min_length=1),
+    session: Session = Depends(get_session),
+) -> schemas.ConceptDetailResponse:
+    detail = service.get_concept_detail(
+        session,
+        concept_code=concept_code,
+        subject_code=subject,
+    )
+    if detail is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Concept '{concept_code}' was not found.",
+        )
+    return detail

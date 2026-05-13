@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+import argparse
 import json
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
-from app.modules.curriculum.seed_data import MATH_CONCEPTS, MATH_EDGES, SUBJECTS
+from app.modules.curriculum.kurikulum_merdeka import (
+    SUBJECT_ALIASES,
+    canonical_subject_code,
+    load_kurikulum_merdeka_seed_data,
+)
 
 
 @dataclass(frozen=True)
@@ -21,7 +27,13 @@ class CurriculumSeedResult:
     edges_updated: int = 0
 
 
-def seed_curriculum(session: Session, *, commit: bool = True) -> CurriculumSeedResult:
+def seed_curriculum(
+    session: Session,
+    *,
+    commit: bool = True,
+    graph_path: str | Path | None = None,
+) -> CurriculumSeedResult:
+    seed_data = load_kurikulum_merdeka_seed_data(graph_path)
     counts = {
         "subjects_created": 0,
         "subjects_updated": 0,
@@ -32,82 +44,78 @@ def seed_curriculum(session: Session, *, commit: bool = True) -> CurriculumSeedR
     }
 
     subjects_by_code: dict[str, Subject] = {}
-    for subject_data in SUBJECTS:
-        subject = session.scalar(
-            select(Subject).where(Subject.code == subject_data["code"])
-        )
+    for subject_data in seed_data.subjects:
+        subject = session.scalar(select(Subject).where(Subject.code == subject_data.code))
         if subject is None:
-            subject = Subject(code=subject_data["code"])
+            subject = Subject(code=subject_data.code)
             session.add(subject)
             counts["subjects_created"] += 1
         else:
             counts["subjects_updated"] += 1
 
-        subject.name = subject_data["name"]
-        subject.description = subject_data["description"]
-        subject.display_order = subject_data["display_order"]
+        subject.name = subject_data.name
+        subject.description = subject_data.description
+        subject.display_order = subject_data.display_order
         subject.is_active = True
-        subject.metadata_json = subject_data["metadata"]
+        subject.metadata_json = subject_data.metadata
         subjects_by_code[subject.code] = subject
 
+    _deactivate_legacy_subject_aliases(session, subjects_by_code)
     session.flush()
 
-    math_subject = subjects_by_code["math"]
     concepts_by_code: dict[str, KnowledgeConcept] = {}
-    for index, concept_data in enumerate(MATH_CONCEPTS, start=1):
+    for concept_data in seed_data.concepts:
+        subject = subjects_by_code[concept_data.subject_code]
         concept = session.scalar(
             select(KnowledgeConcept).where(
-                KnowledgeConcept.subject_id == math_subject.id,
-                KnowledgeConcept.code == concept_data["code"],
+                KnowledgeConcept.subject_id == subject.id,
+                KnowledgeConcept.code == concept_data.code,
             )
         )
         if concept is None:
             concept = KnowledgeConcept(
-                subject_id=math_subject.id,
-                code=concept_data["code"],
+                subject_id=subject.id,
+                code=concept_data.code,
             )
             session.add(concept)
             counts["concepts_created"] += 1
         else:
             counts["concepts_updated"] += 1
 
-        concept.title = concept_data["title"]
-        concept.description = f"Seeded Math concept for {concept_data['title']}."
-        concept.grade_band = concept_data["grade_band"]
-        concept.display_order = index
-        concept.layout_x = float(concept_data["x"])
-        concept.layout_y = float(concept_data["y"])
-        concept.metadata_json = {
-            "default_status": concept_data["status"],
-            "mobile_seed": True,
-        }
+        concept.title = concept_data.title
+        concept.description = concept_data.description
+        concept.grade_band = concept_data.grade_band
+        concept.display_order = concept_data.display_order
+        concept.layout_x = concept_data.layout_x
+        concept.layout_y = concept_data.layout_y
+        concept.metadata_json = concept_data.metadata
         concepts_by_code[concept.code] = concept
 
     session.flush()
 
-    for from_code, to_code in MATH_EDGES:
-        from_concept = concepts_by_code[from_code]
-        to_concept = concepts_by_code[to_code]
+    for edge_data in seed_data.edges:
+        from_concept = concepts_by_code[edge_data.from_code]
+        to_concept = concepts_by_code[edge_data.to_code]
         edge = session.scalar(
             select(ConceptEdge).where(
                 ConceptEdge.from_concept_id == from_concept.id,
                 ConceptEdge.to_concept_id == to_concept.id,
-                ConceptEdge.edge_type == "prerequisite",
+                ConceptEdge.edge_type == edge_data.edge_type,
             )
         )
         if edge is None:
             edge = ConceptEdge(
                 from_concept_id=from_concept.id,
                 to_concept_id=to_concept.id,
-                edge_type="prerequisite",
+                edge_type=edge_data.edge_type,
             )
             session.add(edge)
             counts["edges_created"] += 1
         else:
             counts["edges_updated"] += 1
 
-        edge.weight = 1.0
-        edge.metadata_json = {"mobile_seed": True}
+        edge.weight = edge_data.weight
+        edge.metadata_json = edge_data.metadata
 
     if commit:
         session.commit()
@@ -115,9 +123,36 @@ def seed_curriculum(session: Session, *, commit: bool = True) -> CurriculumSeedR
     return CurriculumSeedResult(**counts)
 
 
+def _deactivate_legacy_subject_aliases(
+    session: Session,
+    subjects_by_code: dict[str, Subject],
+) -> None:
+    canonical_codes = set(subjects_by_code)
+    for alias, canonical_code in SUBJECT_ALIASES.items():
+        if canonical_code not in canonical_codes or alias == canonical_code:
+            continue
+        legacy_subject = session.scalar(select(Subject).where(Subject.code == alias))
+        if legacy_subject is None:
+            continue
+
+        legacy_subject.is_active = False
+        legacy_subject.metadata_json = {
+            **(legacy_subject.metadata_json or {}),
+            "superseded_by": canonical_subject_code(alias),
+        }
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Seed WICARA curriculum data.")
+    parser.add_argument(
+        "--graph-path",
+        default=None,
+        help="Path to wicara_kurikulum_merdeka_graph_complete.json.",
+    )
+    args = parser.parse_args()
+
     with SessionLocal() as session:
-        result = seed_curriculum(session)
+        result = seed_curriculum(session, graph_path=args.graph_path)
     print(json.dumps(asdict(result), sort_keys=True))
 
 
