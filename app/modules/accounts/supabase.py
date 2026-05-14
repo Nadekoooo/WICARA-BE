@@ -94,6 +94,7 @@ async def sign_in_with_google_id_token(
     settings: Settings,
     id_token: str,
     access_token: str | None = None,
+    nonce: str | None = None,
 ) -> str:
     if not settings.supabase_anon_key:
         raise SupabaseTokenError("SUPABASE_ANON_KEY is missing on backend.")
@@ -103,6 +104,8 @@ async def sign_in_with_google_id_token(
     }
     if access_token:
         payload["access_token"] = access_token
+    if nonce:
+        payload["nonce"] = nonce
     return await _token_exchange(
         settings=settings,
         grant_type="id_token",

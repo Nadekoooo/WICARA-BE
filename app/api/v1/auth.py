@@ -113,6 +113,7 @@ async def sign_in_with_google(
             settings=settings,
             id_token=payload.id_token,
             access_token=payload.access_token,
+            nonce=payload.nonce,
         )
     except SupabaseTokenError as exc:
         raise HTTPException(
