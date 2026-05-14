@@ -243,6 +243,24 @@ def test_daily_result_recommends_missed_concept_review(client):
     )
 
 
+def test_media_artifacts_contains_demo_supabase_videos(client):
+    _override_account(client)
+
+    response = client.get("/api/v1/media-artifacts")
+
+    assert response.status_code == 200
+    payload = response.json()
+    playback_urls = {item["playback_url"] for item in payload["items"]}
+    assert (
+        "https://gwbqhirtkgkghnpahtgt.supabase.co/storage/v1/object/public/video/perkalian.mp4"
+        in playback_urls
+    )
+    assert (
+        "https://gwbqhirtkgkghnpahtgt.supabase.co/storage/v1/object/public/video/aljabar.mp4"
+        in playback_urls
+    )
+
+
 def _override_account(client) -> None:
     def override_current_account(
         session: Session = Depends(get_session),

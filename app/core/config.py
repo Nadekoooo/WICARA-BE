@@ -1,8 +1,11 @@
 from functools import lru_cache
+from pathlib import Path
 from urllib.parse import quote
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings(BaseSettings):
@@ -39,7 +42,12 @@ class Settings(BaseSettings):
         "http://127.0.0.1:*",
     ]
 
-    model_config = SettingsConfigDict(env_prefix="WICARA_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="WICARA_",
+        env_file=_ENV_PATH,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @field_validator("database_url", mode="before")
     @classmethod
