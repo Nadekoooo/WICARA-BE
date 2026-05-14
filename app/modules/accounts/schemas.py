@@ -26,6 +26,7 @@ class PasswordRegisterRequest(BaseModel):
 class GoogleSignInRequest(BaseModel):
     id_token: str = Field(..., min_length=20)
     access_token: str | None = None
+    nonce: str | None = None
     role: str = "learner"
 
 
