@@ -7,6 +7,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.modules.accounts import models as account_models  # noqa: F401
 from app.modules.curriculum import models as curriculum_models  # noqa: F401
+from app.modules.learning import models as learning_models  # noqa: F401
 
 config = context.config
 settings = get_settings()
