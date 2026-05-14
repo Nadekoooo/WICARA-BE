@@ -12,18 +12,38 @@ from app.modules.accounts.dependencies import (
 from app.modules.accounts.schemas import (
     AuthSessionResponse,
     GoogleSignInRequest,
+    PasswordRegisterRequest,
     PasswordSignInRequest,
     SupabaseAuthRequest,
     UserAccountRead,
 )
-from app.modules.accounts.service import sync_supabase_user
+from app.modules.accounts.models import UserAccount
+from app.modules.accounts.service import get_learner_profile, sync_supabase_user
 from app.modules.accounts.supabase import (
     SupabaseTokenError,
+    register_with_password,
     sign_in_with_google_id_token,
     sign_in_with_password,
 )
 
 router = APIRouter(prefix="/auth")
+
+
+def _auth_session_response(
+    session: Session,
+    *,
+    account: UserAccount,
+    token: str,
+) -> AuthSessionResponse:
+    profile = get_learner_profile(session, account)
+    return AuthSessionResponse(
+        user_id=str(account.id),
+        display_name=account.display_name,
+        role=account.role,
+        token=token,
+        email=account.email,
+        onboarding_completed=bool(profile and profile.onboarding_completed),
+    )
 
 
 @router.post("/supabase", response_model=AuthSessionResponse)
@@ -34,13 +54,7 @@ def authenticate_with_supabase(
 ) -> AuthSessionResponse:
     claims = verify_supabase_token_or_401(payload.access_token, settings)
     account = sync_supabase_user(session, claims=claims, role=payload.role)
-    return AuthSessionResponse(
-        user_id=str(account.id),
-        display_name=account.display_name,
-        role=account.role,
-        token=payload.access_token,
-        email=account.email,
-    )
+    return _auth_session_response(session, account=account, token=payload.access_token)
 
 
 @router.post("/sign-in", response_model=AuthSessionResponse)
@@ -62,13 +76,30 @@ async def sign_in_with_backend(
         ) from exc
     claims = verify_supabase_token_or_401(access_token, settings)
     account = sync_supabase_user(session, claims=claims, role=payload.role)
-    return AuthSessionResponse(
-        user_id=str(account.id),
-        display_name=account.display_name,
-        role=account.role,
-        token=access_token,
-        email=account.email,
-    )
+    return _auth_session_response(session, account=account, token=access_token)
+
+
+@router.post("/register", response_model=AuthSessionResponse)
+async def register_with_backend(
+    payload: PasswordRegisterRequest,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> AuthSessionResponse:
+    try:
+        access_token = await register_with_password(
+            settings=settings,
+            email=payload.email,
+            password=payload.password,
+            display_name=payload.display_name,
+        )
+    except SupabaseTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    claims = verify_supabase_token_or_401(access_token, settings)
+    account = sync_supabase_user(session, claims=claims, role=payload.role)
+    return _auth_session_response(session, account=account, token=access_token)
 
 
 @router.post("/google", response_model=AuthSessionResponse)
@@ -90,13 +121,7 @@ async def sign_in_with_google(
         ) from exc
     claims = verify_supabase_token_or_401(access_token, settings)
     account = sync_supabase_user(session, claims=claims, role=payload.role)
-    return AuthSessionResponse(
-        user_id=str(account.id),
-        display_name=account.display_name,
-        role=account.role,
-        token=access_token,
-        email=account.email,
-    )
+    return _auth_session_response(session, account=account, token=access_token)
 
 
 @router.get("/me", response_model=UserAccountRead)

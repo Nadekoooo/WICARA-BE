@@ -16,6 +16,13 @@ class PasswordSignInRequest(BaseModel):
     role: str = "learner"
 
 
+class PasswordRegisterRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+    password: str = Field(..., min_length=6)
+    display_name: str = ""
+    role: str = "learner"
+
+
 class GoogleSignInRequest(BaseModel):
     id_token: str = Field(..., min_length=20)
     access_token: str | None = None
@@ -28,6 +35,7 @@ class AuthSessionResponse(BaseModel):
     role: str
     token: str
     email: str | None = None
+    onboarding_completed: bool = False
 
 
 class UserAccountRead(BaseModel):
@@ -51,6 +59,7 @@ class LearnerProfileOnboardingRequest(BaseModel):
         max_length=80,
         validation_alias=AliasChoices("country_name", "country"),
     )
+    education_level: str = Field(default="", max_length=64)
     grade_level: str = Field(default="", max_length=64)
     preferred_language: str = Field(default="id", max_length=16)
     study_goal: str = ""
@@ -69,6 +78,7 @@ class LearnerProfileRead(BaseModel):
     user_id: UUID
     full_name: str
     country_name: str
+    education_level: str
     grade_level: str
     preferred_language: str
     study_goal: str
