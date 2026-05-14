@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class SupabaseAuthRequest(BaseModel):
@@ -43,12 +43,22 @@ class UserAccountRead(BaseModel):
 
 
 class LearnerProfileOnboardingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     full_name: str = Field(default="", max_length=160)
-    country_name: str = Field(default="", max_length=80)
+    country_name: str = Field(
+        default="",
+        max_length=80,
+        validation_alias=AliasChoices("country_name", "country"),
+    )
     grade_level: str = Field(default="", max_length=64)
     preferred_language: str = Field(default="id", max_length=16)
     study_goal: str = ""
-    daily_study_time_label: str = Field(default="", max_length=80)
+    daily_study_time_label: str = Field(
+        default="",
+        max_length=80,
+        validation_alias=AliasChoices("daily_study_time_label", "daily_study_time"),
+    )
     selected_subjects: list[str] = Field(default_factory=list)
 
 

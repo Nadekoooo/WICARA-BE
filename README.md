@@ -55,10 +55,10 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 
 | Source | Finding | Planning Impact |
 |---|---|---|
-| `AGENTS.md` | [Implemented] Workspace rules require current-state first, explicit labels, no mobile edits, and no backend code unless requested. | Plan is documentation-only until user asks implementation. |
+| `AGENTS.md` | [Implemented] Workspace rules require current-state first, explicit labels, and no mobile edits unless requested. | Backend implementation has started; keep future changes scoped and current-state driven. |
 | `TechImple_Django_Adaptive_Canvas_v6_unified_input.md` | [Proposed] Detailed backend architecture now targets FastAPI, SQLAlchemy/Alembic, unified `InputEvent`, mastery, graph, sessions, Manim/TTS/FFmpeg, Celery, Redis. | Use as advanced architecture reference, not as proof of current implementation. |
 | `techdoc.md` | [Inferred] Mobile-aligned API contracts and DB models exist for auth, onboarding, pretest, home, queue, workspace, canvas, media, reports, knowledge map. | Use these contracts as the first API shape. |
-| `plan.md` | [Implemented] `mobile/` is the latest mock product, `tldr.md` is empty, no backend exists, mock repos and local state remain. | Start by replacing mock repos, not by building all AI features. |
+| `plan.md` | [Historical] `mobile/` started as the latest mock product with mock repos and local state. | Replace mock-backed flows incrementally; backend now exists for auth/profile and curriculum map APIs. |
 | `backend-plan-prompt.md` | [Proposed] Planning prompt now points to `appPlan.md` and FastAPI. | Future implementation agents should start from this file. |
 | `mobile/lib/main.dart` | [Implemented] `WicaraApp` receives `MockAuthRepository`, `MockOnboardingRepository`, `MockPretestRepository`. | Only these three contracts are immediately swappable. |
 | `mobile/lib/src/app/app_routes.dart` | [Implemented] Routes: `/`, `/auth/sign-in`, `/onboarding`, `/learning-goal`, `/pretest`, `/home`, `/workspace-modules`. | API groups must support this product journey. |
@@ -122,7 +122,9 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 | AI integration | Gemini, Google Vision/Tesseract, Google TTS, Manim, FFmpeg | Proposed engines from architecture reference. |
 | Observability | `/health`, structured logs, job status, metrics hooks | Required for debugging async media and AI workflows. |
 
-## 5. Initial Backend Directory Structure
+## 5. Planned Backend Directory Structure
+
+The repository already contains the current FastAPI skeleton, account/profile module, curriculum module, migrations, and tests. The structure below is the target shape for future milestones; some modules listed here are still planned.
 
 ```text
 backend/
@@ -399,33 +401,26 @@ Test data strategy: seed one learner, four subjects, one Math/Calculus concept c
 
 ## 15. Execution Checklist
 
-- [ ] FastAPI stack confirmed.
-- [ ] Backend root path confirmed as `D:\Gemma Hackathon\backend`.
-- [ ] PostgreSQL connection strategy confirmed.
-- [ ] JWT auth strategy confirmed.
-- [ ] Alembic migration workflow confirmed.
+- [x] FastAPI stack confirmed.
+- [x] Backend root path confirmed as this repository.
+- [x] PostgreSQL connection strategy configured via `WICARA_DATABASE_URL`.
+- [x] Supabase JWT auth strategy configured for current auth endpoints.
+- [x] Alembic migration workflow configured.
+- [x] Profile onboarding endpoint implemented.
+- [x] Health and profile tests added.
 - [ ] Unified input event model confirmed.
 - [ ] Canvas stroke/snapshot JSON contract confirmed.
 - [ ] Manim/video artifact model confirmed.
 - [ ] First mobile repository replacement confirmed.
-- [ ] Milestone 1 acceptance criteria accepted.
-- [ ] Tests/verification commands known.
+- [x] Milestone 1 profile/onboarding acceptance criteria accepted.
+- [x] Tests/verification commands known.
 - [ ] No mobile changes required for backend Milestone 1.
 - [ ] No destructive changes required.
 
 ## Final Notes
 
-Recommended first command after implementation is approved:
-
-```powershell
-New-Item -ItemType Directory -Path backend
-```
-
-Exact first module to create: `backend/app/main.py` plus `backend/app/core/config.py`, followed by `backend/app/modules/accounts/`.
-
-Must confirm before implementation:
+Before production deployment, confirm:
 
 - database URL and local PostgreSQL availability
-- JWT secret/env handling
-- whether Milestone 1 should use a seeded test user or a registration endpoint
+- Supabase project URL, JWKS URL, issuer, audience, and anon key
 - whether Celery/Redis is configured immediately or deferred until media/jobs milestones

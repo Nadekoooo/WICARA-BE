@@ -36,11 +36,11 @@ def test_profile_onboarding_can_be_saved_and_read(client):
 
     payload = {
         "full_name": "Budi Santoso",
-        "country_name": "Indonesia",
+        "country": "Indonesia",
         "grade_level": "Kelas 8",
         "preferred_language": "id",
         "study_goal": "Belajar aljabar dasar",
-        "daily_study_time_label": "30 menit",
+        "daily_study_time": "30 menit",
         "selected_subjects": ["Matematika", "IPA"],
     }
 
@@ -60,3 +60,16 @@ def test_profile_onboarding_can_be_saved_and_read(client):
     read_response = client.get("/api/v1/me/profile")
     assert read_response.status_code == 200
     assert read_response.json() == saved
+
+
+def test_profile_onboarding_allows_local_put_cors_preflight(client):
+    response = client.options(
+        "/api/v1/me/profile/onboarding",
+        headers={
+            "Origin": "http://localhost:3000",
+            "Access-Control-Request-Method": "PUT",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "PUT" in response.headers["access-control-allow-methods"]
