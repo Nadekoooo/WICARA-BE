@@ -58,7 +58,7 @@ def append_workspace_event(
             event_type=payload.event_type,
             actor_type=payload.actor_type,
             text_payload=payload.text_payload,
-            canvas_snapshot_id=payload.canvas_snapshot_id,
+            image_asset_id=payload.image_asset_id,
             media_artifact_id=payload.media_artifact_id,
             metadata=payload.metadata,
         )

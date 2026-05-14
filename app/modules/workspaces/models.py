@@ -91,7 +91,7 @@ class WorkspaceEvent(Base):
     actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
     event_index: Mapped[int] = mapped_column(Integer, nullable=False)
     text_payload: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    canvas_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    image_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     media_artifact_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("media_artifacts.id", ondelete="SET NULL"),

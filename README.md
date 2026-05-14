@@ -86,7 +86,7 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 | `mobile/lib/src/features/**/domain` | [Implemented] Domain contracts exist only for auth, onboarding, pretest. | Other APIs are inferred from UI state. |
 | `mobile/lib/src/features/home/presentation/app_home_page.dart` | [Mocked] Home, queue, gallery, daily evaluation, reports, profile, knowledge map are local UI/state. | Backend can expose APIs, but mobile clients do not exist yet. |
 | `mobile/lib/src/features/workspace/presentation/workspace_modules_page.dart` | [Mocked] Chat, explanation, quiz, video generation, canvas sent events are local state. | Workspace backend should be event-driven before AI generation. |
-| `mobile/lib/src/features/pretest/presentation/widgets/fishbone_canvas.dart` | [Implemented] Canvas captures local strokes, shapes, eraser, attachment flag, grid, zoom/pan, save version, send version. | Persist vector snapshots and stroke batches, not only images. |
+| `mobile/lib/src/features/pretest/presentation/widgets/fishbone_canvas.dart` | [Implemented] Canvas captures local strokes, shapes, eraser, attachment flag, grid, zoom/pan, save version, send version. | Backend should not persist stroke history; when the learner sends canvas work, mobile exports it as an image attachment for chatbot/evaluation. |
 
 ## 3. Backend Scope and Non-Scope
 
@@ -98,9 +98,9 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 | Auth and account session | Inferred | Password sign-in and Google sign-in contract compatible with Flutter. |
 | Learner profile/onboarding | Inferred | Persist current `OnboardingProfile` fields and selected subjects. |
 | Learning goals and pretest bootstrap | Inferred | Store raw topic, create initial pretest session, return status. |
-| Assessment attempts | Inferred | Store MC answer, confidence, reasoning, canvas reference, evaluation result. |
-| Unified `InputEvent` | Proposed | Canonical event table for text, MC answer, canvas, image, mixed input. |
-| Canvas persistence | Inferred/Proposed | Store stroke batches, versioned snapshots, preview asset references. |
+| Assessment attempts | Inferred | Store MC answer, confidence, reasoning, optional image evidence reference, evaluation result. |
+| Unified `InputEvent` | Proposed | Canonical event table for text, MC answer, image evidence, and mixed input. |
+| Canvas image attachment | Inferred/Proposed | Mobile keeps canvas editing local; backend receives only exported image evidence when the user sends it. |
 | Home/queue/track read APIs | Inferred | Return data currently hardcoded in UI. |
 | Media artifact job model | Proposed | Queue/status rows before real Manim rendering. |
 | Knowledge graph and mastery | Proposed | PostgreSQL adjacency list plus learner state. |
@@ -120,7 +120,7 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 
 | Item | Label | First Dependency |
 |---|---|---|
-| OCR and symbolic canvas parser | Proposed | Canvas snapshots and input events exist. |
+| OCR and symbolic image parser | Proposed | Image evidence and input events exist. |
 | Gemini grading and tutor response | Proposed | Assessment attempts and service interfaces exist. |
 | SSE/WebSocket streaming | Proposed | REST endpoints and job status lifecycle exist. |
 | Cross-subject graph unlock | Proposed | Single-subject graph and mastery state work. |
@@ -135,7 +135,7 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 | ORM | SQLAlchemy 2.x | Explicit relational model, PostgreSQL support, testable repositories. |
 | Migrations | Alembic | Versioned DB migration workflow for SQLAlchemy. |
 | Schemas | Pydantic v2 | Request/response validation and generated OpenAPI schema. |
-| Database | PostgreSQL | Stores accounts, profiles, assessments, graph, mastery, canvas, media, reports. |
+| Database | PostgreSQL | Stores accounts, profiles, assessments, graph, mastery, image/media references, reports. |
 | Auth | JWT access token initially | Matches current mobile `token` field and keeps client swap simple. |
 | Async jobs | Celery + Redis | Durable workers for OCR, AI grading, Manim, TTS, FFmpeg, reports. |
 | Cache/session | Redis | Job status cache, rate limits, LLM/media cache, short-lived session data. |
@@ -201,7 +201,7 @@ backend/
 | `backend/app/db/` | SQLAlchemy base/session and Alembic integration. | `base.py`, `session.py` |
 | `backend/app/modules/accounts/` | User accounts, auth service, profile service. | `models.py`, `schemas.py`, `service.py`, `repository.py` |
 | `backend/app/modules/assessments/` | Pretest/daily/quiz sessions and attempts. | `models.py`, `schemas.py`, `service.py` |
-| `backend/app/modules/inputs/` | Unified evidence pipeline and canvas persistence. | `models.py`, `schemas.py`, `service.py` |
+| `backend/app/modules/inputs/` | Unified evidence pipeline for text, answers, and image-backed canvas evidence. | `models.py`, `schemas.py`, `service.py` |
 | `backend/tests/` | API, service, migration, contract tests. | `test_health.py`, `test_auth_api.py` |
 
 ## 6. Domain Modules
@@ -211,8 +211,8 @@ backend/
 | Accounts | Identity and token sessions. | `user_accounts`, optional `auth_sessions` | `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/google`, `GET /api/v1/me` | Validate credentials, create user/session DTO, issue token. | DB, security config. | TechImple had student profile foundation; FastAPI implementation uses JWT and Pydantic. | M1 |
 | Curriculum/Profile | Learner profile and subject selection. | `learner_profiles`, `subjects`, `learner_subjects` | `GET /api/v1/subjects`, `PUT /api/v1/me/profile/onboarding` | Save profile, bind selected subjects, mark onboarding complete. | Accounts. | Aligns with onboarding phase and curriculum binding. | M1-M2 |
 | Learning Sessions and Tracks | Convert goals into tracks/modules and sessions. | `learning_goals`, `learning_tracks`, `track_modules`, `learning_sessions` | `POST /api/v1/learning-goals`, `GET /api/v1/tracks`, `GET /api/v1/tracks/{id}/modules` | Store raw topic, create pretest session, create initial track/module records. | Curriculum, graph, mastery. | Aligns with parent/child sessions and path engine. | M2-M5 |
-| Unified Inputs | Canonical evidence abstraction. | `input_events` | `POST /api/v1/workspaces/{id}/events`, future `POST /api/v1/sessions/{id}/input` | Normalize text, MC, canvas, image, mixed input into event records. | Sessions, canvas, assessments. | Directly implements `InputEvent` contract. | M3-M6 |
-| Canvas | Persist learner scratch work. | `canvas_documents`, `canvas_stroke_batches`, `canvas_snapshots` | `POST /api/v1/workspaces/{id}/canvas/stroke-batches`, `POST /api/v1/workspaces/{id}/canvas/snapshots` | Store vector payloads, version snapshots, link sent snapshots to events. | Inputs, sessions, media storage. | Implements always-on canvas evidence model. | M6 |
+| Unified Inputs | Canonical evidence abstraction. | `input_events` | `POST /api/v1/workspaces/{id}/events`, future `POST /api/v1/sessions/{id}/input` | Normalize text, MC, image evidence, and mixed input into event records. | Sessions, assessments, image assets. | Directly implements `InputEvent` contract. | M3-M6 |
+| Canvas image evidence | Treat canvas as a mobile-local drawing surface that exports an image when sent. | optional `image_assets` later | `POST /api/v1/workspaces/{id}/events` with `image_asset_id` or image metadata | Link exported images to workspace/input events; do not persist stroke batches or versioned canvas history. | Inputs, media storage. | Implements image-backed canvas evidence without backend canvas state. | M6 |
 | Assessments/Pretest | Adaptive and formative assessment storage. | `assessment_sessions`, `assessment_questions`, `assessment_options`, `assessment_attempts` | `GET /api/v1/pretests/{goal_id}`, `POST /api/v1/pretests/{session_id}/answers`, `POST /api/v1/pretests/{session_id}/reasoning` | Create sessions/questions, persist answer/reasoning, return KnowledgeState-compatible result. | Accounts, goals, mastery, inputs. | Aligns with KST-inspired assessment and mixed answer modes. | M3-M4 |
 | Knowledge Graph | Subject concepts and prerequisites. | `knowledge_concepts`, `concept_edges` | `GET /api/v1/knowledge-map?subject=math` | Seed graph nodes/edges, expose learner-specific graph DTO. | Curriculum, mastery. | Uses Postgres adjacency list first; Neo4j later only if needed. | M8 |
 | Mastery | Learner-specific concept state. | `learner_concept_states` | Internal first; exposed via home/map/report APIs. | Update mastery, confidence, review dates, readiness status. | Assessments, graph, inputs. | Aligns with mastery formula and graph propagation. | M4-M8 |
@@ -239,17 +239,15 @@ backend/
 | 12 | `assessment_sessions` | Pretest/daily/quiz grouping. | `user_accounts`, `learning_tracks`, `track_modules` | `id`, `user_id`, `track_id`, `module_id`, `learning_goal_id`, `session_type`, `status`, `title`, timestamps |
 | 13 | `assessment_questions` | Question definitions. | `assessment_sessions`, `knowledge_concepts` | `id`, `session_id`, `concept_id`, `step_label`, `topic`, `prompt`, `helper_text`, `difficulty_label`, `sort_order`, `metadata` |
 | 14 | `assessment_options` | MC options. | `assessment_questions` | `id`, `question_id`, `option_key`, `label`, `text`, `is_correct`, `sort_order` |
-| 15 | `canvas_documents` | Active canvas state per session/module. | `learning_sessions` | `id`, `learning_session_id`, `latest_version`, `latest_sent_version`, `has_attachment`, `show_grid`, `canvas_width`, `canvas_height` |
-| 16 | `canvas_stroke_batches` | Ordered vector work. | `canvas_documents` | `id`, `canvas_document_id`, `batch_index`, `tool`, `payload_json`, `created_at` |
-| 17 | `canvas_snapshots` | Versioned saved canvas. | `canvas_documents` | `id`, `canvas_document_id`, `version`, `element_count`, `has_attachment`, `show_grid`, `canvas_size`, `elements_json`, `preview_asset_url` |
-| 18 | `input_events` | Canonical evidence. | `learning_sessions`, `assessment_sessions`, `canvas_snapshots` | `id`, `user_id`, `learning_session_id`, `assessment_session_id`, `parent_session_id`, `concept_id`, `event_type`, `text_payload`, `selected_option_id`, `canvas_snapshot_id`, `canvas_stroke_batch_id`, `image_asset_id`, `raw_payload`, `parsed_problem`, `parsed_work`, `confidence`, `created_at` |
-| 19 | `assessment_attempts` | Learner answer and evaluation. | `assessment_sessions`, `assessment_questions`, `assessment_options`, `canvas_snapshots`, `input_events` | `id`, `session_id`, `question_id`, `selected_option_id`, `confidence`, `explanation_text`, `used_canvas`, `canvas_snapshot_id`, `input_event_id`, `score`, `evaluated_result`, `submitted_at` |
-| 20 | `workspace_sessions` | Active module workspace. | `user_accounts`, `learning_tracks`, `track_modules` | `id`, `user_id`, `track_id`, `module_id`, `current_topic`, `content_mode`, `status`, timestamps |
-| 21 | `workspace_events` | Chat/canvas/quiz/media timeline. | `workspace_sessions`, `canvas_snapshots`, `media_artifacts` | `id`, `workspace_session_id`, `event_type`, `actor_type`, `text_payload`, `canvas_snapshot_id`, `media_artifact_id`, `metadata`, `created_at` |
-| 22 | `media_artifacts` | Generated media visible in workspace/gallery. | `user_accounts`, `workspace_sessions`, `learning_tracks`, `track_modules`, `knowledge_concepts` | `id`, `user_id`, `workspace_session_id`, `track_id`, `module_id`, `concept_id`, `artifact_type`, `title`, `subtitle`, `duration_seconds`, `status`, `storage_url`, `thumbnail_url`, `transcript_text`, `note_markdown`, `generation_payload`, timestamps |
-| 23 | `manim_render_jobs` | Dedicated video render/debug record. | `media_artifacts` | `id`, `artifact_id`, `source_session_id`, `source_module_id`, `source_concept_id`, `scene_template`, `scene_spec_json`, `render_params_json`, `status`, `language`, `voice`, `script_text`, `transcript_text`, `subtitle_url`, `manim_output_url`, `merged_video_url`, `compressed_video_url`, `thumbnail_url`, `duration_seconds`, `ffmpeg_metadata_json`, `error_detail`, `retry_count`, timestamps |
-| 24 | `learning_reports` | Weekly/periodic aggregation. | `user_accounts` | `id`, `user_id`, `period_start`, `period_end`, `report_type`, `summary_json`, `created_at` |
-| 25 | `streak_ledgers` | Daily activity ledger. | `user_accounts` | `id`, `user_id`, `activity_date`, `activity_type`, `created_at` |
+| 15 | `image_assets` | Exported images from canvas/uploads when evidence needs durable storage. | `user_accounts` | `id`, `user_id`, `source`, `mime_type`, `storage_url`, `width`, `height`, `metadata`, `created_at` |
+| 16 | `input_events` | Canonical evidence. | `learning_sessions`, `assessment_sessions`, `image_assets` | `id`, `user_id`, `learning_session_id`, `assessment_session_id`, `parent_session_id`, `concept_id`, `event_type`, `text_payload`, `selected_option_id`, `image_asset_id`, `raw_payload`, `parsed_problem`, `parsed_work`, `confidence`, `created_at` |
+| 17 | `assessment_attempts` | Learner answer and evaluation. | `assessment_sessions`, `assessment_questions`, `assessment_options`, `image_assets`, `input_events` | `id`, `session_id`, `question_id`, `selected_option_id`, `confidence`, `explanation_text`, `used_canvas`, `image_asset_id`, `input_event_id`, `score`, `evaluated_result`, `submitted_at` |
+| 18 | `workspace_sessions` | Active module workspace. | `user_accounts`, `learning_tracks`, `track_modules` | `id`, `user_id`, `track_id`, `module_id`, `current_topic`, `content_mode`, `status`, timestamps |
+| 19 | `workspace_events` | Chat/canvas-image/quiz/media timeline. | `workspace_sessions`, `image_assets`, `media_artifacts` | `id`, `workspace_session_id`, `event_index`, `event_type`, `actor_type`, `text_payload`, `image_asset_id`, `media_artifact_id`, `metadata`, `created_at` |
+| 20 | `media_artifacts` | Generated media visible in workspace/gallery. | `user_accounts`, `workspace_sessions`, `learning_tracks`, `track_modules`, `knowledge_concepts` | `id`, `user_id`, `workspace_session_id`, `track_id`, `module_id`, `concept_id`, `artifact_type`, `title`, `subtitle`, `duration_seconds`, `status`, `storage_url`, `thumbnail_url`, `transcript_text`, `note_markdown`, `generation_payload`, timestamps |
+| 21 | `manim_render_jobs` | Dedicated video render/debug record. | `media_artifacts` | `id`, `artifact_id`, `source_session_id`, `source_module_id`, `source_concept_id`, `scene_template`, `scene_spec_json`, `render_params_json`, `status`, `language`, `voice`, `script_text`, `transcript_text`, `subtitle_url`, `manim_output_url`, `merged_video_url`, `compressed_video_url`, `thumbnail_url`, `duration_seconds`, `ffmpeg_metadata_json`, `error_detail`, `retry_count`, timestamps |
+| 22 | `learning_reports` | Weekly/periodic aggregation. | `user_accounts` | `id`, `user_id`, `period_start`, `period_end`, `report_type`, `summary_json`, `created_at` |
+| 23 | `streak_ledgers` | Daily activity ledger. | `user_accounts` | `id`, `user_id`, `activity_date`, `activity_type`, `created_at` |
 
 ## 8. API Contract Plan
 
@@ -281,7 +279,7 @@ backend/
 |---|---|---|---|---|
 | GET | `/api/v1/pretests/{learning_goal_id}` | Return pretest session and questions. | none | `session_id`, question list |
 | POST | `/api/v1/pretests/{session_id}/answers` | Replace `submitAnswer`. | `question_id`, `option_id`, `confidence` | accepted attempt ID |
-| POST | `/api/v1/pretests/{session_id}/reasoning` | Replace `submitReasoning`. | `question_id`, `option_id`, `confidence`, `explanation`, `used_canvas`, `canvas_snapshot_id` | `KnowledgeState` DTO: `skill`, `gap_label`, `message`, `path_title`, `path_meta`, `path_description` |
+| POST | `/api/v1/pretests/{session_id}/reasoning` | Replace `submitReasoning`. | `question_id`, `option_id`, `confidence`, `explanation`, `used_canvas`, `image_asset_id` | `KnowledgeState` DTO: `skill`, `gap_label`, `message`, `path_title`, `path_meta`, `path_description` |
 
 ### Home and Queue APIs
 
@@ -293,15 +291,14 @@ backend/
 | GET | `/api/v1/daily-evaluations/today` | Replace daily eval local questions. | none | assessment session and questions |
 | POST | `/api/v1/daily-evaluations/{session_id}/answers` | Submit daily evaluation. | question answer payload | evaluation result and updated review state |
 
-### Workspace, Unified Input, and Canvas APIs
+### Workspace, Unified Input, and Canvas Image APIs
 
 | Method | Path | Purpose | Request | Response |
 |---|---|---|---|---|
 | POST | `/api/v1/workspaces` | Create/resume module workspace. | `track_id`, `module_id` | workspace state and timeline |
-| GET | `/api/v1/workspaces/{workspace_id}` | Load active timeline. | none | topic, events, last canvas, latest media |
-| POST | `/api/v1/workspaces/{workspace_id}/events` | Submit text/quiz/canvas/media event. | `event_type`, actor, text/media/canvas payload | event + optional tutor response |
-| POST | `/api/v1/workspaces/{workspace_id}/canvas/stroke-batches` | Persist vector batches. | `canvas_document_id`, batch index, tool, payload | batch ID |
-| POST | `/api/v1/workspaces/{workspace_id}/canvas/snapshots` | Persist saved canvas version. | version, element count, attachment/grid flags, canvas size, elements | snapshot ID and version |
+| GET | `/api/v1/workspaces/{workspace_id}` | Load active timeline. | none | topic, events, last sent image, latest media |
+| POST | `/api/v1/workspaces/{workspace_id}/events` | Submit text/quiz/canvas-image/media event. | `event_type`, actor, text/media payload, optional `image_asset_id` | event + optional tutor response |
+| POST | `/api/v1/assets/images` | Optional future upload for exported canvas image evidence. | image file or signed-upload metadata | `image_asset_id`, storage metadata |
 
 ### Media/Gallery/Manim APIs
 
@@ -327,10 +324,10 @@ backend/
 | `AuthService` | Authenticate, create account session, issue JWT. | sign-in DTO, Google token DTO | `AuthSession` DTO | Password accepts seeded/test user; Google validates later. |
 | `ProfileService` | Save onboarding profile and subjects. | profile DTO | profile summary | Real DB writes from M1. |
 | `LearningGoalService` | Store topic and bootstrap pretest. | raw topic, user | goal + pretest session | Rule-based subject guess, fixed first question. |
-| `PretestService` | Create pretest, persist answer/reasoning, return KnowledgeState. | answers, reasoning, canvas ref | attempt, KnowledgeState | Deterministic evaluator first, AI later. |
+| `PretestService` | Create pretest, persist answer/reasoning, return KnowledgeState. | answers, reasoning, optional image ref | attempt, KnowledgeState | Deterministic evaluator first, AI later. |
 | `SessionRouterService` | Decide next action for workspace input. | latest `InputEvent`, active session | route decision | Echo/choice-based response first. |
-| `InputEventService` | Normalize evidence into canonical event. | text, MC, canvas, image, mixed payload | `input_event_id` | Store raw/parsed payload with no AI parse initially. |
-| `CanvasService` | Persist stroke batches and snapshots. | canvas payloads | snapshot/batch records | Store JSON and optional preview URL only. |
+| `InputEventService` | Normalize evidence into canonical event. | text, MC, image, mixed payload | `input_event_id` | Store raw/parsed payload with no AI parse initially. |
+| `ImageAssetService` | Store or reference exported images from canvas/uploads. | image file or upload metadata | `image_asset_id` | Local/object-storage reference only; no canvas stroke history. |
 | `MasteryService` | Update learner concept state. | attempts, parser output | status/mastery update | Fixed rule mapping for first pretest. |
 | `PathEngineService` | Build next modules/queue. | goal, graph, mastery | track/modules | Seeded Calculus path first. |
 | `ExplanationService` | Generate tutor text and explanation artifacts. | input event, context | response text, prompt metadata | Static templates until Gemini integration. |
@@ -343,7 +340,7 @@ backend/
 | Job | Trigger | Input | Output | MVP Behavior | Future Behavior |
 |---|---|---|---|---|---|
 | `GeneratePretestJob` | `POST /learning-goals` | user, goal, subject | assessment session/questions | Create deterministic seeded questions synchronously or eager Celery. | Adaptive KST question selection. |
-| `ParseCanvasJob` | canvas snapshot saved | snapshot ID | parser output JSON | Mark unparsed and keep raw vector JSON. | OCR/math symbol parsing, partial-work detection. |
+| `ParseImageEvidenceJob` | canvas image sent | image asset ID | parser output JSON | Mark unparsed and keep image reference only. | OCR/math symbol parsing, partial-work detection from image. |
 | `GradeAssessmentJob` | answer/reasoning submitted | attempt/input event | score + KnowledgeState | Rule-based answer check. | Gemini/rubric mixed-input grading. |
 | `GenerateExplanationJob` | workspace text or explanation choice | session context | tutor response | Static response template. | Gemini localized explanation and analogy. |
 | `GenerateManimVideoJob` | generate-video endpoint | artifact/job scene spec | raw Manim MP4 URL | Create job and optional fake ready artifact in dev. | Render Manim scene with parameters. |
@@ -362,7 +359,7 @@ backend/
 | `PretestRepository.submitAnswer` | `MockPretestRepository` | `POST /api/v1/pretests/{session_id}/answers` | Current mobile hardcodes question ID; backend should tolerate client IDs or map them. |
 | `PretestRepository.submitReasoning` | `MockPretestRepository` | `POST /api/v1/pretests/{session_id}/reasoning` | Return `KnowledgeState` with exact fields expected by Flutter. |
 | Home/queue/report/map | Local UI state | home/tracks/reports/map APIs | Add API clients later after backend stable. |
-| Workspace chat/canvas/video | Local UI state | workspace/events/canvas/media APIs | Preserve event-driven shape for future client. |
+| Workspace chat/canvas/video | Local UI state | workspace/events/image/media APIs | Canvas editing remains local; sent canvas work is exported as an image event. |
 
 DTO strategy: backend JSON uses snake_case; Flutter API repositories can map to Dart camelCase/domain models. Error format should be stable:
 
@@ -389,7 +386,7 @@ Backward-compatible replacement plan: implement `ApiAuthRepository`, then `ApiOn
 | M3: Pretest sessions/questions/answers | Assessment models and pretest read/answer endpoints. | `GET /pretests/{goal_id}` returns current mobile-shaped question; answer submit persists attempt. | Contract tests for `PretestQuestion` and `PretestAnswer`. | `modules/assessments/*` | `submitAnswer` can be API-backed. |
 | M4: Reasoning + KnowledgeState mock | Reasoning endpoint, deterministic evaluator, initial mastery row updates, track bootstrap. | Returns exact `KnowledgeState` fields and creates first track/modules. | API/service tests for correct DTO and DB writes. | `modules/mastery/*`, `modules/graph/*` partial | `submitReasoning` can be API-backed. |
 | M5: Home/tracks summary | Home, tracks, modules APIs from persisted records. | Dashboard/queue data no longer needs hardcoded server assumptions. | API tests for `/home`, `/tracks`, `/tracks/{id}/modules`. | `api/v1/home.py`, sessions services | Home UI has a backend contract. |
-| M6: Workspace events + canvas persistence | Workspace session, events, input events, canvas documents, stroke batches, snapshots. | Text, quiz, canvas sent create `input_events` and `workspace_events`. | API + serializer tests for canvas DTO. | `modules/inputs/*`, workspace APIs | Workspace timeline is durable. |
+| M6: Workspace events + image-backed canvas evidence | Workspace session, events, input events, optional image assets. | Text, quiz, and sent canvas images create `input_events` and `workspace_events`; no stroke/history persistence. | API + serializer tests for workspace/image event DTO. | `modules/inputs/*`, workspace APIs | Workspace timeline is durable and canvas evidence is image-based. |
 | M7: Media artifacts + Manim job model | `media_artifacts`, `manim_render_jobs`, generate-video/status/gallery APIs. | Request creates artifact/job with inspectable status and error fields. | Job model and API tests. | `modules/media/*`, Celery app config | Video UI can poll artifact status. |
 | M8: Knowledge graph + mastery state | Graph seed, map API, learner states. | Math graph returns nodes/edges/statuses like current UI. | Graph service tests, map API tests. | `modules/graph/*`, `modules/mastery/*` | Knowledge map backed by DB. |
 | M9: Reports/streaks + daily evaluation | Daily eval generation/submission, weekly report, streak ledger. | Daily answer updates attempt/mastery/streak; weekly report returns metrics. | Service/API aggregation tests. | `modules/reports/*` | Progress tab has backend data. |
@@ -414,7 +411,7 @@ Test data strategy: seed one learner, four subjects, one Math/Calculus concept c
 |---|---|---|
 | Product: exact curriculum source for Indonesia grade mapping is not defined. | Subject/concept seeds may be incomplete. | Start with minimal Calculus sample from current UI, mark curriculum as seed data. |
 | Product: Google sign-in production behavior is undefined. | Auth scope can expand. | Stub compatible endpoint first; add real ID-token verification after credentials are available. |
-| Technical: canvas Flutter classes are private UI internals. | Backend DTO may drift from mobile implementation. | Define explicit JSON payload for strokes/shapes/snapshots before mobile API integration. |
+| Technical: canvas Flutter classes are private UI internals. | Backend stroke DTOs would drift from mobile implementation. | Do not persist strokes; define an exported image contract, including format, max size, compression, and optional upload flow. |
 | Technical: Manim/TTS/FFmpeg can be operationally heavy. | Media milestone can block core learning flow. | Model artifact/job records first; make rendering a separate worker milestone. |
 | Integration: mobile has no HTTP client or token storage. | Backend cannot be used directly by app yet. | Build backend contracts first; later add API repositories and secure storage. |
 | Timeline: full adaptive AI is larger than hackathon MVP. | Overbuilding risk. | Ship deterministic services first with clear AI extension points. |
@@ -431,7 +428,7 @@ Test data strategy: seed one learner, four subjects, one Math/Calculus concept c
 - [x] Health and profile tests added.
 - [x] Workspace session/event timeline implemented.
 - [ ] Unified input event model confirmed.
-- [ ] Canvas stroke/snapshot JSON contract confirmed.
+- [ ] Canvas image export/upload contract confirmed.
 - [ ] Manim/video artifact model confirmed.
 - [ ] First mobile repository replacement confirmed.
 - [x] Milestone 1 profile/onboarding acceptance criteria accepted.
