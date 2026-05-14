@@ -6,7 +6,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.accounts.models import UserAccount
+from app.modules.accounts.models import LearnerProfile, UserAccount
+from app.modules.accounts.schemas import LearnerProfileOnboardingRequest
 
 
 def sync_supabase_user(
@@ -47,6 +48,40 @@ def sync_supabase_user(
     return account
 
 
+def get_learner_profile(session: Session, user: UserAccount) -> LearnerProfile | None:
+    return session.scalar(select(LearnerProfile).where(LearnerProfile.user_id == user.id))
+
+
+def save_onboarding_profile(
+    session: Session,
+    *,
+    user: UserAccount,
+    payload: LearnerProfileOnboardingRequest,
+) -> LearnerProfile:
+    profile = get_learner_profile(session, user)
+    if profile is None:
+        profile = LearnerProfile(user_id=user.id)
+        session.add(profile)
+
+    profile.full_name = payload.full_name.strip()
+    profile.country_name = payload.country_name.strip()
+    profile.grade_level = payload.grade_level.strip()
+    profile.preferred_language = payload.preferred_language.strip() or "id"
+    profile.study_goal = payload.study_goal.strip()
+    profile.daily_study_time_label = payload.daily_study_time_label.strip()
+    profile.selected_subjects = [
+        _normalize_subject_code(code) for code in payload.selected_subjects
+    ]
+    profile.onboarding_completed = True
+
+    if profile.full_name:
+        user.display_name = profile.full_name
+
+    session.commit()
+    session.refresh(profile)
+    return profile
+
+
 def _normalize_role(role: str) -> str:
     cleaned = role.strip().lower()
     return cleaned if cleaned in {"learner"} else "learner"
@@ -74,3 +109,7 @@ def _string_or_none(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _normalize_subject_code(value: str) -> str:
+    return value.strip().lower().replace(" ", "_").replace("-", "_")

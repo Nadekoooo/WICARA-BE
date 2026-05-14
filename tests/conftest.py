@@ -13,6 +13,7 @@ sys.path.insert(0, str(BACKEND_ROOT))
 from app.db.base import Base  # noqa: E402
 from app.db.session import get_session  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.modules.accounts import models as account_models  # noqa: F401,E402
 from app.modules.curriculum import models as curriculum_models  # noqa: F401,E402
 
 
