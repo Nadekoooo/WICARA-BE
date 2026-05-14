@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import func, select
 
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
@@ -50,3 +52,49 @@ def test_curriculum_seed_creates_required_prerequisite_edge(db_session):
     assert bilangan_bulat.subject.code == "matematika"
     assert edge is not None
     assert edge.weight == 0.85
+
+
+def test_curriculum_seed_marks_removed_concepts_as_stale(db_session, tmp_path):
+    legacy_graph_path = tmp_path / "legacy_graph.json"
+    legacy_graph_path.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "curriculum": "kurikulum_merdeka",
+                    "version": "legacy-test",
+                },
+                "nodes": [
+                    {
+                        "id": "legacy_ipas_node",
+                        "subject": "ipas",
+                        "subject_label": "IPAS",
+                        "phase": "A",
+                        "school_level": "SD",
+                        "grade_range": "1-2",
+                        "domain": "Legacy",
+                        "difficulty_order": 1,
+                        "label_id": "Legacy IPAS Node",
+                    }
+                ],
+                "edges": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    seed_curriculum(db_session, graph_path=legacy_graph_path)
+    legacy_concept = db_session.scalar(
+        select(KnowledgeConcept).where(KnowledgeConcept.code == "legacy_ipas_node")
+    )
+
+    assert legacy_concept is not None
+    assert legacy_concept.metadata_json.get("stale_seed") is not True
+
+    seed_curriculum(db_session)
+    db_session.refresh(legacy_concept)
+
+    assert legacy_concept.metadata_json["stale_seed"] is True
+    assert (
+        legacy_concept.metadata_json["stale_reason"]
+        == "not_present_in_current_curriculum_seed"
+    )

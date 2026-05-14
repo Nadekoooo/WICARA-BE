@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -19,7 +21,15 @@ from app.modules.curriculum.schemas import (
     KnowledgeMapResponse,
     SubjectRead,
 )
-from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
+from app.modules.curriculum.kurikulum_merdeka import (
+    GROUP_X_GAP,
+    GROUP_X_START,
+    NODE_Y_GAP,
+    NODE_Y_START,
+    PHASE_ORDER,
+    SUBJECT_DISPLAY_ORDER,
+    canonical_subject_code,
+)
 from app.modules.learning.models import LearnerConceptState
 
 STATUS_LABELS = {
@@ -31,6 +41,36 @@ STATUS_LABELS = {
     "gap": "GAP",
     "locked": "LOCKED",
 }
+
+KNOWLEDGE_MAP_SUBJECT_SCOPES = {
+    "matematika": {"matematika"},
+    "ipas": {"ipas"},
+    "ipa": {"ipas", "ipa"},
+    "fisika": {"ipas", "ipa", "fisika"},
+    "kimia": {"ipas", "ipa", "kimia"},
+    "biologi": {"ipas", "ipa", "biologi"},
+}
+
+
+@dataclass(frozen=True)
+class _NodeLayout:
+    x: float | None
+    y: float | None
+    group: str | None
+
+
+@dataclass(frozen=True)
+class _PrerequisiteGate:
+    prerequisite_count: int
+    satisfied_prerequisite_count: int
+
+    @property
+    def has_prerequisites(self) -> bool:
+        return self.prerequisite_count > 0
+
+    @property
+    def is_satisfied(self) -> bool:
+        return self.satisfied_prerequisite_count >= self.prerequisite_count
 
 
 def list_active_subjects(session: Session) -> list[Subject]:
@@ -55,6 +95,85 @@ def subject_to_schema(subject: Subject) -> SubjectRead:
     )
 
 
+def _active_subject_by_code(session: Session, code: str) -> Subject | None:
+    return session.scalar(
+        select(Subject).where(
+            Subject.code == canonical_subject_code(code),
+            Subject.is_active.is_(True),
+        )
+    )
+
+
+def _knowledge_map_concepts_for_subject(
+    session: Session,
+    subject: Subject,
+) -> list[KnowledgeConcept]:
+    scope_codes = KNOWLEDGE_MAP_SUBJECT_SCOPES.get(subject.code, {subject.code})
+    concepts = list(
+        session.scalars(
+            select(KnowledgeConcept)
+            .join(KnowledgeConcept.subject)
+            .where(Subject.is_active.is_(True))
+            .options(selectinload(KnowledgeConcept.subject))
+        )
+    )
+    scoped_concepts = [
+        concept
+        for concept in concepts
+        if concept.subject.code in scope_codes and not _is_stale_seed_concept(concept)
+    ]
+
+    return sorted(
+        scoped_concepts,
+        key=_concept_map_sort_key,
+    )
+
+
+def _concept_for_detail_context(
+    session: Session,
+    *,
+    concept_code: str,
+    subject_code: str | None,
+) -> KnowledgeConcept | None:
+    normalized_subject = canonical_subject_code(subject_code) if subject_code else None
+    base_statement = (
+        select(KnowledgeConcept)
+        .join(KnowledgeConcept.subject)
+        .options(selectinload(KnowledgeConcept.subject))
+        .where(KnowledgeConcept.code == concept_code)
+    )
+    if normalized_subject:
+        exact_match = session.scalar(
+            base_statement.where(Subject.code == normalized_subject)
+        )
+        if exact_match is not None and not _is_stale_seed_concept(exact_match):
+            return exact_match
+
+    candidates = [
+        concept
+        for concept in session.scalars(
+            base_statement.order_by(Subject.display_order, Subject.name)
+        )
+        if not _is_stale_seed_concept(concept)
+    ]
+    if not candidates:
+        return None
+    if not normalized_subject:
+        return candidates[0]
+
+    subject = _active_subject_by_code(session, normalized_subject)
+    if subject is None:
+        return None
+
+    scoped_concept_ids = {
+        concept.id for concept in _knowledge_map_concepts_for_subject(session, subject)
+    }
+    for candidate in candidates:
+        if candidate.id in scoped_concept_ids:
+            return candidate
+    return None
+
+
 def get_knowledge_map(
     session: Session,
     *,
@@ -62,28 +181,15 @@ def get_knowledge_map(
     user: UserAccount | None = None,
 ) -> KnowledgeMapResponse | None:
     normalized_code = canonical_subject_code(subject_code)
-    subject = session.scalar(
-        select(Subject).where(
-            Subject.code == normalized_code,
-            Subject.is_active.is_(True),
-        )
-    )
+    subject = _active_subject_by_code(session, normalized_code)
     if subject is None:
         return None
 
-    concepts = list(
-        session.scalars(
-            select(KnowledgeConcept)
-            .where(KnowledgeConcept.subject_id == subject.id)
-            .options(selectinload(KnowledgeConcept.outgoing_edges))
-            .order_by(KnowledgeConcept.display_order, KnowledgeConcept.title)
-        )
-    )
+    concepts = _knowledge_map_concepts_for_subject(session, subject)
     if not concepts:
         return None
 
     concept_by_id = {concept.id: concept for concept in concepts}
-    concept_by_code = {concept.code: concept for concept in concepts}
     edges = list(
         session.scalars(
             select(ConceptEdge)
@@ -94,48 +200,46 @@ def get_knowledge_map(
             .order_by(ConceptEdge.edge_type, ConceptEdge.created_at)
         )
     )
+    groups, node_layouts, graph = _knowledge_map_layout(concepts, subject)
     state_by_concept = _learner_states_for_concepts(
         session,
         user=user,
         concept_ids=list(concept_by_id),
     )
-    concepts_with_prerequisites = {
-        edge.to_concept_id
-        for edge in edges
-        if edge.edge_type == "prerequisite"
+    prerequisite_ids_by_concept: dict[UUID, list[UUID]] = defaultdict(list)
+    for edge in edges:
+        if edge.edge_type != "prerequisite":
+            continue
+        prerequisite_ids_by_concept[edge.to_concept_id].append(edge.from_concept_id)
+    prerequisite_gates = {
+        concept_id: _prerequisite_gate(prerequisite_ids, state_by_concept)
+        for concept_id, prerequisite_ids in prerequisite_ids_by_concept.items()
     }
-
-    graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
-    groups_payload = graph_metadata.get("groups", [])
-    groups = [
-        KnowledgeMapGroup(label=str(group["label"]), x=float(group["x"]))
-        for group in groups_payload
-    ]
+    empty_gate = _PrerequisiteGate(
+        prerequisite_count=0,
+        satisfied_prerequisite_count=0,
+    )
 
     return KnowledgeMapResponse(
         subject=subject_to_schema(subject),
-        graph=KnowledgeMapGraph(
-            title=str(graph_metadata.get("title", f"{subject.name} Knowledge Map")),
-            width=float(graph_metadata.get("width", 1200)),
-            height=float(graph_metadata.get("height", 600)),
-            top_down=bool(graph_metadata.get("top_down", True)),
-        ),
+        graph=graph,
         groups=groups,
         nodes=[
             _concept_to_node(
                 concept,
                 groups,
+                layout=node_layouts.get(concept.id),
                 state=state_by_concept.get(concept.id),
                 is_personalized=user is not None,
-                has_prerequisites=concept.id in concepts_with_prerequisites,
+                prerequisite_gate=prerequisite_gates.get(concept.id, empty_gate),
             )
             for concept in concepts
         ],
         edges=[
             KnowledgeMapEdge(
                 id=edge.id,
-                from_node=concept_by_code[concept_by_id[edge.from_concept_id].code].code,
-                to=concept_by_code[concept_by_id[edge.to_concept_id].code].code,
+                from_node=concept_by_id[edge.from_concept_id].code,
+                to=concept_by_id[edge.to_concept_id].code,
                 edge_type=edge.edge_type,
                 weight=edge.weight,
                 metadata=edge.metadata_json or {},
@@ -152,16 +256,11 @@ def get_concept_detail(
     subject_code: str | None = None,
     user: UserAccount | None = None,
 ) -> ConceptDetailResponse | None:
-    statement = (
-        select(KnowledgeConcept)
-        .join(KnowledgeConcept.subject)
-        .options(selectinload(KnowledgeConcept.subject))
-        .where(KnowledgeConcept.code == concept_code)
+    concept = _concept_for_detail_context(
+        session,
+        concept_code=concept_code,
+        subject_code=subject_code,
     )
-    if subject_code:
-        statement = statement.where(Subject.code == canonical_subject_code(subject_code))
-
-    concept = session.scalar(statement)
     if concept is None:
         return None
 
@@ -223,13 +322,20 @@ def get_concept_detail(
         ],
     )
     concept_state = state_by_concept.get(concept.id)
+    concept_prerequisite_gate = _prerequisite_gate(
+        [item.id for item in prerequisite_concepts],
+        state_by_concept,
+    )
 
     prerequisites = [
         _concept_relation(
             item,
             state=state_by_concept.get(item.id),
             is_personalized=user is not None,
-            has_prerequisites=False,
+            prerequisite_gate=_PrerequisiteGate(
+                prerequisite_count=0,
+                satisfied_prerequisite_count=0,
+            ),
         )
         for item in prerequisite_concepts
     ]
@@ -238,7 +344,10 @@ def get_concept_detail(
             item,
             state=state_by_concept.get(item.id),
             is_personalized=user is not None,
-            has_prerequisites=True,
+            prerequisite_gate=_PrerequisiteGate(
+                prerequisite_count=1,
+                satisfied_prerequisite_count=0,
+            ),
         )
         for item in related_concept_models
     ]
@@ -247,7 +356,10 @@ def get_concept_detail(
             item,
             state=state_by_concept.get(item.id),
             is_personalized=user is not None,
-            has_prerequisites=True,
+            prerequisite_gate=_PrerequisiteGate(
+                prerequisite_count=1,
+                satisfied_prerequisite_count=0,
+            ),
         )
         for item in cross_subject_concepts
     ]
@@ -258,7 +370,7 @@ def get_concept_detail(
             _groups_for_subject(concept.subject),
             state=concept_state,
             is_personalized=user is not None,
-            has_prerequisites=bool(prerequisite_concepts),
+            prerequisite_gate=concept_prerequisite_gate,
         ),
         subject=subject_to_schema(concept.subject),
         mastery_confidence=_mastery_confidence_for_detail(
@@ -273,7 +385,7 @@ def get_concept_detail(
             concept,
             state=concept_state,
             is_personalized=user is not None,
-            has_prerequisites=bool(prerequisite_concepts),
+            prerequisite_gate=concept_prerequisite_gate,
         ),
     )
 
@@ -282,23 +394,28 @@ def _concept_to_node(
     concept: KnowledgeConcept,
     groups: list[KnowledgeMapGroup],
     *,
+    layout: _NodeLayout | None = None,
     state: LearnerConceptState | None = None,
     is_personalized: bool = False,
-    has_prerequisites: bool = False,
+    prerequisite_gate: _PrerequisiteGate | None = None,
 ) -> KnowledgeMapNode:
     metadata: dict[str, Any] = concept.metadata_json or {}
+    gate = prerequisite_gate or _PrerequisiteGate(
+        prerequisite_count=0,
+        satisfied_prerequisite_count=0,
+    )
     status, reason = _status_for_concept(
         concept,
         state=state,
         is_personalized=is_personalized,
-        has_prerequisites=has_prerequisites,
+        prerequisite_gate=gate,
     )
     response_metadata = _node_metadata(
         concept,
         state=state,
         is_personalized=is_personalized,
         status_reason=reason,
-        has_prerequisites=has_prerequisites,
+        prerequisite_gate=gate,
     )
     return KnowledgeMapNode(
         id=concept.code,
@@ -314,9 +431,9 @@ def _concept_to_node(
             if is_personalized
             else _concept_status_label(metadata, status)
         ),
-        x=concept.layout_x,
-        y=concept.layout_y,
-        group=_nearest_group_label(concept.layout_x, groups),
+        x=layout.x if layout else concept.layout_x,
+        y=layout.y if layout else concept.layout_y,
+        group=layout.group if layout else _nearest_group_label(concept.layout_x, groups),
         metadata=response_metadata,
     )
 
@@ -326,14 +443,18 @@ def _concept_relation(
     *,
     state: LearnerConceptState | None = None,
     is_personalized: bool = False,
-    has_prerequisites: bool = False,
+    prerequisite_gate: _PrerequisiteGate | None = None,
 ) -> ConceptRelation:
     metadata: dict[str, Any] = concept.metadata_json or {}
+    gate = prerequisite_gate or _PrerequisiteGate(
+        prerequisite_count=0,
+        satisfied_prerequisite_count=0,
+    )
     status, _reason = _status_for_concept(
         concept,
         state=state,
         is_personalized=is_personalized,
-        has_prerequisites=has_prerequisites,
+        prerequisite_gate=gate,
     )
     return ConceptRelation(
         id=concept.code,
@@ -357,6 +478,145 @@ def _groups_for_subject(subject: Subject) -> list[KnowledgeMapGroup]:
         KnowledgeMapGroup(label=str(group["label"]), x=float(group["x"]))
         for group in groups_payload
     ]
+
+
+def _knowledge_map_layout(
+    concepts: list[KnowledgeConcept],
+    selected_subject: Subject,
+) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
+    subject_ids = {concept.subject_id for concept in concepts}
+    if subject_ids == {selected_subject.id}:
+        return _single_subject_knowledge_map_layout(concepts, selected_subject)
+
+    return _integrated_knowledge_map_layout(concepts, selected_subject)
+
+
+def _single_subject_knowledge_map_layout(
+    concepts: list[KnowledgeConcept],
+    subject: Subject,
+) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
+    graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
+    groups = _groups_for_subject(subject)
+    node_layouts = {
+        concept.id: _NodeLayout(
+            x=concept.layout_x,
+            y=concept.layout_y,
+            group=_nearest_group_label(concept.layout_x, groups),
+        )
+        for concept in concepts
+    }
+
+    return (
+        groups,
+        node_layouts,
+        KnowledgeMapGraph(
+            title=str(graph_metadata.get("title", f"{subject.name} Knowledge Map")),
+            width=float(graph_metadata.get("width", 1200)),
+            height=float(graph_metadata.get("height", 600)),
+            top_down=bool(graph_metadata.get("top_down", True)),
+        ),
+    )
+
+
+def _integrated_knowledge_map_layout(
+    concepts: list[KnowledgeConcept],
+    selected_subject: Subject,
+) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
+    ordered_concepts = sorted(concepts, key=_concept_map_sort_key)
+    ordered_group_keys: list[tuple[str, str, str, str]] = []
+    known_group_keys: set[tuple[str, str, str, str]] = set()
+    for concept in ordered_concepts:
+        key = _layout_group_key(concept)
+        if key in known_group_keys:
+            continue
+        known_group_keys.add(key)
+        ordered_group_keys.append(key)
+
+    ordered_group_keys.sort(key=_layout_group_sort_key)
+    groups = [
+        KnowledgeMapGroup(
+            label=_layout_group_label(key),
+            x=GROUP_X_START + (index * GROUP_X_GAP),
+        )
+        for index, key in enumerate(ordered_group_keys)
+    ]
+    group_by_key = dict(zip(ordered_group_keys, groups, strict=True))
+    local_counts: dict[tuple[str, str, str, str], int] = defaultdict(int)
+    node_layouts: dict[UUID, _NodeLayout] = {}
+    max_group_count = 0
+
+    for concept in ordered_concepts:
+        key = _layout_group_key(concept)
+        group = group_by_key[key]
+        local_index = local_counts[key]
+        local_counts[key] = local_index + 1
+        max_group_count = max(max_group_count, local_counts[key])
+        node_layouts[concept.id] = _NodeLayout(
+            x=group.x,
+            y=NODE_Y_START + (local_index * NODE_Y_GAP),
+            group=group.label,
+        )
+
+    width = (groups[-1].x + 260.0) if groups else 1200.0
+    height = max(600.0, NODE_Y_START + (max_group_count * NODE_Y_GAP) + 80.0)
+    return (
+        groups,
+        node_layouts,
+        KnowledgeMapGraph(
+            title=f"{selected_subject.name} Integrated Knowledge Map",
+            width=width,
+            height=height,
+            top_down=True,
+        ),
+    )
+
+
+def _layout_group_key(concept: KnowledgeConcept) -> tuple[str, str, str, str]:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    return (
+        concept.subject.code,
+        str(metadata.get("subject_label") or concept.subject.name).strip(),
+        str(metadata.get("phase") or "").strip(),
+        str(metadata.get("domain") or "General").strip(),
+    )
+
+
+def _layout_group_sort_key(key: tuple[str, str, str, str]) -> tuple[int, int, str, str]:
+    subject_code, _subject_label, phase, domain = key
+    return (
+        PHASE_ORDER.get(phase, 999),
+        SUBJECT_DISPLAY_ORDER.get(subject_code, 999),
+        domain,
+        subject_code,
+    )
+
+
+def _layout_group_label(key: tuple[str, str, str, str]) -> str:
+    _subject_code, subject_label, phase, domain = key
+    if phase and domain:
+        return f"{subject_label} - Fase {phase} / {domain}"
+    if phase:
+        return f"{subject_label} - Fase {phase}"
+    return f"{subject_label} - {domain}"
+
+
+def _concept_map_sort_key(concept: KnowledgeConcept) -> tuple[int, int, str, int, int, str]:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    phase = str(metadata.get("phase") or "").strip()
+    domain = str(metadata.get("domain") or "").strip()
+    return (
+        PHASE_ORDER.get(phase, 999),
+        SUBJECT_DISPLAY_ORDER.get(concept.subject.code, 999),
+        domain,
+        _safe_int(metadata.get("difficulty_order"), fallback=9999),
+        concept.display_order,
+        concept.title,
+    )
+
+
+def _is_stale_seed_concept(concept: KnowledgeConcept) -> bool:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    return metadata.get("stale_seed") is True
 
 
 def _learner_states_for_concepts(
@@ -384,22 +644,27 @@ def _status_for_concept(
     *,
     state: LearnerConceptState | None,
     is_personalized: bool,
-    has_prerequisites: bool,
+    prerequisite_gate: _PrerequisiteGate,
 ) -> tuple[str, str]:
     metadata: dict[str, Any] = concept.metadata_json or {}
-    curriculum_status = str(metadata.get("default_status", "ready"))
+    curriculum_status = _curriculum_default_status(
+        metadata,
+        has_prerequisites=prerequisite_gate.has_prerequisites,
+    )
     if not is_personalized:
-        return _normalize_status(curriculum_status), "curriculum_default"
+        return curriculum_status, "curriculum_default"
 
     if state is None:
-        if has_prerequisites:
-            return "locked", "no_learner_evidence_prerequisites_unknown"
-        return "ready", "no_learner_evidence_root_concept"
+        if prerequisite_gate.has_prerequisites and not prerequisite_gate.is_satisfied:
+            return "locked", "no_learner_evidence_prerequisites_unmet"
+        return "ready", "no_learner_evidence_curriculum_available"
 
     evidence_count = state.evidence_count or 0
     mastery_score = _clamp_score(state.mastery_score)
     stored_status = _normalize_status(state.status)
     if evidence_count <= 0:
+        if prerequisite_gate.has_prerequisites and not prerequisite_gate.is_satisfied:
+            return "locked", "learner_state_without_evidence_prerequisites_unmet"
         return "ready", "learner_state_without_evidence"
     if mastery_score < 0.4:
         return "gap", "low_mastery_score"
@@ -416,13 +681,24 @@ def _status_for_concept(
     return "ready", "developing_mastery_score"
 
 
+def _curriculum_default_status(
+    metadata: dict[str, Any],
+    *,
+    has_prerequisites: bool,
+) -> str:
+    status = _normalize_status(str(metadata.get("default_status", "ready")))
+    if status == "locked" and not has_prerequisites:
+        return "ready"
+    return status
+
+
 def _node_metadata(
     concept: KnowledgeConcept,
     *,
     state: LearnerConceptState | None,
     is_personalized: bool,
     status_reason: str,
-    has_prerequisites: bool,
+    prerequisite_gate: _PrerequisiteGate,
 ) -> dict[str, Any]:
     metadata: dict[str, Any] = dict(concept.metadata_json or {})
     if not is_personalized:
@@ -435,8 +711,16 @@ def _node_metadata(
             ),
             "learner_state_present": state is not None,
             "status_reason": status_reason,
-            "has_prerequisites": has_prerequisites,
-            "curriculum_default_status": str(metadata.get("default_status", "ready")),
+            "has_prerequisites": prerequisite_gate.has_prerequisites,
+            "prerequisite_count": prerequisite_gate.prerequisite_count,
+            "satisfied_prerequisite_count": (
+                prerequisite_gate.satisfied_prerequisite_count
+            ),
+            "prerequisites_satisfied": prerequisite_gate.is_satisfied,
+            "curriculum_default_status": _curriculum_default_status(
+                metadata,
+                has_prerequisites=prerequisite_gate.has_prerequisites,
+            ),
             "mock_mastery": False,
         }
     )
@@ -470,7 +754,7 @@ def _concept_detail_metadata(
     *,
     state: LearnerConceptState | None,
     is_personalized: bool,
-    has_prerequisites: bool,
+    prerequisite_gate: _PrerequisiteGate,
 ) -> dict[str, Any]:
     if not is_personalized:
         return {
@@ -482,13 +766,17 @@ def _concept_detail_metadata(
         concept,
         state=state,
         is_personalized=True,
-        has_prerequisites=has_prerequisites,
+        prerequisite_gate=prerequisite_gate,
     )
     return {
         "mock_mastery": False,
         "source": "learner_concept_state" if state is not None else "no_learner_state",
         "learner_state_present": state is not None,
         "status_reason": reason,
+        "has_prerequisites": prerequisite_gate.has_prerequisites,
+        "prerequisite_count": prerequisite_gate.prerequisite_count,
+        "satisfied_prerequisite_count": prerequisite_gate.satisfied_prerequisite_count,
+        "prerequisites_satisfied": prerequisite_gate.is_satisfied,
         "mastery_score": round(_clamp_score(state.mastery_score), 4) if state else None,
         "confidence_score": round(_clamp_score(state.confidence_score), 4) if state else None,
         "evidence_count": (state.evidence_count or 0) if state else 0,
@@ -522,6 +810,28 @@ def _mock_mastery_confidence(concept: KnowledgeConcept) -> float:
         "gap": 0.18,
         "locked": 0.08,
     }.get(status, 0.34)
+
+
+def _prerequisite_gate(
+    prerequisite_ids: list[UUID],
+    state_by_concept: dict[UUID, LearnerConceptState],
+) -> _PrerequisiteGate:
+    return _PrerequisiteGate(
+        prerequisite_count=len(prerequisite_ids),
+        satisfied_prerequisite_count=sum(
+            1
+            for prerequisite_id in prerequisite_ids
+            if _is_prerequisite_satisfied(state_by_concept.get(prerequisite_id))
+        ),
+    )
+
+
+def _is_prerequisite_satisfied(state: LearnerConceptState | None) -> bool:
+    if state is None or (state.evidence_count or 0) <= 0:
+        return False
+    mastery_score = _clamp_score(state.mastery_score)
+    stored_status = _normalize_status(state.status)
+    return stored_status == "mastered" or mastery_score >= 0.7
 
 
 def _nearest_group_label(
@@ -559,6 +869,13 @@ def _normalize_status(status: str) -> str:
         "in_progress": "active",
         "unknown": "locked",
     }.get(normalized, normalized if normalized in STATUS_LABELS else "ready")
+
+
+def _safe_int(value: Any, *, fallback: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
 
 
 def _clamp_score(value: float | None) -> float:
