@@ -18,7 +18,7 @@ class WorkspaceEventCreateRequest(BaseModel):
     event_type: str = Field(..., min_length=2, max_length=32)
     actor_type: str = Field(default="learner", min_length=2, max_length=32)
     text_payload: str = ""
-    canvas_snapshot_id: UUID | None = None
+    image_asset_id: UUID | None = None
     media_artifact_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -30,7 +30,7 @@ class WorkspaceEventRead(BaseModel):
     event_type: str
     actor_type: str
     text_payload: str
-    canvas_snapshot_id: UUID | None = None
+    image_asset_id: UUID | None = None
     media_artifact_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str
@@ -44,7 +44,7 @@ class WorkspaceRead(BaseModel):
     content_mode: str
     status: str
     events: list[WorkspaceEventRead] = Field(default_factory=list)
-    last_canvas_snapshot_id: UUID | None = None
+    last_image_asset_id: UUID | None = None
     latest_media: MediaArtifactRead | None = None
 
 

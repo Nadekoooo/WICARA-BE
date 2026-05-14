@@ -65,28 +65,28 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
     assert text_payload["tutor_response"] is None
     assert len(text_payload["workspace"]["events"]) == 1
 
-    canvas_snapshot_id = "44444444-4444-4444-8444-444444444444"
-    canvas_response = client.post(
+    image_asset_id = "44444444-4444-4444-8444-444444444444"
+    image_response = client.post(
         f"/api/v1/workspaces/{workspace['id']}/events",
         json={
             "event_type": "canvas_sent",
             "actor_type": "learner",
-            "canvas_snapshot_id": canvas_snapshot_id,
+            "image_asset_id": image_asset_id,
             "metadata": {"element_count": 3, "has_attachment": False},
         },
     )
 
-    assert canvas_response.status_code == 200
-    canvas_payload = canvas_response.json()
-    assert canvas_payload["event"]["event_index"] == 2
-    assert canvas_payload["event"]["canvas_snapshot_id"] == canvas_snapshot_id
-    assert canvas_payload["workspace"]["last_canvas_snapshot_id"] == canvas_snapshot_id
+    assert image_response.status_code == 200
+    image_payload = image_response.json()
+    assert image_payload["event"]["event_index"] == 2
+    assert image_payload["event"]["image_asset_id"] == image_asset_id
+    assert image_payload["workspace"]["last_image_asset_id"] == image_asset_id
 
     load_response = client.get(f"/api/v1/workspaces/{workspace['id']}")
     assert load_response.status_code == 200
     loaded = load_response.json()
     assert [event["event_type"] for event in loaded["events"]] == ["text", "canvas_sent"]
-    assert loaded["last_canvas_snapshot_id"] == canvas_snapshot_id
+    assert loaded["last_image_asset_id"] == image_asset_id
 
 
 def test_workspace_rejects_event_with_unknown_type(client):

@@ -61,7 +61,7 @@ def upgrade() -> None:
         sa.Column("actor_type", sa.String(length=32), nullable=False),
         sa.Column("event_index", sa.Integer(), nullable=False),
         sa.Column("text_payload", sa.Text(), nullable=False),
-        sa.Column("canvas_snapshot_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("image_asset_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("media_artifact_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column(
             "metadata",

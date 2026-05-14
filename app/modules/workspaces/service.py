@@ -92,7 +92,7 @@ def append_workspace_event(
     event_type: str,
     actor_type: str,
     text_payload: str,
-    canvas_snapshot_id: UUID | None,
+    image_asset_id: UUID | None,
     media_artifact_id: UUID | None,
     metadata: dict[str, Any],
 ) -> WorkspaceEventCreateResponse | None:
@@ -111,7 +111,7 @@ def append_workspace_event(
         event_type=normalized_event_type,
         actor_type=normalized_actor_type,
         text_payload=text_payload.strip(),
-        canvas_snapshot_id=canvas_snapshot_id,
+        image_asset_id=image_asset_id,
         media_artifact_id=media_artifact_id,
         metadata_json=metadata,
     )
@@ -143,7 +143,7 @@ def workspace_to_schema(session: Session, workspace: WorkspaceSession) -> Worksp
         content_mode=workspace.content_mode,
         status=workspace.status,
         events=[event_to_schema(event) for event in events],
-        last_canvas_snapshot_id=_latest_canvas_snapshot_id(events),
+        last_image_asset_id=_latest_image_asset_id(events),
         latest_media=media_artifact_to_schema(latest_media) if latest_media else None,
     )
 
@@ -156,7 +156,7 @@ def event_to_schema(event: WorkspaceEvent) -> WorkspaceEventRead:
         event_type=event.event_type,
         actor_type=event.actor_type,
         text_payload=event.text_payload,
-        canvas_snapshot_id=event.canvas_snapshot_id,
+        image_asset_id=event.image_asset_id,
         media_artifact_id=event.media_artifact_id,
         metadata=event.metadata_json or {},
         created_at=event.created_at.isoformat() if event.created_at else "",
@@ -245,10 +245,10 @@ def _normalize_content_mode(content_mode: str) -> str:
     return normalized or "chat"
 
 
-def _latest_canvas_snapshot_id(events: list[WorkspaceEvent]) -> UUID | None:
+def _latest_image_asset_id(events: list[WorkspaceEvent]) -> UUID | None:
     for event in reversed(events):
-        if event.canvas_snapshot_id is not None:
-            return event.canvas_snapshot_id
+        if event.image_asset_id is not None:
+            return event.image_asset_id
     return None
 
 
