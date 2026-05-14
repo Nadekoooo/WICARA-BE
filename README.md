@@ -37,13 +37,34 @@ Current implemented API surface:
 - `GET /health`
 - `POST /api/v1/auth/supabase`
 - `POST /api/v1/auth/sign-in`
+- `POST /api/v1/auth/register`
 - `POST /api/v1/auth/google`
 - `GET /api/v1/auth/me`
+- `GET /api/v1/me`
 - `GET /api/v1/me/profile`
 - `PUT /api/v1/me/profile/onboarding`
 - `GET /api/v1/subjects`
 - `GET /api/v1/knowledge-map?subject=matematika`
 - `GET /api/v1/knowledge-map/concepts/{concept_code}`
+- `POST /api/v1/learning-goals`
+- `GET /api/v1/learning-goals/{learning_goal_id}`
+- `GET /api/v1/pretests/{learning_goal_id}`
+- `POST /api/v1/pretests/{assessment_session_id}/answers`
+- `POST /api/v1/pretests/{assessment_session_id}/reasoning`
+- `GET /api/v1/home`
+- `GET /api/v1/learning-queue`
+- `GET /api/v1/tracks`
+- `GET /api/v1/tracks/{track_id}/modules`
+- `PATCH /api/v1/tracks/{track_id}/modules/{module_id}/state`
+- `POST /api/v1/workspaces`
+- `GET /api/v1/workspaces/{workspace_id}`
+- `POST /api/v1/workspaces/{workspace_id}/events`
+- `GET /api/v1/daily-evaluations/today`
+- `POST /api/v1/daily-evaluations/{assessment_session_id}/answers`
+- `GET /api/v1/media-artifacts`
+- `GET /api/v1/media-artifacts/{artifact_id}`
+- `GET /api/v1/media-artifacts/{artifact_id}/status`
+- `GET /api/v1/reports/weekly/latest`
 
 ## 1. Executive Summary
 
@@ -408,6 +429,7 @@ Test data strategy: seed one learner, four subjects, one Math/Calculus concept c
 - [x] Alembic migration workflow configured.
 - [x] Profile onboarding endpoint implemented.
 - [x] Health and profile tests added.
+- [x] Workspace session/event timeline implemented.
 - [ ] Unified input event model confirmed.
 - [ ] Canvas stroke/snapshot JSON contract confirmed.
 - [ ] Manim/video artifact model confirmed.
