@@ -49,7 +49,24 @@ class WorkspaceRead(BaseModel):
     latest_media: MediaArtifactRead | None = None
 
 
+class TutorResponseRead(BaseModel):
+    text: str
+    intent: str
+    next_actions: list[str] = Field(default_factory=list)
+
+
+class WorkspaceMasteryUpdateRead(BaseModel):
+    concept_id: UUID | None = None
+    mastery_score: float | None = None
+    confidence_score: float | None = None
+    evidence_count: int | None = None
+    status: str | None = None
+    delta: float = 0.0
+    reason: str
+
+
 class WorkspaceEventCreateResponse(BaseModel):
     event: WorkspaceEventRead
-    tutor_response: WorkspaceEventRead | None = None
+    tutor_response: TutorResponseRead | None = None
+    mastery_update: WorkspaceMasteryUpdateRead | None = None
     workspace: WorkspaceRead

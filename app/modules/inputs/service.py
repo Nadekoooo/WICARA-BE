@@ -15,6 +15,7 @@ def create_workspace_input_event(
     *,
     user: UserAccount,
     workspace_session_id: UUID,
+    concept_id: UUID | None = None,
     source_event_type: str,
     actor_type: str,
     text_payload: str,
@@ -25,6 +26,7 @@ def create_workspace_input_event(
     event = InputEvent(
         user_id=user.id,
         workspace_session_id=workspace_session_id,
+        concept_id=concept_id,
         event_type=_canonical_workspace_event_type(
             source_event_type=source_event_type,
             text_payload=text_payload,
