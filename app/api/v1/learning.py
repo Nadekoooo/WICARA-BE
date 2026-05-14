@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
@@ -156,6 +157,26 @@ def latest_weekly_report(
     return service.get_latest_weekly_report(session, user=account)
 
 
+@router.get("/reports/weekly", response_model=schemas.WeeklyReportResponse)
+def weekly_report(
+    start: date = Query(...),
+    end: date = Query(...),
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WeeklyReportResponse:
+    if start > end:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Report start date must be before or equal to end date.",
+        )
+    if (end - start).days > 31:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Weekly report range cannot exceed 31 days.",
+        )
+    return service.get_weekly_report(session, user=account, start=start, end=end)
+
+
 @router.get("/pretests/{learning_goal_id}", response_model=schemas.PretestReadResponse)
 def read_pretest(
     learning_goal_id: UUID,
@@ -245,3 +266,25 @@ def submit_daily_evaluation_answer(
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.get(
+    "/daily-evaluations/{assessment_session_id}/result",
+    response_model=schemas.DailyEvaluationResultResponse,
+)
+def get_daily_evaluation_result(
+    assessment_session_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.DailyEvaluationResultResponse:
+    result = service.get_daily_evaluation_result(
+        session,
+        user=account,
+        assessment_session_id=assessment_session_id,
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Daily evaluation was not found.",
+        )
+    return result
