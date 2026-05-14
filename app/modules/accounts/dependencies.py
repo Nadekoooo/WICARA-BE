@@ -33,6 +33,20 @@ def bearer_token(authorization: str | None = Header(default=None)) -> str:
     return token.strip()
 
 
+def optional_bearer_token(authorization: str | None = Header(default=None)) -> str | None:
+    if not authorization:
+        return None
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization bearer token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token.strip()
+
+
 def verified_supabase_claims(
     token: str = Depends(bearer_token),
     settings: Settings = Depends(get_settings),
@@ -55,4 +69,16 @@ def get_current_account(
     claims: dict[str, Any] = Depends(verified_supabase_claims),
     session: Session = Depends(get_session),
 ) -> UserAccount:
+    return sync_supabase_user(session, claims=claims, role="learner")
+
+
+def get_optional_current_account(
+    token: str | None = Depends(optional_bearer_token),
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> UserAccount | None:
+    if token is None:
+        return None
+
+    claims = verify_supabase_token_or_401(token, settings)
     return sync_supabase_user(session, claims=claims, role="learner")
