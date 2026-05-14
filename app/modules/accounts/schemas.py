@@ -85,3 +85,9 @@ class LearnerProfileRead(BaseModel):
     daily_study_time_label: str
     selected_subjects: list[str]
     onboarding_completed: bool
+
+
+class AccountProfileResponse(BaseModel):
+    account: UserAccountRead
+    profile: LearnerProfileRead | None = None
+    onboarding_completed: bool

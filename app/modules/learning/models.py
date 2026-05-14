@@ -250,3 +250,43 @@ class LearnerConceptState(Base):
     evidence_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MediaArtifact(Base):
+    __tablename__ = "media_artifacts"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False
+    )
+    track_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("learning_tracks.id", ondelete="SET NULL")
+    )
+    module_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("track_modules.id", ondelete="SET NULL")
+    )
+    concept_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("knowledge_concepts.id", ondelete="SET NULL")
+    )
+    artifact_type: Mapped[str] = mapped_column(String(32), nullable=False, default="video")
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    subtitle: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ready")
+    duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    thumbnail_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    playback_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    transcript: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    notes_json: Mapped[list[str]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), nullable=False, default=list
+    )
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", json_dict_type, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )

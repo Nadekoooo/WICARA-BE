@@ -84,6 +84,7 @@ class KnowledgeStateResponse(BaseModel):
 
 class TrackModuleRead(BaseModel):
     id: UUID
+    track_id: UUID | None = None
     title: str
     description: str
     estimated_minutes: int
@@ -104,6 +105,95 @@ class TrackRead(BaseModel):
 
 class TrackListResponse(BaseModel):
     items: list[TrackRead]
+
+
+class TrackModuleStateUpdateRequest(BaseModel):
+    status: str = Field(..., min_length=2, max_length=32)
+
+
+class TrackModuleStateUpdateResponse(BaseModel):
+    track: TrackRead
+
+
+class QueueItemRead(BaseModel):
+    id: str
+    track_id: UUID | None = None
+    module_id: UUID | None = None
+    title: str
+    subtitle: str
+    meta: str
+    status: str
+    estimated_minutes: int
+    action_label: str
+
+
+class LearningQueueResponse(BaseModel):
+    recommended: list[QueueItemRead]
+    tracks: list[TrackRead]
+
+
+class DailySummaryRead(BaseModel):
+    status: str
+    title: str
+    due_count: int
+    completed_count: int
+
+
+class HomeSummaryResponse(BaseModel):
+    display_name: str
+    first_name: str
+    onboarding_completed: bool
+    streak_days: int
+    active_tracks_count: int
+    next_queue_item: QueueItemRead | None = None
+    daily_evaluation: DailySummaryRead
+    active_tracks: list[TrackRead]
+
+
+class MediaArtifactRead(BaseModel):
+    id: UUID
+    title: str
+    subtitle: str
+    artifact_type: str
+    status: str
+    duration_seconds: int
+    duration_label: str
+    thumbnail_url: str
+    playback_url: str
+    transcript: str
+    notes: list[str]
+    track_id: UUID | None = None
+    module_id: UUID | None = None
+    created_at: str
+
+
+class MediaArtifactListResponse(BaseModel):
+    items: list[MediaArtifactRead]
+
+
+class MediaArtifactStatusResponse(BaseModel):
+    artifact_id: UUID
+    status: str
+    progress: int
+    error: str | None = None
+
+
+class ReportTrendRead(BaseModel):
+    label: str
+    before: float
+    after: float
+
+
+class WeeklyReportResponse(BaseModel):
+    range_label: str
+    status: str
+    score: int
+    fixed_gaps: int
+    remaining_gaps: int
+    retention_minutes: int
+    concepts: str
+    summary_notes: list[str]
+    trends: list[ReportTrendRead]
 
 
 class DailyEvaluationResponse(BaseModel):

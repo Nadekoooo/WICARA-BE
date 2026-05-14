@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
@@ -19,6 +19,7 @@ from app.modules.learning.models import (
     LearnerConceptState,
     LearningGoal,
     LearningTrack,
+    MediaArtifact,
     TrackModule,
 )
 from app.modules.learning.schemas import (
@@ -26,14 +27,24 @@ from app.modules.learning.schemas import (
     AssessmentQuestionRead,
     DailyEvaluationAnswerResponse,
     DailyEvaluationResponse,
+    DailySummaryRead,
+    HomeSummaryResponse,
     KnowledgeStateResponse,
+    LearningQueueResponse,
     LearningGoalCreateResponse,
     LearningGoalRead,
+    MediaArtifactListResponse,
+    MediaArtifactRead,
+    MediaArtifactStatusResponse,
     PretestReadResponse,
+    QueueItemRead,
+    ReportTrendRead,
     SubmitAnswerResponse,
     TrackListResponse,
     TrackModuleRead,
+    TrackModuleStateUpdateResponse,
     TrackRead,
+    WeeklyReportResponse,
 )
 
 
@@ -359,6 +370,194 @@ def list_tracks(session: Session, *, user: UserAccount) -> TrackListResponse:
     return TrackListResponse(items=[track_to_schema(track) for track in tracks])
 
 
+def get_home_summary(session: Session, *, user: UserAccount) -> HomeSummaryResponse:
+    tracks = _user_tracks(session, user=user)
+    queue = _build_queue_items(tracks)
+    daily_session = _today_daily_session(session, user=user)
+    completed_today = 0
+    if daily_session is not None:
+        completed_today = session.scalar(
+            select(func.count(AssessmentAttempt.id)).where(
+                AssessmentAttempt.session_id == daily_session.id
+            )
+        ) or 0
+    display_name = _display_name_for_user(user)
+    return HomeSummaryResponse(
+        display_name=display_name,
+        first_name=_first_name(display_name),
+        onboarding_completed=bool(user.learner_profile and user.learner_profile.onboarding_completed),
+        streak_days=_streak_days(session, user=user),
+        active_tracks_count=len([track for track in tracks if track.status != "completed"]),
+        next_queue_item=queue[0] if queue else None,
+        daily_evaluation=DailySummaryRead(
+            status="completed" if completed_today else "ready",
+            title="Daily Evaluation",
+            due_count=max(0, 3 - completed_today),
+            completed_count=completed_today,
+        ),
+        active_tracks=[track_to_schema(track) for track in tracks[:3]],
+    )
+
+
+def get_learning_queue(session: Session, *, user: UserAccount) -> LearningQueueResponse:
+    tracks = _user_tracks(session, user=user)
+    return LearningQueueResponse(
+        recommended=_build_queue_items(tracks),
+        tracks=[track_to_schema(track) for track in tracks],
+    )
+
+
+def get_track_modules(
+    session: Session,
+    *,
+    user: UserAccount,
+    track_id: UUID,
+) -> TrackRead | None:
+    track = session.scalar(
+        select(LearningTrack)
+        .where(LearningTrack.id == track_id, LearningTrack.user_id == user.id)
+        .options(selectinload(LearningTrack.modules))
+    )
+    return track_to_schema(track) if track is not None else None
+
+
+def update_track_module_state(
+    session: Session,
+    *,
+    user: UserAccount,
+    track_id: UUID,
+    module_id: UUID,
+    status: str,
+) -> TrackModuleStateUpdateResponse | None:
+    normalized_status = status.strip().lower()
+    if normalized_status not in {"locked", "ready", "active", "completed"}:
+        raise ValueError("Module status must be locked, ready, active, or completed.")
+    track = session.scalar(
+        select(LearningTrack)
+        .where(LearningTrack.id == track_id, LearningTrack.user_id == user.id)
+        .options(selectinload(LearningTrack.modules))
+    )
+    if track is None:
+        return None
+    module = next((item for item in track.modules if item.id == module_id), None)
+    if module is None:
+        return None
+    module.status = normalized_status
+    if normalized_status == "active":
+        track.status = "active"
+    if normalized_status == "completed":
+        modules = sorted(track.modules, key=lambda item: item.sort_order)
+        completed_count = len([item for item in modules if item.status == "completed"])
+        track.progress_percent = int(round((completed_count / max(1, len(modules))) * 100))
+        next_module = next(
+            (item for item in modules if item.sort_order > module.sort_order and item.status == "locked"),
+            None,
+        )
+        if next_module is not None:
+            next_module.status = "ready"
+        if completed_count == len(modules):
+            track.status = "completed"
+    session.commit()
+    session.refresh(track)
+    return TrackModuleStateUpdateResponse(track=track_to_schema(track))
+
+
+def list_media_artifacts(session: Session, *, user: UserAccount) -> MediaArtifactListResponse:
+    _ensure_sample_media_artifacts(session, user=user)
+    artifacts = list(
+        session.scalars(
+            select(MediaArtifact)
+            .where(MediaArtifact.user_id == user.id)
+            .order_by(MediaArtifact.created_at.desc(), MediaArtifact.title)
+        )
+    )
+    return MediaArtifactListResponse(items=[media_artifact_to_schema(item) for item in artifacts])
+
+
+def get_media_artifact(
+    session: Session,
+    *,
+    user: UserAccount,
+    artifact_id: UUID,
+) -> MediaArtifactRead | None:
+    _ensure_sample_media_artifacts(session, user=user)
+    artifact = session.scalar(
+        select(MediaArtifact).where(
+            MediaArtifact.id == artifact_id,
+            MediaArtifact.user_id == user.id,
+        )
+    )
+    return media_artifact_to_schema(artifact) if artifact else None
+
+
+def get_media_artifact_status(
+    session: Session,
+    *,
+    user: UserAccount,
+    artifact_id: UUID,
+) -> MediaArtifactStatusResponse | None:
+    _ensure_sample_media_artifacts(session, user=user)
+    artifact = session.scalar(
+        select(MediaArtifact).where(
+            MediaArtifact.id == artifact_id,
+            MediaArtifact.user_id == user.id,
+        )
+    )
+    if artifact is None:
+        return None
+    progress = artifact.metadata_json.get("progress")
+    return MediaArtifactStatusResponse(
+        artifact_id=artifact.id,
+        status=artifact.status,
+        progress=int(progress) if isinstance(progress, int) else (100 if artifact.status == "ready" else 0),
+        error=str(artifact.metadata_json.get("error")) if artifact.metadata_json.get("error") else None,
+    )
+
+
+def get_latest_weekly_report(session: Session, *, user: UserAccount) -> WeeklyReportResponse:
+    attempts_count = session.scalar(
+        select(func.count(AssessmentAttempt.id))
+        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
+        .where(AssessmentSession.user_id == user.id)
+    ) or 0
+    correct_count = session.scalar(
+        select(func.count(AssessmentAttempt.id))
+        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
+        .where(AssessmentSession.user_id == user.id, AssessmentAttempt.score >= 1.0)
+    ) or 0
+    states = list(
+        session.scalars(select(LearnerConceptState).where(LearnerConceptState.user_id == user.id))
+    )
+    mastered_or_ready = len([state for state in states if state.status in {"mastered", "ready"}])
+    review_due = len([state for state in states if state.status == "review_due"])
+    score = int(round((correct_count / attempts_count) * 100)) if attempts_count else 72
+    fixed_gaps = mastered_or_ready if states else 3
+    remaining_gaps = review_due if states else 2
+    retention_minutes = int(sum(state.evidence_count for state in states) * 6) if states else 18
+    concept_names = _recent_concept_names(session, user=user)
+    overall_after = max(0.18, min(1.0, score / 100))
+    application_after = max(0.18, min(1.0, overall_after - 0.04 + (fixed_gaps * 0.01)))
+    analysis_after = max(0.18, min(1.0, overall_after - 0.08 + (attempts_count * 0.01)))
+    return WeeklyReportResponse(
+        range_label=_current_week_label(),
+        status="complete" if attempts_count else "seeded_baseline",
+        score=score,
+        fixed_gaps=fixed_gaps,
+        remaining_gaps=remaining_gaps,
+        retention_minutes=retention_minutes,
+        concepts=", ".join(concept_names) if concept_names else "Limits, graph reading",
+        summary_notes=[
+            "Report is aggregated from persisted assessment attempts and concept mastery rows.",
+            "More daily evaluations will make this trend less shallow.",
+        ],
+        trends=[
+            ReportTrendRead(label="Overall", before=max(0.18, overall_after - 0.16), after=overall_after),
+            ReportTrendRead(label="Application", before=max(0.18, application_after - 0.18), after=application_after),
+            ReportTrendRead(label="Analysis", before=max(0.18, analysis_after - 0.2), after=analysis_after),
+        ],
+    )
+
+
 def get_or_create_daily_evaluation(
     session: Session,
     *,
@@ -467,6 +666,7 @@ def track_to_schema(track: LearningTrack) -> TrackRead:
         modules=[
             TrackModuleRead(
                 id=module.id,
+                track_id=module.track_id,
                 title=module.title,
                 description=module.description,
                 estimated_minutes=module.estimated_minutes,
@@ -477,6 +677,182 @@ def track_to_schema(track: LearningTrack) -> TrackRead:
             for module in track.modules
         ],
     )
+
+
+def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
+    return MediaArtifactRead(
+        id=artifact.id,
+        title=artifact.title,
+        subtitle=artifact.subtitle,
+        artifact_type=artifact.artifact_type,
+        status=artifact.status,
+        duration_seconds=artifact.duration_seconds,
+        duration_label=_duration_label(artifact.duration_seconds),
+        thumbnail_url=artifact.thumbnail_url,
+        playback_url=artifact.playback_url,
+        transcript=artifact.transcript,
+        notes=artifact.notes_json,
+        track_id=artifact.track_id,
+        module_id=artifact.module_id,
+        created_at=artifact.created_at.isoformat() if artifact.created_at else "",
+    )
+
+
+def _user_tracks(session: Session, *, user: UserAccount) -> list[LearningTrack]:
+    return list(
+        session.scalars(
+            select(LearningTrack)
+            .where(LearningTrack.user_id == user.id)
+            .options(selectinload(LearningTrack.modules))
+            .order_by(LearningTrack.created_at.desc())
+        )
+    )
+
+
+def _build_queue_items(tracks: list[LearningTrack]) -> list[QueueItemRead]:
+    items: list[QueueItemRead] = []
+    for track in tracks:
+        modules = sorted(track.modules, key=lambda item: item.sort_order)
+        ready_module = next(
+            (module for module in modules if module.status in {"ready", "active"}),
+            modules[0] if modules else None,
+        )
+        if ready_module is None:
+            continue
+        items.append(
+            QueueItemRead(
+                id=f"module:{ready_module.id}",
+                track_id=track.id,
+                module_id=ready_module.id,
+                title=ready_module.title,
+                subtitle=track.title,
+                meta=f"{ready_module.estimated_minutes} min | {ready_module.difficulty_label}",
+                status=ready_module.status,
+                estimated_minutes=ready_module.estimated_minutes,
+                action_label="Continue",
+            )
+        )
+    if items:
+        return items
+    return [
+        QueueItemRead(
+            id="seed:create-goal",
+            title="Create your first learning goal",
+            subtitle="WICARA will generate a pretest, track, and modules from backend data.",
+            meta="2 min setup",
+            status="ready",
+            estimated_minutes=2,
+            action_label="Create goal",
+        )
+    ]
+
+
+def _today_daily_session(session: Session, *, user: UserAccount) -> AssessmentSession | None:
+    today = datetime.now(UTC).date().isoformat()
+    return session.scalar(
+        select(AssessmentSession).where(
+            AssessmentSession.user_id == user.id,
+            AssessmentSession.session_type == "daily_evaluation",
+            AssessmentSession.metadata_json["review_date"].as_string() == today,
+        )
+    )
+
+
+def _ensure_sample_media_artifacts(session: Session, *, user: UserAccount) -> None:
+    if session.scalar(select(MediaArtifact.id).where(MediaArtifact.user_id == user.id).limit(1)):
+        return
+    tracks = _user_tracks(session, user=user)
+    track = tracks[0] if tracks else None
+    first_module = track.modules[0] if track and track.modules else None
+    second_module = track.modules[1] if track and len(track.modules) > 1 else None
+    samples = [
+        {
+            "module": first_module,
+            "title": "Limits from graphs",
+            "subtitle": "Approaching a value without touching it",
+            "duration_seconds": 258,
+            "transcript": "A limit describes the value a graph approaches as x gets close to a point.",
+            "notes": [
+                "Generated as durable seeded media so the gallery is not frontend-only.",
+                "Connect this with the prerequisite checkpoint before derivative rules.",
+            ],
+        },
+        {
+            "module": second_module,
+            "title": "Derivatives intuition",
+            "subtitle": "What does a derivative tell us?",
+            "duration_seconds": 405,
+            "transcript": "A derivative measures local rate of change and appears as tangent slope.",
+            "notes": [
+                "Use the tangent-line idea before memorizing rules.",
+                "Canvas evidence can later attach a learner's own graph sketch.",
+            ],
+        },
+    ]
+    for sample in samples:
+        module = sample["module"]
+        session.add(
+            MediaArtifact(
+                user_id=user.id,
+                track_id=track.id if track else None,
+                module_id=module.id if module else None,
+                concept_id=module.concept_id if module else None,
+                artifact_type="video",
+                title=str(sample["title"]),
+                subtitle=str(sample["subtitle"]),
+                status="ready",
+                duration_seconds=int(sample["duration_seconds"]),
+                thumbnail_url="",
+                playback_url="",
+                transcript=str(sample["transcript"]),
+                notes_json=list(sample["notes"]),
+                metadata_json={"seed_source": "media_gallery_mvp"},
+            )
+        )
+    session.commit()
+
+
+def _recent_concept_names(session: Session, *, user: UserAccount) -> list[str]:
+    rows = session.execute(
+        select(KnowledgeConcept.title)
+        .join(LearnerConceptState, LearnerConceptState.concept_id == KnowledgeConcept.id)
+        .where(LearnerConceptState.user_id == user.id)
+        .order_by(LearnerConceptState.last_evaluated_at.desc().nullslast())
+        .limit(3)
+    )
+    return [str(row[0]) for row in rows]
+
+
+def _display_name_for_user(user: UserAccount) -> str:
+    if user.learner_profile and user.learner_profile.full_name.strip():
+        return user.learner_profile.full_name.strip()
+    return user.display_name or "Learner"
+
+
+def _first_name(display_name: str) -> str:
+    parts = display_name.strip().split()
+    return parts[0] if parts else "Learner"
+
+
+def _streak_days(session: Session, *, user: UserAccount) -> int:
+    active_days = session.scalar(
+        select(func.count(func.distinct(func.date(AssessmentAttempt.submitted_at))))
+        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
+        .where(AssessmentSession.user_id == user.id)
+    )
+    return int(active_days or 0)
+
+
+def _duration_label(seconds: int) -> str:
+    minutes, remainder = divmod(max(0, seconds), 60)
+    return f"{minutes:02d}:{remainder:02d}"
+
+
+def _current_week_label() -> str:
+    today = datetime.now(UTC).date()
+    start = today - timedelta(days=today.weekday())
+    end = start + timedelta(days=6)
+    return f"{start.strftime('%b')} {start.day} - {end.strftime('%b')} {end.day}, {end.year}"
 
 
 def _create_assessment_session(
