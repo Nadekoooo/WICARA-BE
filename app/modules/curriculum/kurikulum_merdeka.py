@@ -104,6 +104,10 @@ def load_kurikulum_merdeka_seed_data(
 
 
 def find_default_graph_path() -> Path:
+    module_data_path = Path(__file__).resolve().parent / "data" / GRAPH_FILE_NAME
+    if module_data_path.exists():
+        return module_data_path
+
     for parent in Path(__file__).resolve().parents:
         candidate = parent / GRAPH_FILE_NAME
         if candidate.exists():
@@ -160,6 +164,7 @@ def _build_seed_data(
                     display_order=concept_order,
                     layout_x=group["x"],
                     layout_y=NODE_Y_START + (local_index * NODE_Y_GAP),
+                    local_group_order=local_index + 1,
                 )
             )
             concept_order += 1
@@ -389,12 +394,17 @@ def _concept_seed(
     display_order: int,
     layout_x: float,
     layout_y: float,
+    local_group_order: int,
 ) -> ConceptSeed:
     title = _string(node, "label_id", fallback=_string(node, "label_en"))
     metadata = dict(node)
     metadata.update(
         {
-            "default_status": _preview_status(node),
+            "default_status": _preview_status(
+                node,
+                local_group_order=local_group_order,
+            ),
+            "local_group_order": local_group_order,
             "preview_status_only": True,
             "source_node_id": _string(node, "id"),
             "source_curriculum_graph": GRAPH_FILE_NAME,
@@ -480,9 +490,9 @@ def _grade_band(node: dict[str, Any]) -> str | None:
     return f"Fase {phase} ({school_level} {grade_range})".strip()
 
 
-def _preview_status(node: dict[str, Any]) -> str:
+def _preview_status(node: dict[str, Any], *, local_group_order: int) -> str:
     phase = _string(node, "phase")
-    difficulty = _int(node.get("difficulty_order"), fallback=0)
+    difficulty = local_group_order
 
     if phase in {"A", "B"}:
         return "mastered"

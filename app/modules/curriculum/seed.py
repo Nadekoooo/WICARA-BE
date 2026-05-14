@@ -64,8 +64,10 @@ def seed_curriculum(
     session.flush()
 
     concepts_by_code: dict[str, KnowledgeConcept] = {}
+    current_concept_keys: set[tuple[str, str]] = set()
     for concept_data in seed_data.concepts:
         subject = subjects_by_code[concept_data.subject_code]
+        current_concept_keys.add((subject.code, concept_data.code))
         concept = session.scalar(
             select(KnowledgeConcept).where(
                 KnowledgeConcept.subject_id == subject.id,
@@ -88,9 +90,13 @@ def seed_curriculum(
         concept.display_order = concept_data.display_order
         concept.layout_x = concept_data.layout_x
         concept.layout_y = concept_data.layout_y
-        concept.metadata_json = concept_data.metadata
+        metadata = dict(concept_data.metadata)
+        metadata.pop("stale_seed", None)
+        metadata.pop("stale_reason", None)
+        concept.metadata_json = metadata
         concepts_by_code[concept.code] = concept
 
+    _mark_stale_concepts(session, subjects_by_code, current_concept_keys)
     session.flush()
 
     for edge_data in seed_data.edges:
@@ -140,6 +146,25 @@ def _deactivate_legacy_subject_aliases(
             **(legacy_subject.metadata_json or {}),
             "superseded_by": canonical_subject_code(alias),
         }
+
+
+def _mark_stale_concepts(
+    session: Session,
+    subjects_by_code: dict[str, Subject],
+    current_concept_keys: set[tuple[str, str]],
+) -> None:
+    for subject in subjects_by_code.values():
+        concepts = session.scalars(
+            select(KnowledgeConcept).where(KnowledgeConcept.subject_id == subject.id)
+        )
+        for concept in concepts:
+            if (subject.code, concept.code) in current_concept_keys:
+                continue
+            concept.metadata_json = {
+                **(concept.metadata_json or {}),
+                "stale_seed": True,
+                "stale_reason": "not_present_in_current_curriculum_seed",
+            }
 
 
 def main() -> None:
