@@ -16,6 +16,7 @@ from app.main import create_app  # noqa: E402
 from app.modules.accounts import models as account_models  # noqa: F401,E402
 from app.modules.curriculum import models as curriculum_models  # noqa: F401,E402
 from app.modules.learning import models as learning_models  # noqa: F401,E402
+from app.modules.workspaces import models as workspace_models  # noqa: F401,E402
 
 
 @pytest.fixture()
