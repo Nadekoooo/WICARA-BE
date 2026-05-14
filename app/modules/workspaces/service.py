@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
+from app.modules.inputs.service import create_workspace_input_event
 from app.modules.learning.models import LearningTrack, MediaArtifact, TrackModule
 from app.modules.learning.service import media_artifact_to_schema
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
@@ -105,6 +106,17 @@ def append_workspace_event(
     if media_artifact_id is not None:
         _resolve_owned_media_artifact(session, user=user, media_artifact_id=media_artifact_id)
 
+    input_event = create_workspace_input_event(
+        session,
+        user=user,
+        workspace_session_id=workspace.id,
+        source_event_type=normalized_event_type,
+        actor_type=normalized_actor_type,
+        text_payload=text_payload,
+        image_asset_id=image_asset_id,
+        media_artifact_id=media_artifact_id,
+        metadata=metadata,
+    )
     event = WorkspaceEvent(
         workspace_session_id=workspace.id,
         event_index=_next_event_index(session, workspace_id=workspace.id),
@@ -113,6 +125,7 @@ def append_workspace_event(
         text_payload=text_payload.strip(),
         image_asset_id=image_asset_id,
         media_artifact_id=media_artifact_id,
+        input_event_id=input_event.id,
         metadata_json=metadata,
     )
     workspace.updated_at = datetime.now(UTC)
@@ -158,6 +171,7 @@ def event_to_schema(event: WorkspaceEvent) -> WorkspaceEventRead:
         text_payload=event.text_payload,
         image_asset_id=event.image_asset_id,
         media_artifact_id=event.media_artifact_id,
+        input_event_id=event.input_event_id,
         metadata=event.metadata_json or {},
         created_at=event.created_at.isoformat() if event.created_at else "",
     )

@@ -32,6 +32,7 @@ class WorkspaceEventRead(BaseModel):
     text_payload: str
     image_asset_id: UUID | None = None
     media_artifact_id: UUID | None = None
+    input_event_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: str
 

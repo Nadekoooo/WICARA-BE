@@ -60,6 +60,7 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
     assert text_payload["event"]["event_type"] == "text"
     assert text_payload["event"]["actor_type"] == "learner"
     assert text_payload["event"]["event_index"] == 1
+    assert text_payload["event"]["input_event_id"]
     assert text_payload["event"]["text_payload"] == "Kenapa limit harus dicek sebelum turunan?"
     assert text_payload["event"]["metadata"] == {"client_event_id": "local-1"}
     assert text_payload["tutor_response"] is None
@@ -79,6 +80,7 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
     assert image_response.status_code == 200
     image_payload = image_response.json()
     assert image_payload["event"]["event_index"] == 2
+    assert image_payload["event"]["input_event_id"]
     assert image_payload["event"]["image_asset_id"] == image_asset_id
     assert image_payload["workspace"]["last_image_asset_id"] == image_asset_id
 

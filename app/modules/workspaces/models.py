@@ -96,6 +96,10 @@ class WorkspaceEvent(Base):
         Uuid(as_uuid=True),
         ForeignKey("media_artifacts.id", ondelete="SET NULL"),
     )
+    input_event_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("input_events.id", ondelete="SET NULL"),
+    )
     metadata_json: Mapped[dict[str, Any]] = mapped_column(
         "metadata", json_dict_type, nullable=False, default=dict
     )
