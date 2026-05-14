@@ -50,6 +50,112 @@ def list_tracks(
     return service.list_tracks(session, user=account)
 
 
+@router.get("/home", response_model=schemas.HomeSummaryResponse)
+def home_summary(
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.HomeSummaryResponse:
+    return service.get_home_summary(session, user=account)
+
+
+@router.get("/learning-queue", response_model=schemas.LearningQueueResponse)
+def learning_queue(
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.LearningQueueResponse:
+    return service.get_learning_queue(session, user=account)
+
+
+@router.get("/tracks/{track_id}/modules", response_model=schemas.TrackRead)
+def track_modules(
+    track_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.TrackRead:
+    track = service.get_track_modules(session, user=account, track_id=track_id)
+    if track is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track was not found.")
+    return track
+
+
+@router.patch(
+    "/tracks/{track_id}/modules/{module_id}/state",
+    response_model=schemas.TrackModuleStateUpdateResponse,
+)
+def update_track_module_state(
+    track_id: UUID,
+    module_id: UUID,
+    payload: schemas.TrackModuleStateUpdateRequest,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.TrackModuleStateUpdateResponse:
+    try:
+        result = service.update_track_module_state(
+            session,
+            user=account,
+            track_id=track_id,
+            module_id=module_id,
+            status=payload.status,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Track module was not found.",
+        )
+    return result
+
+
+@router.get("/media-artifacts", response_model=schemas.MediaArtifactListResponse)
+def media_artifacts(
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.MediaArtifactListResponse:
+    return service.list_media_artifacts(session, user=account)
+
+
+@router.get("/media-artifacts/{artifact_id}", response_model=schemas.MediaArtifactRead)
+def media_artifact_detail(
+    artifact_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.MediaArtifactRead:
+    artifact = service.get_media_artifact(session, user=account, artifact_id=artifact_id)
+    if artifact is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Media artifact was not found.",
+        )
+    return artifact
+
+
+@router.get(
+    "/media-artifacts/{artifact_id}/status",
+    response_model=schemas.MediaArtifactStatusResponse,
+)
+def media_artifact_status(
+    artifact_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.MediaArtifactStatusResponse:
+    artifact = service.get_media_artifact_status(session, user=account, artifact_id=artifact_id)
+    if artifact is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Media artifact was not found.",
+        )
+    return artifact
+
+
+@router.get("/reports/weekly/latest", response_model=schemas.WeeklyReportResponse)
+def latest_weekly_report(
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WeeklyReportResponse:
+    return service.get_latest_weekly_report(session, user=account)
+
+
 @router.get("/pretests/{learning_goal_id}", response_model=schemas.PretestReadResponse)
 def read_pretest(
     learning_goal_id: UUID,
