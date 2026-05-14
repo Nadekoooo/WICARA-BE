@@ -11,8 +11,10 @@ from app.modules.accounts.models import UserAccount
 from app.modules.inputs.service import create_workspace_input_event
 from app.modules.learning.models import LearningTrack, MediaArtifact, TrackModule
 from app.modules.learning.service import media_artifact_to_schema
+from app.modules.workspaces.mastery import WorkspaceMasteryService
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 from app.modules.workspaces.schemas import (
+    TutorResponseRead,
     WorkspaceEventCreateResponse,
     WorkspaceEventRead,
     WorkspaceRead,
@@ -27,6 +29,7 @@ VALID_EVENT_TYPES = {
     "note",
 }
 VALID_ACTOR_TYPES = {"learner", "tutor", "system"}
+_mastery_service = WorkspaceMasteryService()
 
 
 def create_or_resume_workspace(
@@ -68,6 +71,8 @@ def create_or_resume_workspace(
         workspace.content_mode = _normalize_content_mode(content_mode)
         workspace.status = "active"
         workspace.updated_at = datetime.now(UTC)
+    module.status = "active"
+    track.status = "active"
 
     session.commit()
     workspace = _load_workspace(session, user=user, workspace_id=workspace.id)
@@ -106,16 +111,38 @@ def append_workspace_event(
     if media_artifact_id is not None:
         _resolve_owned_media_artifact(session, user=user, media_artifact_id=media_artifact_id)
 
+    module = session.get(TrackModule, workspace.module_id)
+    event_metadata = dict(metadata)
+    audit_metadata = {
+        **metadata,
+        "track_id": str(workspace.track_id),
+        "module_id": str(workspace.module_id),
+        "tutor_policy": "deterministic_workspace_mvp",
+    }
+    mastery_result = _mastery_service.apply_event(
+        session,
+        user=user,
+        module=module,
+        event_type=normalized_event_type,
+        text_payload=text_payload,
+        metadata=audit_metadata,
+    )
+    if mastery_result.concept_id is not None:
+        audit_metadata["concept_id"] = str(mastery_result.concept_id)
+    if mastery_result.update is not None:
+        audit_metadata["mastery_update_reason"] = mastery_result.update.reason
+
     input_event = create_workspace_input_event(
         session,
         user=user,
         workspace_session_id=workspace.id,
+        concept_id=mastery_result.concept_id,
         source_event_type=normalized_event_type,
         actor_type=normalized_actor_type,
         text_payload=text_payload,
         image_asset_id=image_asset_id,
         media_artifact_id=media_artifact_id,
-        metadata=metadata,
+        metadata=audit_metadata,
     )
     event = WorkspaceEvent(
         workspace_session_id=workspace.id,
@@ -126,8 +153,10 @@ def append_workspace_event(
         image_asset_id=image_asset_id,
         media_artifact_id=media_artifact_id,
         input_event_id=input_event.id,
-        metadata_json=metadata,
+        metadata_json=event_metadata,
     )
+    if normalized_event_type == "quiz_answer" and audit_metadata.get("is_correct") is True:
+        _complete_workspace_module(session, user=user, workspace=workspace)
     workspace.updated_at = datetime.now(UTC)
     session.add(event)
     session.commit()
@@ -137,7 +166,12 @@ def append_workspace_event(
     assert workspace is not None
     return WorkspaceEventCreateResponse(
         event=event_to_schema(event),
-        tutor_response=None,
+        tutor_response=_deterministic_tutor_response(
+            event_type=normalized_event_type,
+            text_payload=text_payload,
+            metadata=audit_metadata,
+        ),
+        mastery_update=mastery_result.update,
         workspace=workspace_to_schema(session, workspace),
     )
 
@@ -257,6 +291,95 @@ def _normalize_actor_type(actor_type: str) -> str:
 def _normalize_content_mode(content_mode: str) -> str:
     normalized = content_mode.strip().lower().replace("-", "_").replace(" ", "_")
     return normalized or "chat"
+
+
+def _complete_workspace_module(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace: WorkspaceSession,
+) -> None:
+    track = session.scalar(
+        select(LearningTrack)
+        .where(LearningTrack.id == workspace.track_id, LearningTrack.user_id == user.id)
+        .options(selectinload(LearningTrack.modules))
+    )
+    if track is None:
+        return
+    module = next((item for item in track.modules if item.id == workspace.module_id), None)
+    if module is None:
+        return
+
+    module.status = "completed"
+    modules = sorted(track.modules, key=lambda item: item.sort_order)
+    completed_count = len([item for item in modules if item.status == "completed"])
+    track.progress_percent = int(round((completed_count / max(1, len(modules))) * 100))
+    next_module = next(
+        (
+            item
+            for item in modules
+            if item.sort_order > module.sort_order and item.status == "locked"
+        ),
+        None,
+    )
+    if next_module is not None:
+        next_module.status = "ready"
+    if completed_count == len(modules):
+        track.status = "completed"
+    else:
+        track.status = "active"
+
+
+def _deterministic_tutor_response(
+    *,
+    event_type: str,
+    text_payload: str,
+    metadata: dict[str, Any],
+) -> TutorResponseRead | None:
+    if event_type == "text":
+        if not text_payload.strip():
+            return None
+        return TutorResponseRead(
+            text=(
+                "I saved that as workspace evidence. Try connecting it to the "
+                "module idea, then use the canvas if a diagram would make the "
+                "reasoning clearer."
+            ),
+            intent="ask_followup",
+            next_actions=["explain_reasoning", "use_canvas", "answer_quiz"],
+        )
+    if event_type == "canvas_sent":
+        element_count = metadata.get("element_count")
+        return TutorResponseRead(
+            text=(
+                f"I saved your canvas snapshot with {element_count or 'some'} "
+                "elements. Now write one sentence explaining what the sketch proves."
+            ),
+            intent="ask_followup",
+            next_actions=["summarize_canvas", "answer_quiz"],
+        )
+    if event_type == "quiz_answer":
+        if metadata.get("is_correct") is True:
+            return TutorResponseRead(
+                text="Correct. I updated this module evidence and you can move to the next step.",
+                intent="recommend_practice",
+                next_actions=["complete_module", "continue_next_module"],
+            )
+        return TutorResponseRead(
+            text=(
+                "Not quite. Review the graph behavior from the left and right sides, "
+                "then try the quiz again."
+            ),
+            intent="correct_misconception",
+            next_actions=["review_explanation", "use_canvas", "retry_quiz"],
+        )
+    if event_type == "media_generated":
+        return TutorResponseRead(
+            text="I recorded the generated media as a learning intervention for this module.",
+            intent="explain",
+            next_actions=["watch_media", "answer_quiz"],
+        )
+    return None
 
 
 def _latest_image_asset_id(events: list[WorkspaceEvent]) -> UUID | None:

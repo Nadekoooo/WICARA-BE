@@ -91,6 +91,61 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
     assert loaded["last_image_asset_id"] == image_asset_id
 
 
+def test_workspace_quiz_event_updates_mastery_and_completes_module(client):
+    _override_account(client)
+    track_id, module_id = _create_track_and_concept_module(client)
+
+    workspace_response = client.post(
+        "/api/v1/workspaces",
+        json={
+            "track_id": track_id,
+            "module_id": module_id,
+            "content_mode": "chat",
+        },
+    )
+    assert workspace_response.status_code == 200
+
+    modules_response = client.get(f"/api/v1/tracks/{track_id}/modules")
+    assert modules_response.status_code == 200
+    modules = modules_response.json()["modules"]
+    active_module = next(module for module in modules if module["id"] == module_id)
+    assert active_module["status"] == "active"
+
+    event_response = client.post(
+        f"/api/v1/workspaces/{workspace_response.json()['id']}/events",
+        json={
+            "event_type": "quiz_answer",
+            "actor_type": "learner",
+            "text_payload": "3",
+            "metadata": {
+                "question_id": "limit-graph-check",
+                "selected_answer": "3",
+                "correct_answer": "3",
+                "is_correct": True,
+            },
+        },
+    )
+
+    assert event_response.status_code == 200
+    payload = event_response.json()
+    assert payload["tutor_response"]["text"]
+    assert payload["tutor_response"]["intent"] == "recommend_practice"
+    assert payload["mastery_update"]["evidence_count"] == 1
+    assert payload["mastery_update"]["mastery_score"] > 0
+    assert payload["mastery_update"]["status"] == "ready"
+
+    modules_response = client.get(f"/api/v1/tracks/{track_id}/modules")
+    modules = modules_response.json()["modules"]
+    completed_module = next(module for module in modules if module["id"] == module_id)
+    next_module = next(
+        module
+        for module in modules
+        if module["sort_order"] == completed_module["sort_order"] + 1
+    )
+    assert completed_module["status"] == "completed"
+    assert next_module["status"] == "ready"
+
+
 def test_workspace_rejects_event_with_unknown_type(client):
     _override_account(client)
     track_id, module_id = _create_track_and_first_module(client)
@@ -123,6 +178,27 @@ def _create_track_and_first_module(client) -> tuple[str, str]:
     assert track_response.status_code == 200
     track = track_response.json()
     return track_id, track["modules"][0]["id"]
+
+
+def _create_track_and_concept_module(client) -> tuple[str, str]:
+    goal_response = client.post(
+        "/api/v1/learning-goals",
+        json={"raw_topic": "derivative rules"},
+    )
+    assert goal_response.status_code == 200
+    track_id = goal_response.json()["track_id"]
+
+    track_response = client.get(f"/api/v1/tracks/{track_id}/modules")
+    assert track_response.status_code == 200
+    track = track_response.json()
+    concept_module = next(module for module in track["modules"] if module["sort_order"] == 2)
+
+    activate_response = client.patch(
+        f"/api/v1/tracks/{track_id}/modules/{concept_module['id']}/state",
+        json={"status": "ready"},
+    )
+    assert activate_response.status_code == 200
+    return track_id, concept_module["id"]
 
 
 def _override_account(client) -> None:
