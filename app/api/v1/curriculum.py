@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
+from app.modules.accounts.dependencies import get_optional_current_account
+from app.modules.accounts.models import UserAccount
 from app.modules.curriculum import schemas, service
 
 router = APIRouter()
@@ -18,9 +20,10 @@ def list_subjects(session: Session = Depends(get_session)) -> schemas.SubjectLis
 @router.get("/knowledge-map", response_model=schemas.KnowledgeMapResponse)
 def get_knowledge_map(
     subject: str = Query(..., min_length=1),
+    account: UserAccount | None = Depends(get_optional_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.KnowledgeMapResponse:
-    knowledge_map = service.get_knowledge_map(session, subject_code=subject)
+    knowledge_map = service.get_knowledge_map(session, subject_code=subject, user=account)
     if knowledge_map is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -36,12 +39,14 @@ def get_knowledge_map(
 def get_concept_detail(
     concept_code: str,
     subject: str | None = Query(default=None, min_length=1),
+    account: UserAccount | None = Depends(get_optional_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.ConceptDetailResponse:
     detail = service.get_concept_detail(
         session,
         concept_code=concept_code,
         subject_code=subject,
+        user=account,
     )
     if detail is None:
         raise HTTPException(
