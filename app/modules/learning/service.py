@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -23,11 +23,15 @@ from app.modules.learning.models import (
     TrackModule,
 )
 from app.modules.learning.schemas import (
+    ActionRead,
     AssessmentOptionRead,
     AssessmentQuestionRead,
     DailyEvaluationAnswerResponse,
+    DailyEvaluationNextReviewRead,
     DailyEvaluationResponse,
+    DailyEvaluationResultResponse,
     DailySummaryRead,
+    GapMetricRead,
     HomeSummaryResponse,
     KnowledgeStateResponse,
     LearningQueueResponse,
@@ -38,13 +42,25 @@ from app.modules.learning.schemas import (
     MediaArtifactStatusResponse,
     PretestReadResponse,
     QueueItemRead,
+    RecommendationCalloutRead,
+    RecommendedNextActionRead,
     ReportTrendRead,
+    ReportPerformanceGroupRead,
+    RetentionForecastPointRead,
+    RetentionForecastRead,
+    ReviewDueRead,
+    ReviewedConceptRead,
+    SpacedRepetitionImpactRead,
     SubmitAnswerResponse,
     TrackListResponse,
     TrackModuleRead,
     TrackModuleStateUpdateResponse,
     TrackRead,
+    UnlockedConceptSummaryRead,
+    UpcomingRecommendationRead,
+    ConsistencySummaryRead,
     WeeklyReportResponse,
+    ProgressRead,
 )
 
 
@@ -515,46 +531,123 @@ def get_media_artifact_status(
 
 
 def get_latest_weekly_report(session: Session, *, user: UserAccount) -> WeeklyReportResponse:
-    attempts_count = session.scalar(
-        select(func.count(AssessmentAttempt.id))
-        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
-        .where(AssessmentSession.user_id == user.id)
-    ) or 0
-    correct_count = session.scalar(
-        select(func.count(AssessmentAttempt.id))
-        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
-        .where(AssessmentSession.user_id == user.id, AssessmentAttempt.score >= 1.0)
-    ) or 0
+    week_start, week_end = _current_week_range()
+    return get_weekly_report(session, user=user, start=week_start, end=week_end)
+
+
+def get_weekly_report(
+    session: Session,
+    *,
+    user: UserAccount,
+    start: date,
+    end: date,
+) -> WeeklyReportResponse:
+    start_at, end_at = _date_range_bounds(start, end)
+    range_attempts = _assessment_attempt_rows(
+        session,
+        user=user,
+        submitted_from=start_at,
+        submitted_before=end_at,
+    )
+    baseline_attempts = _assessment_attempt_rows(
+        session,
+        user=user,
+        submitted_before=start_at,
+    )
+    attempts_count = len(range_attempts)
     states = list(
         session.scalars(select(LearnerConceptState).where(LearnerConceptState.user_id == user.id))
     )
     mastered_or_ready = len([state for state in states if state.status in {"mastered", "ready"}])
-    review_due = len([state for state in states if state.status == "review_due"])
-    score = int(round((correct_count / attempts_count) * 100)) if attempts_count else 72
-    fixed_gaps = mastered_or_ready if states else 3
+    review_due = len([state for state in states if state.status in {"review_due", "gap"}])
+    fixed_in_range = len(
+        [
+            state
+            for state in states
+            if state.status in {"mastered", "ready"}
+            and state.last_evaluated_at is not None
+            and start_at <= _as_utc(state.last_evaluated_at) < end_at
+        ]
+    )
+    score = _attempt_correct_percent(range_attempts) if range_attempts else 72
+    fixed_gaps = fixed_in_range if fixed_in_range else (mastered_or_ready if states else 3)
     remaining_gaps = review_due if states else 2
     retention_minutes = int(sum(state.evidence_count for state in states) * 6) if states else 18
     concept_names = _recent_concept_names(session, user=user)
-    overall_after = max(0.18, min(1.0, score / 100))
-    application_after = max(0.18, min(1.0, overall_after - 0.04 + (fixed_gaps * 0.01)))
-    analysis_after = max(0.18, min(1.0, overall_after - 0.08 + (attempts_count * 0.01)))
+    trends = _report_trends(range_attempts=range_attempts, baseline_attempts=baseline_attempts)
+    fixed_delta = fixed_in_range if attempts_count or states else 4
+    remaining_delta = -max(1, min(3, remaining_gaps)) if attempts_count else -2
+    unlocked_count = max(1, min(8, mastered_or_ready or len(concept_names) or 3))
+    unlocked_concepts = concept_names[:unlocked_count] or [
+        "Limits from graphs",
+        "Derivative intuition",
+        "Application translation",
+    ]
+    recommendations = _weekly_recommendations(
+        session=session,
+        user=user,
+        states=states,
+        remaining_gaps=remaining_gaps,
+        week_end=end,
+    )
+    has_baseline = bool(baseline_attempts)
+    status = "complete" if attempts_count else "seeded_baseline"
+    if attempts_count and has_baseline:
+        source = "derived_from_range_assessments_and_mastery"
+    elif attempts_count:
+        source = "derived_from_range_assessments_no_baseline"
+    elif states:
+        source = "derived_from_mastery_state"
+    else:
+        source = "seeded_mvp"
     return WeeklyReportResponse(
-        range_label=_current_week_label(),
-        status="complete" if attempts_count else "seeded_baseline",
+        range_label=_format_week_label(start, end),
+        range_start=start.isoformat(),
+        range_end=end.isoformat(),
+        status=status,
+        source=source,
         score=score,
         fixed_gaps=fixed_gaps,
+        fixed_gaps_delta=fixed_delta,
         remaining_gaps=remaining_gaps,
+        remaining_gaps_delta=remaining_delta,
         retention_minutes=retention_minutes,
         concepts=", ".join(concept_names) if concept_names else "Limits, graph reading",
         summary_notes=[
-            "Report is aggregated from persisted assessment attempts and concept mastery rows.",
-            "More daily evaluations will make this trend less shallow.",
+            "Report is aggregated from persisted attempts submitted inside the selected date range.",
+            "Gap deltas are inferred from current mastery because historical state snapshots are not yet stored.",
         ],
-        trends=[
-            ReportTrendRead(label="Overall", before=max(0.18, overall_after - 0.16), after=overall_after),
-            ReportTrendRead(label="Application", before=max(0.18, application_after - 0.18), after=application_after),
-            ReportTrendRead(label="Analysis", before=max(0.18, analysis_after - 0.2), after=analysis_after),
+        trends=trends,
+        performance_groups=[
+            ReportPerformanceGroupRead(
+                label=trend.label,
+                pre_test_percent=round(trend.before * 100),
+                post_test_percent=round(trend.after * 100),
+            )
+            for trend in trends
         ],
+        gap_metrics={
+            "fixed": GapMetricRead(
+                count=fixed_gaps,
+                weekly_delta=fixed_delta,
+                delta_label=f"+{fixed_delta} this week",
+            ),
+            "remaining": GapMetricRead(
+                count=remaining_gaps,
+                weekly_delta=remaining_delta,
+                delta_label=f"{remaining_delta} this week",
+            ),
+        },
+        unlocked_this_week=UnlockedConceptSummaryRead(
+            count=unlocked_count,
+            concepts=unlocked_concepts,
+        ),
+        upcoming_recommendations=recommendations,
+        consistency_summary=ConsistencySummaryRead(
+            title="Consistency is compounding.",
+            narrative="Keep it up - your future self will thank you.",
+            signal="daily_review_and_gap_closure",
+        ),
     )
 
 
@@ -598,15 +691,45 @@ def get_or_create_daily_evaluation(
             )
         )
     assert assessment is not None
+    completed_question_ids = _answered_question_ids(session, assessment_id=assessment.id)
+    questions = [question_to_schema(question) for question in assessment.questions]
+    total_questions = len(questions)
+    completed_count = len(completed_question_ids)
+    current_question = next(
+        (question for question in assessment.questions if question.id not in completed_question_ids),
+        assessment.questions[0] if assessment.questions else None,
+    )
+    due_count = max(0, total_questions - completed_count)
     return DailyEvaluationResponse(
         session_id=assessment.id,
         title=assessment.title,
         status=assessment.status,
+        language=_language_for_user(user),
+        source=_daily_source(assessment),
         review_policy={
             "strategy": "spaced_repetition_mvp",
             "basis": "due concepts first, seeded review templates when no due concepts exist",
         },
-        questions=[question_to_schema(question) for question in assessment.questions],
+        review_due=ReviewDueRead(
+            title="Review due",
+            due_count=due_count,
+            summary=f"{due_count} items ready for review",
+            action_label="Start" if completed_count == 0 else "Continue",
+        ),
+        progress=ProgressRead(
+            current=min(total_questions, completed_count + 1) if total_questions else 0,
+            total=total_questions,
+            completed=completed_count,
+            label=(
+                f"{min(total_questions, completed_count + 1)} of {total_questions}"
+                if total_questions
+                else "0 of 0"
+            ),
+        ),
+        question=question_to_schema(current_question) if current_question else None,
+        questions=questions,
+        retention_forecast=_retention_forecast(completed_count=completed_count),
+        recommendation_callout=_daily_recommendation_callout(due_count=due_count),
     )
 
 
@@ -627,11 +750,105 @@ def submit_daily_answer_response(
         option_id=option_id,
         confidence=confidence,
     )
+    assessment = session.scalar(
+        select(AssessmentSession)
+        .where(
+            AssessmentSession.id == assessment_session_id,
+            AssessmentSession.user_id == user.id,
+            AssessmentSession.session_type == "daily_evaluation",
+        )
+        .options(selectinload(AssessmentSession.questions))
+    )
+    completed = False
+    session_status = "active"
+    if assessment is not None:
+        completed_question_ids = _answered_question_ids(session, assessment_id=assessment.id)
+        completed = bool(assessment.questions) and len(completed_question_ids) >= len(assessment.questions)
+        if completed:
+            assessment.status = "completed"
+            assessment.completed_at = datetime.now(UTC)
+            session.commit()
+        session_status = assessment.status
     return DailyEvaluationAnswerResponse(
         attempt_id=attempt.id,
         is_correct=is_correct,
         next_review_label="Review tomorrow" if not is_correct else "Review in 3 days",
         mastery_delta=0.08 if is_correct else -0.04,
+        session_status=session_status,
+        completed=completed,
+    )
+
+
+def get_daily_evaluation_result(
+    session: Session,
+    *,
+    user: UserAccount,
+    assessment_session_id: UUID,
+) -> DailyEvaluationResultResponse | None:
+    assessment = session.scalar(
+        select(AssessmentSession)
+        .where(
+            AssessmentSession.id == assessment_session_id,
+            AssessmentSession.user_id == user.id,
+            AssessmentSession.session_type == "daily_evaluation",
+        )
+        .options(selectinload(AssessmentSession.questions))
+    )
+    if assessment is None:
+        return None
+
+    attempts = list(
+        session.scalars(
+            select(AssessmentAttempt)
+            .where(AssessmentAttempt.session_id == assessment.id)
+            .order_by(AssessmentAttempt.submitted_at)
+        )
+    )
+    reviewed_count = len(attempts)
+    correct_count = len([attempt for attempt in attempts if attempt.score >= 1.0])
+    review_again_count = max(0, reviewed_count - correct_count)
+    score_percent = int(round((correct_count / reviewed_count) * 100)) if reviewed_count else 0
+    interval_days = 3 if review_again_count else 7
+    due_date = datetime.now(UTC).date() + timedelta(days=interval_days)
+
+    if assessment.questions and len(_answered_question_ids(session, assessment_id=assessment.id)) >= len(
+        assessment.questions
+    ):
+        assessment.status = "completed"
+        assessment.completed_at = assessment.completed_at or datetime.now(UTC)
+        session.commit()
+
+    reviewed_concepts = _reviewed_concepts(session, user=user, assessment=assessment, attempts=attempts)
+    return DailyEvaluationResultResponse(
+        session_id=assessment.id,
+        title=assessment.title,
+        status=assessment.status,
+        source=_daily_source(assessment),
+        score_percent=score_percent,
+        reviewed_count=reviewed_count,
+        correct_count=correct_count,
+        review_again_count=review_again_count,
+        reviewed_concepts=reviewed_concepts,
+        spaced_repetition_impact=SpacedRepetitionImpactRead(
+            retention_lift_percent=_retention_lift_percent(correct_count, review_again_count),
+            days_until_next_review=interval_days,
+            summary="You've strengthened your memory." if reviewed_count else "No review evidence yet.",
+        ),
+        next_review=DailyEvaluationNextReviewRead(
+            label=f"Review in {interval_days} days",
+            due_date=due_date.isoformat(),
+            interval_days=interval_days,
+        ),
+        recommended_next_actions=_daily_next_actions(
+            reviewed_concepts=reviewed_concepts,
+            review_again_count=review_again_count,
+            due_date=due_date,
+        ),
+        back_to_home=ActionRead(
+            label="Back to Home",
+            action_type="navigate",
+            target="/home",
+        ),
     )
 
 
@@ -812,6 +1029,123 @@ def _ensure_sample_media_artifacts(session: Session, *, user: UserAccount) -> No
     session.commit()
 
 
+def _date_range_bounds(start: date, end: date) -> tuple[datetime, datetime]:
+    start_at = datetime(start.year, start.month, start.day, tzinfo=UTC)
+    exclusive_end = end + timedelta(days=1)
+    end_at = datetime(exclusive_end.year, exclusive_end.month, exclusive_end.day, tzinfo=UTC)
+    return start_at, end_at
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _assessment_attempt_rows(
+    session: Session,
+    *,
+    user: UserAccount,
+    submitted_from: datetime | None = None,
+    submitted_before: datetime | None = None,
+) -> list[tuple[AssessmentAttempt, AssessmentQuestion]]:
+    query = (
+        select(AssessmentAttempt, AssessmentQuestion)
+        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
+        .join(AssessmentQuestion, AssessmentAttempt.question_id == AssessmentQuestion.id)
+        .where(AssessmentSession.user_id == user.id)
+        .order_by(AssessmentAttempt.submitted_at)
+    )
+    if submitted_from is not None:
+        query = query.where(AssessmentAttempt.submitted_at >= submitted_from)
+    if submitted_before is not None:
+        query = query.where(AssessmentAttempt.submitted_at < submitted_before)
+    return [(attempt, question) for attempt, question in session.execute(query)]
+
+
+def _attempt_correct_percent(rows: list[tuple[AssessmentAttempt, AssessmentQuestion]]) -> int:
+    if not rows:
+        return 0
+    correct = len([attempt for attempt, _question in rows if attempt.score >= 1.0])
+    return int(round((correct / len(rows)) * 100))
+
+
+def _weighted_analysis_percent(rows: list[tuple[AssessmentAttempt, AssessmentQuestion]]) -> int:
+    if not rows:
+        return 0
+    weighted_score = 0.0
+    total_weight = 0.0
+    for attempt, _question in rows:
+        confidence_weight = max(1, min(10, attempt.confidence or 1)) / 10
+        total_weight += confidence_weight
+        weighted_score += (attempt.score or 0.0) * confidence_weight
+    return int(round((weighted_score / max(total_weight, 0.01)) * 100))
+
+
+def _application_rows(
+    rows: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+) -> list[tuple[AssessmentAttempt, AssessmentQuestion]]:
+    selected: list[tuple[AssessmentAttempt, AssessmentQuestion]] = []
+    for row in rows:
+        _attempt, question = row
+        marker = f"{question.topic} {question.helper_text} {question.difficulty_label}".lower()
+        if any(token in marker for token in ("application", "apply", "problem", "equation")):
+            selected.append(row)
+    return selected or rows
+
+
+def _report_period_value(
+    rows: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+    *,
+    fallback: int,
+    analysis: bool = False,
+) -> int:
+    if not rows:
+        return fallback
+    return _weighted_analysis_percent(rows) if analysis else _attempt_correct_percent(rows)
+
+
+def _report_trends(
+    *,
+    range_attempts: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+    baseline_attempts: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+) -> list[ReportTrendRead]:
+    if not range_attempts and not baseline_attempts:
+        return [
+            ReportTrendRead(label="Overall", before=0.56, after=0.72),
+            ReportTrendRead(label="Application", before=0.48, after=0.66),
+            ReportTrendRead(label="Analysis", before=0.44, after=0.62),
+        ]
+
+    overall_after = _report_period_value(range_attempts, fallback=_attempt_correct_percent(baseline_attempts))
+    overall_before = _report_period_value(baseline_attempts, fallback=max(18, overall_after - 16))
+
+    range_application = _application_rows(range_attempts)
+    baseline_application = _application_rows(baseline_attempts)
+    application_after = _report_period_value(range_application, fallback=max(18, overall_after - 4))
+    application_before = _report_period_value(
+        baseline_application,
+        fallback=max(18, application_after - 18),
+    )
+
+    analysis_after = _report_period_value(range_attempts, fallback=max(18, overall_after - 8), analysis=True)
+    analysis_before = _report_period_value(
+        baseline_attempts,
+        fallback=max(18, analysis_after - 20),
+        analysis=True,
+    )
+
+    return [
+        ReportTrendRead(label="Overall", before=overall_before / 100, after=overall_after / 100),
+        ReportTrendRead(
+            label="Application",
+            before=application_before / 100,
+            after=application_after / 100,
+        ),
+        ReportTrendRead(label="Analysis", before=analysis_before / 100, after=analysis_after / 100),
+    ]
+
+
 def _recent_concept_names(session: Session, *, user: UserAccount) -> list[str]:
     rows = session.execute(
         select(KnowledgeConcept.title)
@@ -821,6 +1155,293 @@ def _recent_concept_names(session: Session, *, user: UserAccount) -> list[str]:
         .limit(3)
     )
     return [str(row[0]) for row in rows]
+
+
+def _weekly_recommendations(
+    *,
+    session: Session,
+    user: UserAccount,
+    states: list[LearnerConceptState],
+    remaining_gaps: int,
+    week_end: date,
+) -> list[UpcomingRecommendationRead]:
+    state_rows = session.execute(
+        select(LearnerConceptState, KnowledgeConcept)
+        .join(KnowledgeConcept, LearnerConceptState.concept_id == KnowledgeConcept.id)
+        .where(LearnerConceptState.user_id == user.id)
+        .order_by(
+            LearnerConceptState.next_review_at.asc().nullslast(),
+            LearnerConceptState.mastery_score.asc(),
+        )
+        .limit(3)
+    )
+    recommendations: list[UpcomingRecommendationRead] = []
+    today = datetime.now(UTC).date()
+    for priority, (state, concept) in enumerate(state_rows, start=1):
+        due_date = state.next_review_at.date() if state.next_review_at else today + timedelta(days=priority + 1)
+        if state.status == "review_due" or due_date <= today + timedelta(days=2):
+            action_type = "review"
+            title = f"Review: {concept.title}"
+            reason = "Next review is due soon based on spaced repetition state."
+        elif state.mastery_score < 0.55:
+            action_type = "practice"
+            title = f"Practice: {concept.title}"
+            reason = "Mastery is still low, so retrieval practice is the highest-leverage action."
+        elif state.mastery_score < 0.75:
+            action_type = "deepen"
+            title = f"Deepen: {concept.title}"
+            reason = "Strengthen transfer before the next post-test."
+        else:
+            action_type = "continue_learning"
+            title = "Continue: next module"
+            reason = f"{concept.title} is stable enough to continue the path."
+        recommendations.append(
+            UpcomingRecommendationRead(
+                title=title,
+                action_type=action_type,
+                reason=reason,
+                due_date=due_date.isoformat(),
+                due_label=_due_label(due_date, today=today),
+            )
+        )
+    if recommendations:
+        return recommendations
+
+    concept_names = _recent_concept_names(session, user=user)
+    weak_concept = concept_names[0] if concept_names else "Market Equilibrium"
+    deepen_concept = concept_names[1] if len(concept_names) > 1 else "Elasticity"
+    practice_due = week_end + timedelta(days=1)
+    reason = (
+        f"{remaining_gaps} gaps still need spaced review."
+        if states
+        else "Seeded recommendation until the learner has enough mastery history."
+    )
+    return [
+        UpcomingRecommendationRead(
+            title=f"Review: {weak_concept}",
+            action_type="review",
+            reason=reason,
+            due_date=(today + timedelta(days=2)).isoformat(),
+            due_label="Due in 2 days",
+        ),
+        UpcomingRecommendationRead(
+            title=f"Deepen: {deepen_concept}",
+            action_type="deepen",
+            reason="Strengthen concept transfer before the next post-test.",
+            due_date=(today + timedelta(days=4)).isoformat(),
+            due_label="Due in 4 days",
+        ),
+        UpcomingRecommendationRead(
+            title="Practice: Application Set 2",
+            action_type="practice",
+            reason="Application trend is the highest-leverage next check.",
+            due_date=practice_due.isoformat(),
+            due_label="Due this week",
+        ),
+    ]
+
+
+def _due_label(due_date: date, *, today: date) -> str:
+    day_delta = (due_date - today).days
+    if day_delta < 0:
+        return "Overdue"
+    if day_delta == 0:
+        return "Due today"
+    if day_delta == 1:
+        return "Due tomorrow"
+    return f"Due in {day_delta} days"
+
+
+def _answered_question_ids(session: Session, *, assessment_id: UUID) -> set[UUID]:
+    return set(
+        session.scalars(
+            select(AssessmentAttempt.question_id).where(
+                AssessmentAttempt.session_id == assessment_id
+            )
+        )
+    )
+
+
+def _language_for_user(user: UserAccount) -> str:
+    if user.learner_profile and user.learner_profile.preferred_language:
+        return user.learner_profile.preferred_language
+    return "en"
+
+
+def _daily_source(assessment: AssessmentSession) -> str:
+    policy = assessment.metadata_json.get("policy")
+    if policy == "spaced_repetition_mvp":
+        return "seeded_spaced_repetition_mvp"
+    return str(assessment.metadata_json.get("generation") or "deterministic_mvp")
+
+
+def _retention_forecast(*, completed_count: int) -> RetentionForecastRead:
+    lift = min(12, completed_count * 2)
+    raw_points = [
+        ("Today", 100, False),
+        ("Day 1", 70 + lift, False),
+        ("Day 2", 52 + lift, False),
+        ("Day 7", 38 + lift, False),
+        ("Day 14", 25 + lift, True),
+        ("Day 30", 17 + lift, True),
+    ]
+    return RetentionForecastRead(
+        title="Your retention forecast",
+        basis="Based on the Ebbinghaus forgetting curve MVP.",
+        points=[
+            RetentionForecastPointRead(
+                label=label,
+                retention_percent=min(100, percent),
+                projected=projected,
+            )
+            for label, percent, projected in raw_points
+        ],
+    )
+
+
+def _daily_recommendation_callout(*, due_count: int) -> RecommendationCalloutRead:
+    return RecommendationCalloutRead(
+        title="Review now",
+        message=(
+            "Keep reviewing to move the curve up and improve long-term retention."
+            if due_count
+            else "You are caught up for today's review queue."
+        ),
+        impact_label="High impact" if due_count else "Maintained",
+        action_label="Review now" if due_count else "Back to home",
+    )
+
+
+def _reviewed_concepts(
+    session: Session,
+    *,
+    user: UserAccount,
+    assessment: AssessmentSession,
+    attempts: list[AssessmentAttempt],
+) -> list[ReviewedConceptRead]:
+    latest_attempt_by_question: dict[UUID, AssessmentAttempt] = {}
+    for attempt in attempts:
+        latest_attempt_by_question[attempt.question_id] = attempt
+
+    concept_ids = {
+        question.concept_id
+        for question in assessment.questions
+        if question.concept_id is not None
+    }
+    concept_titles: dict[UUID, str] = {}
+    state_by_concept: dict[UUID, LearnerConceptState] = {}
+    if concept_ids:
+        concept_titles = {
+            concept.id: concept.title
+            for concept in session.scalars(
+                select(KnowledgeConcept).where(KnowledgeConcept.id.in_(concept_ids))
+            )
+        }
+        state_by_concept = {
+            state.concept_id: state
+            for state in session.scalars(
+                select(LearnerConceptState).where(
+                    LearnerConceptState.user_id == user.id,
+                    LearnerConceptState.concept_id.in_(concept_ids),
+                )
+            )
+        }
+
+    rows: list[ReviewedConceptRead] = []
+    for question in sorted(assessment.questions, key=lambda item: item.sort_order):
+        attempt = latest_attempt_by_question.get(question.id)
+        if attempt is None:
+            continue
+        state = state_by_concept.get(question.concept_id) if question.concept_id else None
+        mastery_score = state.mastery_score if state else (0.68 if attempt.score >= 1.0 else 0.32)
+        rows.append(
+            ReviewedConceptRead(
+                concept_id=str(question.concept_id) if question.concept_id else None,
+                title=(
+                    concept_titles.get(question.concept_id)
+                    if question.concept_id
+                    else question.topic
+                )
+                or question.topic,
+                status_label=_concept_status_label(
+                    is_correct=attempt.score >= 1.0,
+                    mastery_score=mastery_score,
+                ),
+                mastery_score=round(float(mastery_score), 2),
+            )
+        )
+    return rows
+
+
+def _concept_status_label(*, is_correct: bool, mastery_score: float) -> str:
+    if not is_correct:
+        return "Review"
+    if mastery_score >= 0.78:
+        return "Strong"
+    return "Good"
+
+
+def _retention_lift_percent(correct_count: int, review_again_count: int) -> int:
+    return max(0, min(40, 12 + (correct_count * 5) - (review_again_count * 2)))
+
+
+def _daily_next_actions(
+    *,
+    reviewed_concepts: list[ReviewedConceptRead],
+    review_again_count: int,
+    due_date: date,
+) -> list[RecommendedNextActionRead]:
+    review_concept = next(
+        (concept for concept in reviewed_concepts if concept.status_label == "Review"),
+        reviewed_concepts[0] if reviewed_concepts else None,
+    )
+    practice_concept = next(
+        (
+            concept
+            for concept in reviewed_concepts
+            if concept.status_label != "Review" and concept.mastery_score < 0.75
+        ),
+        review_concept,
+    )
+    return [
+        RecommendedNextActionRead(
+            title=(
+                f"Review: {review_concept.title}"
+                if review_concept and review_again_count
+                else (
+                    f"Review: {review_concept.title}"
+                    if review_concept
+                    else "Review 2-week concepts"
+                )
+            ),
+            action_type="review",
+            reason=(
+                "You missed this concept in today's evaluation."
+                if review_again_count
+                else "Focus on high-impact memory reinforcement."
+            ),
+            due_date=due_date.isoformat(),
+            priority=1,
+        ),
+        RecommendedNextActionRead(
+            title=(
+                f"Practice: {practice_concept.title}"
+                if practice_concept and practice_concept.mastery_score < 0.75
+                else "Practice 5 more questions"
+            ),
+            action_type="practice",
+            reason="Retighten your understanding with short retrieval practice.",
+            due_date=(datetime.now(UTC).date() + timedelta(days=1)).isoformat(),
+            priority=2,
+        ),
+        RecommendedNextActionRead(
+            title="Continue learning",
+            action_type="continue_learning",
+            reason="Go to your learning path when review is complete.",
+            due_date=None,
+            priority=3,
+        ),
+    ]
 
 
 def _display_name_for_user(user: UserAccount) -> str:
@@ -849,9 +1470,18 @@ def _duration_label(seconds: int) -> str:
 
 
 def _current_week_label() -> str:
+    start, end = _current_week_range()
+    return _format_week_label(start, end)
+
+
+def _current_week_range() -> tuple[date, date]:
     today = datetime.now(UTC).date()
     start = today - timedelta(days=today.weekday())
     end = start + timedelta(days=6)
+    return start, end
+
+
+def _format_week_label(start: date, end: date) -> str:
     return f"{start.strftime('%b')} {start.day} - {end.strftime('%b')} {end.day}, {end.year}"
 
 

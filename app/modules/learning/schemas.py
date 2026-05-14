@@ -178,30 +178,117 @@ class MediaArtifactStatusResponse(BaseModel):
     error: str | None = None
 
 
+class ActionRead(BaseModel):
+    label: str
+    action_type: str
+    target: str | None = None
+
+
+class ProgressRead(BaseModel):
+    current: int
+    total: int
+    completed: int
+    label: str
+
+
+class ReviewDueRead(BaseModel):
+    title: str
+    due_count: int
+    summary: str
+    action_label: str
+
+
+class RetentionForecastPointRead(BaseModel):
+    label: str
+    retention_percent: int
+    projected: bool = False
+
+
+class RetentionForecastRead(BaseModel):
+    title: str
+    basis: str
+    points: list[RetentionForecastPointRead]
+
+
+class RecommendationCalloutRead(BaseModel):
+    title: str
+    message: str
+    impact_label: str
+    action_label: str
+
+
 class ReportTrendRead(BaseModel):
     label: str
     before: float
     after: float
 
 
+class ReportPerformanceGroupRead(BaseModel):
+    label: str
+    pre_test_percent: int
+    post_test_percent: int
+
+
+class GapMetricRead(BaseModel):
+    count: int
+    weekly_delta: int
+    delta_label: str
+
+
+class UnlockedConceptSummaryRead(BaseModel):
+    count: int
+    concepts: list[str]
+
+
+class UpcomingRecommendationRead(BaseModel):
+    title: str
+    action_type: str
+    reason: str
+    due_date: str
+    due_label: str
+
+
+class ConsistencySummaryRead(BaseModel):
+    title: str
+    narrative: str
+    signal: str
+
+
 class WeeklyReportResponse(BaseModel):
     range_label: str
+    range_start: str
+    range_end: str
     status: str
+    source: str
     score: int
     fixed_gaps: int
+    fixed_gaps_delta: int
     remaining_gaps: int
+    remaining_gaps_delta: int
     retention_minutes: int
     concepts: str
     summary_notes: list[str]
     trends: list[ReportTrendRead]
+    performance_groups: list[ReportPerformanceGroupRead]
+    gap_metrics: dict[str, GapMetricRead]
+    unlocked_this_week: UnlockedConceptSummaryRead
+    upcoming_recommendations: list[UpcomingRecommendationRead]
+    consistency_summary: ConsistencySummaryRead
 
 
 class DailyEvaluationResponse(BaseModel):
     session_id: UUID
     title: str
     status: str
+    language: str
+    source: str
     review_policy: dict[str, Any]
+    review_due: ReviewDueRead
+    progress: ProgressRead
+    question: AssessmentQuestionRead | None = None
     questions: list[AssessmentQuestionRead]
+    retention_forecast: RetentionForecastRead
+    recommendation_callout: RecommendationCalloutRead
 
 
 class DailyEvaluationAnswerRequest(BaseModel):
@@ -215,3 +302,48 @@ class DailyEvaluationAnswerResponse(BaseModel):
     is_correct: bool
     next_review_label: str
     mastery_delta: float
+    session_status: str
+    completed: bool
+
+
+class ReviewedConceptRead(BaseModel):
+    concept_id: str | None = None
+    title: str
+    status_label: str
+    mastery_score: float
+
+
+class SpacedRepetitionImpactRead(BaseModel):
+    retention_lift_percent: int
+    days_until_next_review: int
+    summary: str
+
+
+class DailyEvaluationNextReviewRead(BaseModel):
+    label: str
+    due_date: str
+    interval_days: int
+
+
+class RecommendedNextActionRead(BaseModel):
+    title: str
+    action_type: str
+    reason: str
+    due_date: str | None = None
+    priority: int
+
+
+class DailyEvaluationResultResponse(BaseModel):
+    session_id: UUID
+    title: str
+    status: str
+    source: str
+    score_percent: int
+    reviewed_count: int
+    correct_count: int
+    review_again_count: int
+    reviewed_concepts: list[ReviewedConceptRead]
+    spaced_repetition_impact: SpacedRepetitionImpactRead
+    next_review: DailyEvaluationNextReviewRead
+    recommended_next_actions: list[RecommendedNextActionRead]
+    back_to_home: ActionRead
