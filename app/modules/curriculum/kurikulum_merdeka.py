@@ -86,8 +86,16 @@ def canonical_subject_code(value: str) -> str:
 def load_kurikulum_merdeka_seed_data(
     graph_path: str | Path | None = None,
 ) -> CurriculumSeedData:
-    path = Path(graph_path) if graph_path is not None else find_default_graph_path()
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    if graph_path is None:
+        try:
+            path = find_default_graph_path()
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            payload = _fallback_kurikulum_merdeka_payload()
+    else:
+        path = Path(graph_path)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+
     metadata = payload.get("metadata", {})
     nodes = [node for node in payload.get("nodes", []) if isinstance(node, dict)]
     edges = [edge for edge in payload.get("edges", []) if isinstance(edge, dict)]
@@ -165,6 +173,174 @@ def _build_seed_data(
     ]
 
     return CurriculumSeedData(subjects=subjects, concepts=concepts, edges=edge_seeds)
+
+
+def _fallback_kurikulum_merdeka_payload() -> dict[str, Any]:
+    return {
+        "metadata": {
+            "curriculum": "kurikulum_merdeka",
+            "version": "fallback-dev",
+            "generated_at": None,
+        },
+        "nodes": [
+            _fallback_node(
+                node_id="km_a_matematika_pola",
+                subject="matematika",
+                subject_label="Matematika",
+                phase="A",
+                school_level="SD",
+                grade_range="1-2",
+                domain="Aljabar",
+                difficulty_order=1,
+                label="Pola Sederhana",
+            ),
+            _fallback_node(
+                node_id="km_d_matematika_bilangan_bulat",
+                subject="matematika",
+                subject_label="Matematika",
+                phase="D",
+                school_level="SMP",
+                grade_range="7-9",
+                domain="Bilangan",
+                difficulty_order=1,
+                label="Bilangan Bulat",
+            ),
+            _fallback_node(
+                node_id="km_d_matematika_bilangan_rasional",
+                subject="matematika",
+                subject_label="Matematika",
+                phase="D",
+                school_level="SMP",
+                grade_range="7-9",
+                domain="Bilangan",
+                difficulty_order=3,
+                label="Bilangan Rasional",
+            ),
+            _fallback_node(
+                node_id="km_d_matematika_bilangan_irasional",
+                subject="matematika",
+                subject_label="Matematika",
+                phase="D",
+                school_level="SMP",
+                grade_range="7-9",
+                domain="Bilangan",
+                difficulty_order=4,
+                label="Bilangan Irasional",
+            ),
+            _fallback_node(
+                node_id="km_b_ipas_makhluk_hidup",
+                subject="ipas",
+                subject_label="IPAS",
+                phase="B",
+                school_level="SD",
+                grade_range="3-4",
+                domain="Makhluk Hidup",
+                difficulty_order=1,
+                label="Makhluk Hidup dan Lingkungan",
+            ),
+            _fallback_node(
+                node_id="km_d_ipa_pengukuran",
+                subject="ipa",
+                subject_label="IPA",
+                phase="D",
+                school_level="SMP",
+                grade_range="7-9",
+                domain="Sains",
+                difficulty_order=1,
+                label="Pengukuran dalam Sains",
+            ),
+            _fallback_node(
+                node_id="km_e_fisika_gerak",
+                subject="fisika",
+                subject_label="Fisika",
+                phase="E",
+                school_level="SMA",
+                grade_range="10",
+                domain="Mekanika",
+                difficulty_order=1,
+                label="Gerak Lurus",
+            ),
+            _fallback_node(
+                node_id="km_e_kimia_atom",
+                subject="kimia",
+                subject_label="Kimia",
+                phase="E",
+                school_level="SMA",
+                grade_range="10",
+                domain="Struktur Materi",
+                difficulty_order=1,
+                label="Struktur Atom",
+            ),
+            _fallback_node(
+                node_id="km_e_biologi_sel",
+                subject="biologi",
+                subject_label="Biologi",
+                phase="E",
+                school_level="SMA",
+                grade_range="10",
+                domain="Sel",
+                difficulty_order=1,
+                label="Struktur Sel",
+            ),
+        ],
+        "edges": [
+            _fallback_edge(
+                edge_id="edge_km_d_matematika_bilangan_bulat_rasional",
+                from_node_id="km_d_matematika_bilangan_bulat",
+                to_node_id="km_d_matematika_bilangan_rasional",
+                strength=0.85,
+            ),
+            _fallback_edge(
+                edge_id="edge_km_d_matematika_bilangan_rasional_irasional",
+                from_node_id="km_d_matematika_bilangan_rasional",
+                to_node_id="km_d_matematika_bilangan_irasional",
+                strength=0.8,
+            ),
+        ],
+    }
+
+
+def _fallback_node(
+    *,
+    node_id: str,
+    subject: str,
+    subject_label: str,
+    phase: str,
+    school_level: str,
+    grade_range: str,
+    domain: str,
+    difficulty_order: int,
+    label: str,
+) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "subject": subject,
+        "subject_label": subject_label,
+        "phase": phase,
+        "school_level": school_level,
+        "grade_range": grade_range,
+        "domain": domain,
+        "difficulty_order": difficulty_order,
+        "label_id": label,
+        "label_en": label,
+        "description_id": f"Fallback seed untuk {label}.",
+    }
+
+
+def _fallback_edge(
+    *,
+    edge_id: str,
+    from_node_id: str,
+    to_node_id: str,
+    strength: float,
+) -> dict[str, Any]:
+    return {
+        "id": edge_id,
+        "from_node_id": from_node_id,
+        "to_node_id": to_node_id,
+        "edge_type": "prerequisite",
+        "strength": strength,
+    }
 
 
 def _subject_seed(
