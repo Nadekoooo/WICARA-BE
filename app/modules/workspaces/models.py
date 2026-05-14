@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, Uuid
@@ -63,14 +63,20 @@ class WorkspaceSession(Base):
     events: Mapped[list[WorkspaceEvent]] = relationship(
         back_populates="workspace_session",
         cascade="all, delete-orphan",
-        order_by="WorkspaceEvent.created_at",
+        order_by="WorkspaceEvent.event_index",
     )
 
 
 class WorkspaceEvent(Base):
     __tablename__ = "workspace_events"
     __table_args__ = (
+        UniqueConstraint(
+            "workspace_session_id",
+            "event_index",
+            name="uq_workspace_events_session_index",
+        ),
         Index("ix_workspace_events_session_created", "workspace_session_id", "created_at"),
+        Index("ix_workspace_events_session_index", "workspace_session_id", "event_index"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -83,6 +89,7 @@ class WorkspaceEvent(Base):
     )
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_index: Mapped[int] = mapped_column(Integer, nullable=False)
     text_payload: Mapped[str] = mapped_column(Text, nullable=False, default="")
     canvas_snapshot_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     media_artifact_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -59,6 +59,7 @@ def upgrade() -> None:
         sa.Column("workspace_session_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("event_type", sa.String(length=32), nullable=False),
         sa.Column("actor_type", sa.String(length=32), nullable=False),
+        sa.Column("event_index", sa.Integer(), nullable=False),
         sa.Column("text_payload", sa.Text(), nullable=False),
         sa.Column("canvas_snapshot_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("media_artifact_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -76,6 +77,11 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "workspace_session_id",
+            "event_index",
+            name="uq_workspace_events_session_index",
+        ),
     )
     op.create_index(
         "ix_workspace_events_session_created",
@@ -83,9 +89,16 @@ def upgrade() -> None:
         ["workspace_session_id", "created_at"],
         unique=False,
     )
+    op.create_index(
+        "ix_workspace_events_session_index",
+        "workspace_events",
+        ["workspace_session_id", "event_index"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_workspace_events_session_index", table_name="workspace_events")
     op.drop_index("ix_workspace_events_session_created", table_name="workspace_events")
     op.drop_table("workspace_events")
     op.drop_index("ix_workspace_sessions_user_status", table_name="workspace_sessions")

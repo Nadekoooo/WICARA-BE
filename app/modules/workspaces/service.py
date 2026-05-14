@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
@@ -107,6 +107,7 @@ def append_workspace_event(
 
     event = WorkspaceEvent(
         workspace_session_id=workspace.id,
+        event_index=_next_event_index(session, workspace_id=workspace.id),
         event_type=normalized_event_type,
         actor_type=normalized_actor_type,
         text_payload=text_payload.strip(),
@@ -131,7 +132,7 @@ def append_workspace_event(
 def workspace_to_schema(session: Session, workspace: WorkspaceSession) -> WorkspaceRead:
     events = sorted(
         workspace.events,
-        key=lambda event: event.created_at or datetime.min.replace(tzinfo=UTC),
+        key=lambda event: event.event_index,
     )
     latest_media = _latest_media_artifact(session, events)
     return WorkspaceRead(
@@ -151,6 +152,7 @@ def event_to_schema(event: WorkspaceEvent) -> WorkspaceEventRead:
     return WorkspaceEventRead(
         id=event.id,
         workspace_id=event.workspace_session_id,
+        event_index=event.event_index,
         event_type=event.event_type,
         actor_type=event.actor_type,
         text_payload=event.text_payload,
@@ -211,6 +213,15 @@ def _load_workspace(
         .options(selectinload(WorkspaceSession.events))
         .execution_options(populate_existing=True)
     )
+
+
+def _next_event_index(session: Session, *, workspace_id: UUID) -> int:
+    max_index = session.scalar(
+        select(func.max(WorkspaceEvent.event_index)).where(
+            WorkspaceEvent.workspace_session_id == workspace_id
+        )
+    )
+    return int(max_index or 0) + 1
 
 
 def _normalize_event_type(event_type: str) -> str:

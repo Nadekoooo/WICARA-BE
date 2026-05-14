@@ -26,6 +26,7 @@ class WorkspaceEventCreateRequest(BaseModel):
 class WorkspaceEventRead(BaseModel):
     id: UUID
     workspace_id: UUID
+    event_index: int
     event_type: str
     actor_type: str
     text_payload: str
