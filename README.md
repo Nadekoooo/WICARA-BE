@@ -427,7 +427,7 @@ Test data strategy: seed one learner, four subjects, one Math/Calculus concept c
 - [x] Profile onboarding endpoint implemented.
 - [x] Health and profile tests added.
 - [x] Workspace session/event timeline implemented.
-- [ ] Unified input event model confirmed.
+- [x] Unified input event model implemented for workspace evidence.
 - [ ] Canvas image export/upload contract confirmed.
 - [ ] Manim/video artifact model confirmed.
 - [ ] First mobile repository replacement confirmed.
