@@ -42,7 +42,7 @@ class AuthSessionResponse(BaseModel):
 class UserAccountRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
+    id: UUID
     supabase_user_id: str
     email: str | None
     phone: str | None
