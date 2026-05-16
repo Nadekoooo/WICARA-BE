@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.modules.learning.schemas import AnimationQueueResponse, MediaArtifactRead
 
@@ -24,12 +24,33 @@ class WorkspaceEventCreateRequest(BaseModel):
 
 
 class WorkspaceGenerateVideoRequest(BaseModel):
-    template_id: str = Field(..., min_length=3, max_length=120)
+    generation_mode: str = Field(default="manual", min_length=2, max_length=32)
+    template_id: str | None = Field(default=None, min_length=3, max_length=120)
     spec_json: dict[str, Any] = Field(default_factory=dict)
     language: str = Field(default="id", min_length=2, max_length=16)
     quality_profile: str = Field(default="standard", min_length=2, max_length=32)
     concept_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("generation_mode", mode="before")
+    @classmethod
+    def normalize_generation_mode(cls, value: str) -> str:
+        normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        aliases = {"auto": "context_auto", "context": "context_auto"}
+        normalized = aliases.get(normalized, normalized)
+        if normalized not in {"manual", "context_auto"}:
+            raise ValueError("generation_mode must be either 'manual' or 'context_auto'.")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> WorkspaceGenerateVideoRequest:
+        if self.generation_mode == "manual":
+            template_id = (self.template_id or "").strip()
+            if not template_id:
+                raise ValueError(
+                    "template_id is required when generation_mode is 'manual'."
+                )
+        return self
 
 
 class WorkspaceEventRead(BaseModel):
