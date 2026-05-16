@@ -91,6 +91,12 @@ from app.modules.learning.template_validation import (
 from app.modules.workspaces.models import WorkspaceSession
 
 logger = logging.getLogger(__name__)
+from app.modules.question_bank.service import (
+    DAILY_SELECTOR_VERSION,
+    LearnerStep,
+    SelectedQuestion,
+    select_daily_questions,
+)
 
 
 PRETEST_TEMPLATES: list[dict[str, Any]] = [
@@ -1136,16 +1142,26 @@ def get_or_create_daily_evaluation(
         )
     )
     if assessment is None:
-        assessment = _create_assessment_session(
-            session,
-            user=user,
-            learning_goal=None,
-            track=None,
-            session_type="daily_evaluation",
-            title="Daily Evaluation",
-            templates=DAILY_REVIEW_TEMPLATES,
-            metadata={"review_date": today, "policy": "spaced_repetition_mvp"},
-        )
+        learner_step, selected_questions = select_daily_questions(session, user=user)
+        if selected_questions:
+            assessment = _create_daily_assessment_from_bank(
+                session,
+                user=user,
+                review_date=today,
+                learner_step=learner_step,
+                selected_questions=selected_questions,
+            )
+        else:
+            assessment = _create_assessment_session(
+                session,
+                user=user,
+                learning_goal=None,
+                track=None,
+                session_type="daily_evaluation",
+                title="Daily Evaluation",
+                templates=DAILY_REVIEW_TEMPLATES,
+                metadata={"review_date": today, "policy": "spaced_repetition_mvp"},
+            )
         session.commit()
         assessment = session.scalar(
             select(AssessmentSession)
@@ -1173,8 +1189,8 @@ def get_or_create_daily_evaluation(
         language=_language_for_user(user),
         source=_daily_source(assessment),
         review_policy={
-            "strategy": "spaced_repetition_mvp",
-            "basis": "due concepts first, seeded review templates when no due concepts exist",
+            "strategy": str(assessment.metadata_json.get("policy") or "spaced_repetition_mvp"),
+            "basis": _daily_review_policy_basis(assessment),
         },
         review_due=ReviewDueRead(
             title="Review due",
@@ -1785,9 +1801,20 @@ def _language_for_user(user: UserAccount) -> str:
 
 def _daily_source(assessment: AssessmentSession) -> str:
     policy = assessment.metadata_json.get("policy")
+    if policy == "personalized_daily_v2":
+        return "question_bank_personalized_daily_v2"
     if policy == "spaced_repetition_mvp":
         return "seeded_spaced_repetition_mvp"
     return str(assessment.metadata_json.get("generation") or "deterministic_mvp")
+
+
+def _daily_review_policy_basis(assessment: AssessmentSession) -> str:
+    policy = assessment.metadata_json.get("policy")
+    if policy == "personalized_daily_v2":
+        return (
+            "question bank selector using due review, weak mastery, and current module state"
+        )
+    return "due concepts first, seeded review templates when no due concepts exist"
 
 
 def _retention_forecast(*, completed_count: int) -> RetentionForecastRead:
@@ -2052,6 +2079,91 @@ def _create_assessment_session(
                     label=key,
                     text=text,
                     is_correct=key == template["correct"],
+                    sort_order=option_index,
+                )
+            )
+    session.flush()
+    return assessment
+
+
+def _create_daily_assessment_from_bank(
+    session: Session,
+    *,
+    user: UserAccount,
+    review_date: str,
+    learner_step: LearnerStep,
+    selected_questions: list[SelectedQuestion],
+) -> AssessmentSession:
+    assessment = AssessmentSession(
+        user_id=user.id,
+        learning_goal_id=None,
+        track_id=learner_step.active_track_id,
+        session_type="daily_evaluation",
+        title="Daily Evaluation",
+        status="active",
+        metadata_json={
+            "review_date": review_date,
+            "policy": "personalized_daily_v2",
+            "selector_version": DAILY_SELECTOR_VERSION,
+            "selected_subject_code": learner_step.subject.code,
+            "education_level": learner_step.education_level,
+            "preferred_language": learner_step.preferred_language,
+            "active_track_id": str(learner_step.active_track_id)
+            if learner_step.active_track_id
+            else None,
+            "active_module_id": str(learner_step.active_module_id)
+            if learner_step.active_module_id
+            else None,
+            "active_concept_id": str(learner_step.active_concept_id)
+            if learner_step.active_concept_id
+            else None,
+            "selection_slots": [
+                {
+                    "slot": selected.slot,
+                    "reason": selected.reason,
+                    "question_bank_external_id": selected.item.external_id,
+                    "concept_code": selected.item.concept_code,
+                }
+                for selected in selected_questions
+            ],
+        },
+    )
+    session.add(assessment)
+    session.flush()
+
+    total = len(selected_questions)
+    for index, selected in enumerate(selected_questions, start=1):
+        item = selected.item
+        question = AssessmentQuestion(
+            session_id=assessment.id,
+            concept_id=item.concept_id,
+            step_label=f"{index} / {total}",
+            topic=item.concept_title or item.concept_code or item.subject_code,
+            prompt=item.prompt,
+            helper_text=item.helper_text,
+            difficulty_label=item.difficulty.title(),
+            sort_order=index,
+            metadata_json={
+                "source": "question_bank",
+                "question_bank_item_id": str(item.id),
+                "question_bank_external_id": item.external_id,
+                "concept_code": item.concept_code,
+                "selection_slot": selected.slot,
+                "selection_reason": selected.reason,
+                "selector_version": DAILY_SELECTOR_VERSION,
+                "correct_option_key": item.answer_key,
+            },
+        )
+        session.add(question)
+        session.flush()
+        for option_index, option in enumerate(item.options, start=1):
+            session.add(
+                AssessmentOption(
+                    question_id=question.id,
+                    option_key=option.option_key,
+                    label=option.label,
+                    text=option.text,
+                    is_correct=option.is_correct,
                     sort_order=option_index,
                 )
             )
