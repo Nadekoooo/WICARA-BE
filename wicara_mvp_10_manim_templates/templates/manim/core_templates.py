@@ -566,7 +566,8 @@ class WicaraTemplateScene(VoiceoverScene):
         return LEFT * 2.05 + DOWN * 0.40
 
     def right_card_center(self):
-        return RIGHT * 4.05 + DOWN * 0.30
+        # Keep guidance cards away from the main visual rail.
+        return RIGHT * 4.05 + UP * 0.55
 
     def bottom_summary_y(self):
         return -3.18
@@ -1259,11 +1260,12 @@ class NumberLineQuantityTemplate(WicaraTemplateScene):
 
         number_line = NumberLine(
             x_range=[min_v, max_v, step],
-            length=7.8,
+            length=6.6,
             include_numbers=True,
             font_size=19,
         )
-        number_line.move_to(LEFT * 2.0 + DOWN * 0.65)
+        # Pull visual further left so the right-side teaching card never overlaps.
+        number_line.move_to(self.visual_center() + LEFT * 0.60 + DOWN * 0.20)
 
         axis_title = Text(self.tr_text("Garis bilangan"), font_size=22, color=GRAY_A)
         axis_title.next_to(number_line, UP, buff=0.35)
@@ -1675,25 +1677,45 @@ class RatioProportionTemplate(WicaraTemplateScene):
 
     def make_quantity_bar(self, label, value, unit, color, max_value):
         value = float(value)
-        width = max(0.75, min(4.65, 4.65 * value / max_value))
+        safe_max = max(float(max_value), 1.0)
+        fill_ratio = max(0.0, min(1.0, value / safe_max))
 
-        bar = Rectangle(
-            width=width,
-            height=0.40,
-            stroke_color=WHITE,
-            fill_color=color,
-            fill_opacity=0.84,
-        )
-
-        text = Text(
-            f"{label}: {value:g} {unit}",
-            font_size=21,
+        label_text = Text(
+            clamp_text(f"{label}: {value:g} {unit}".strip(), 28),
+            font_size=22,
             color=color,
             weight=BOLD,
         )
-        text.next_to(bar, LEFT, buff=0.25)
+        label_text.scale_to_fit_width(min(2.35, max(label_text.width, 1.2)))
 
-        return VGroup(text, bar)
+        track = RoundedRectangle(
+            corner_radius=0.06,
+            width=4.55,
+            height=0.48,
+            stroke_color=WHITE,
+            stroke_width=2,
+            fill_color=BLACK,
+            fill_opacity=0.35,
+        )
+
+        fill_width = max(0.26, 4.35 * fill_ratio)
+        fill = RoundedRectangle(
+            corner_radius=0.04,
+            width=fill_width,
+            height=0.32,
+            stroke_width=0,
+            fill_color=color,
+            fill_opacity=0.82,
+        )
+        fill.move_to(track.get_left() + RIGHT * (0.10 + fill_width / 2))
+
+        value_text = Text(f"{value:g}", font_size=19, color=WHITE)
+        value_text.next_to(track, RIGHT, buff=0.16)
+
+        row = VGroup(label_text, track, fill, value_text)
+        label_text.align_to(track, DOWN).shift(UP * 0.04)
+        label_text.next_to(track, LEFT, buff=0.22)
+        return row
 
     def construct(self):
         spec = self.SPEC
@@ -1739,17 +1761,34 @@ class RatioProportionTemplate(WicaraTemplateScene):
                 )
             )
 
-        bars.arrange(DOWN, aligned_edge=LEFT, buff=0.38)
-        bars.move_to(self.visual_center())
+        bars.arrange(DOWN, aligned_edge=LEFT, buff=0.48)
+        bars.move_to(self.visual_center() + LEFT * 0.15 + DOWN * 0.10)
 
         self.play(
-            LaggedStart(*[FadeIn(bar, shift=UP * 0.08) for bar in bars], lag_ratio=0.15),
-            run_time=0.9,
+            LaggedStart(*[FadeIn(bar, shift=RIGHT * 0.08) for bar in bars], lag_ratio=0.18),
+            run_time=1.15,
         )
+
+        ratio_pairs = spec.get("ratio_pairs", [])
+        ratio_text = None
+        if ratio_pairs:
+            pair = ratio_pairs[0]
+            if isinstance(pair, list) and len(pair) == 2:
+                left_name, right_name = str(pair[0]), str(pair[1])
+                q_map = {str(item.get("label", "")): float(item.get("value", 0)) for item in quantities}
+                left_value = q_map.get(left_name, 0.0)
+                right_value = q_map.get(right_name, 0.0)
+                ratio_text = Text(
+                    f"{left_name} : {right_name} = {left_value:g} : {right_value:g}",
+                    font_size=24,
+                    color=YELLOW,
+                    weight=BOLD,
+                )
+                ratio_text.next_to(context, DOWN, buff=0.24).shift(LEFT * 1.10)
+                self.play(FadeIn(ratio_text, shift=UP * 0.08), run_time=0.6)
 
         scale_factor = spec.get("scale_factor")
         scale_text = None
-
         if scale_factor is not None:
             scale_text = Text(
                 f"Faktor skala: ×{scale_factor}",
@@ -1757,9 +1796,10 @@ class RatioProportionTemplate(WicaraTemplateScene):
                 color=YELLOW,
                 weight=BOLD,
             )
-            scale_text.next_to(bars, DOWN, buff=0.42)
+            scale_text.next_to(bars, DOWN, buff=0.36)
             self.play(Write(scale_text), run_time=0.5)
 
+        transform_text = None
         for step in spec.get("scaling_steps", [])[:1]:
             transform_text = Text(
                 f"{step.get('from')}  →  {step.get('to')}",
@@ -1767,8 +1807,42 @@ class RatioProportionTemplate(WicaraTemplateScene):
                 color=GREEN,
                 weight=BOLD,
             )
-            transform_text.next_to(bars, UP, buff=0.34)
+            if ratio_text is not None:
+                transform_text.next_to(ratio_text, DOWN, buff=0.18).align_to(ratio_text, LEFT)
+            else:
+                transform_text.next_to(bars, UP, buff=0.34)
             self.play(FadeIn(transform_text, shift=UP * 0.08), run_time=0.5)
+
+        if scale_factor is not None and float(scale_factor) not in (0.0, 1.0):
+            scaled_values = []
+            for q in quantities[:4]:
+                scaled = dict(q)
+                scaled["value"] = float(q.get("value", 0)) * float(scale_factor)
+                scaled_values.append(scaled)
+
+            scaled_max = max(float(item.get("value", 1)) for item in scaled_values) if scaled_values else 1.0
+            scaled_bars = VGroup()
+            for i, q in enumerate(scaled_values):
+                scaled_bars.add(
+                    self.make_quantity_bar(
+                        q.get("label", f"Q{i + 1}"),
+                        q.get("value", 1),
+                        q.get("unit", ""),
+                        colors[i % len(colors)],
+                        max_value=scaled_max,
+                    )
+                )
+            scaled_bars.arrange(DOWN, aligned_edge=LEFT, buff=0.48)
+            scaled_bars.move_to(bars.get_center())
+
+            self.play(Transform(bars, scaled_bars), run_time=1.0)
+            self.play(
+                LaggedStart(
+                    *[Indicate(row, color=YELLOW, scale_factor=1.03) for row in bars],
+                    lag_ratio=0.15,
+                ),
+                run_time=0.8,
+            )
 
         active_card = self.render_step_cards(spec, active_card=active_card)
         self.clean_summary(spec, active_card=active_card)
@@ -1836,40 +1910,41 @@ class EquationBalanceTemplate(WicaraTemplateScene):
         pivot = Triangle(color=GRAY_B, fill_opacity=0.80).scale(0.36)
         pivot.next_to(beam, DOWN, buff=0.02)
 
-        left_anchor = Dot(LEFT * 2.00, radius=0.01, color=GRAY_B)
-        right_anchor = Dot(RIGHT * 2.00, radius=0.01, color=GRAY_B)
+        left_anchor = Dot(LEFT * 2.00 + DOWN * 0.02, radius=0.01, color=GRAY_B)
+        right_anchor = Dot(RIGHT * 2.00 + DOWN * 0.02, radius=0.01, color=GRAY_B)
+
+        plate_drop = 0.78
+        left_plate = RoundedRectangle(
+            corner_radius=0.06,
+            width=1.78,
+            height=0.20,
+            stroke_color=BLUE,
+            stroke_width=2.6,
+            fill_color=BLUE_E,
+            fill_opacity=0.50,
+        ).move_to(left_anchor.get_center() + DOWN * plate_drop)
+        right_plate = RoundedRectangle(
+            corner_radius=0.06,
+            width=1.78,
+            height=0.20,
+            stroke_color=GREEN,
+            stroke_width=2.6,
+            fill_color=GREEN_E,
+            fill_opacity=0.50,
+        ).move_to(right_anchor.get_center() + DOWN * plate_drop)
 
         left_rope = Line(
             left_anchor.get_center(),
-            left_anchor.get_center() + DOWN * 0.70,
+            left_plate.get_top() + UP * 0.01,
             color=GRAY_B,
-            stroke_width=3,
+            stroke_width=2.3,
         )
         right_rope = Line(
             right_anchor.get_center(),
-            right_anchor.get_center() + DOWN * 0.70,
+            right_plate.get_top() + UP * 0.01,
             color=GRAY_B,
-            stroke_width=3,
+            stroke_width=2.3,
         )
-
-        left_plate = RoundedRectangle(
-            corner_radius=0.04,
-            width=1.70,
-            height=0.15,
-            stroke_color=BLUE,
-            stroke_width=3,
-            fill_color=BLUE_E,
-            fill_opacity=0.45,
-        ).move_to(left_rope.get_end())
-        right_plate = RoundedRectangle(
-            corner_radius=0.04,
-            width=1.70,
-            height=0.15,
-            stroke_color=GREEN,
-            stroke_width=3,
-            fill_color=GREEN_E,
-            fill_opacity=0.45,
-        ).move_to(right_rope.get_end())
 
         balance = VGroup(
             beam,
@@ -1885,10 +1960,19 @@ class EquationBalanceTemplate(WicaraTemplateScene):
         return balance, pivot, left_plate, right_plate
 
     def make_plate_text(self, value, plate, color):
-        text_mob = Text(str(value), font_size=31, color=color, weight=BOLD)
-        text_mob.next_to(plate, UP, buff=0.23)
-        text_mob.add_updater(lambda m, target=plate: m.next_to(target, UP, buff=0.23))
-        return text_mob
+        text_mob = Text(str(value), font_size=29, color=color, weight=BOLD)
+        text_bg = RoundedRectangle(
+            corner_radius=0.06,
+            width=text_mob.width + 0.22,
+            height=text_mob.height + 0.16,
+            stroke_width=0,
+            fill_color=BLACK,
+            fill_opacity=0.70,
+        )
+        text_group = VGroup(text_bg, text_mob)
+        text_group.move_to(plate.get_center() + UP * 0.01)
+        text_group.add_updater(lambda m, target=plate: m.move_to(target.get_center() + UP * 0.01))
+        return text_group
 
     def construct(self):
         spec = self.SPEC
@@ -2421,6 +2505,13 @@ class GraphExplanationTemplate(WicaraTemplateScene):
             )
         )
 
+        trace_path = TracedPath(
+            dot.get_center,
+            stroke_color=YELLOW_D,
+            stroke_width=2.5,
+            stroke_opacity=0.72,
+        )
+
         dot_label = always_redraw(
             lambda: Text(
                 clamp_text(
@@ -2445,7 +2536,16 @@ class GraphExplanationTemplate(WicaraTemplateScene):
             )
         )
 
-        self.play(FadeIn(dot), FadeIn(dot_label), Create(vertical_line), run_time=0.6)
+        readout = always_redraw(
+            lambda: Text(
+                f"x={tracker.get_value():.1f}, f(x)={f(tracker.get_value()):.1f}",
+                font_size=16,
+                color=YELLOW,
+            ).next_to(axes, UP, buff=0.12).shift(RIGHT * 1.35)
+        )
+
+        self.add(trace_path)
+        self.play(FadeIn(dot), FadeIn(dot_label), Create(vertical_line), FadeIn(readout), run_time=0.6)
 
         active_card = self.replace_card(
             active_card,
@@ -2462,12 +2562,30 @@ class GraphExplanationTemplate(WicaraTemplateScene):
                 run_time=1.0,
                 rate_func=smooth,
             )
+            self.play(Indicate(dot, color=YELLOW, scale_factor=1.18), run_time=0.25)
+
+        highlight_points = spec.get("highlight_points", [])
+        if isinstance(highlight_points, list):
+            for item in highlight_points[:2]:
+                if not isinstance(item, dict):
+                    continue
+                x_value = float(item.get("x", 0))
+                y_value = f(x_value)
+                point_dot = Dot(axes.c2p(x_value, y_value), color=GREEN, radius=0.062)
+                point_label = Text(
+                    clamp_text(str(item.get("label", f"x={x_value:g}")), 18),
+                    font_size=15,
+                    color=GREEN,
+                ).next_to(point_dot, UP, buff=0.09)
+                self.play(FadeIn(point_dot), FadeIn(point_label), run_time=0.42)
 
         tangent_group = None
 
         if bool(spec.get("show_slope", False)):
             highlight_x = float(spec.get("highlight_x", 1))
             slope = numerical_slope(f, highlight_x)
+
+            self.play(tracker.animate.set_value(highlight_x), run_time=0.75, rate_func=smooth)
 
             tangent_group = axes.get_secant_slope_group(
                 x=highlight_x,
@@ -2488,6 +2606,14 @@ class GraphExplanationTemplate(WicaraTemplateScene):
             )
 
             self.play(Create(tangent_group), run_time=0.85)
+            slope_value = Text(
+                f"m \u2248 {slope:.2f}",
+                font_size=22,
+                color=RED,
+                weight=BOLD,
+            )
+            slope_value.next_to(axes, DOWN, buff=0.20).shift(LEFT * 1.25)
+            self.play(FadeIn(slope_value, shift=UP * 0.06), run_time=0.45)
             self.wait(0.7)
 
         active_card = self.render_step_cards(spec, active_card=active_card)
