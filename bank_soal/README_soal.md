@@ -18,9 +18,6 @@ backend/bank_soal/
   README.md
   schema/
     question_bank.schema.json
-  scripts/
-    generate_mathematics_topic_bank.py
-    generate_science_topic_banks.py
   seeds/
     mathematics.elementary.all_topics.v1.json
     mathematics.junior_high.all_topics.v1.json
@@ -37,7 +34,6 @@ Current generated state:
 
 - `*.all_topics.v1.json` files are breadth-first topic coverage derived from the curriculum graph
 - `mathematics.elementary.multiplication_equal_groups.v1.json` is a focused concept seed
-- generators now emit separate `pretest`, `daily_quiz`, `posttest`, and `workspace_quiz` items per concept
 
 These generated packs are baseline coverage, not yet deep production-quality concept banks.
 
