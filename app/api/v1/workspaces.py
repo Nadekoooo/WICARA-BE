@@ -44,14 +44,14 @@ def read_workspace(
 
 
 @router.post("/{workspace_id}/events", response_model=schemas.WorkspaceEventCreateResponse)
-def append_workspace_event(
+async def append_workspace_event(
     workspace_id: UUID,
     payload: schemas.WorkspaceEventCreateRequest,
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.WorkspaceEventCreateResponse:
     try:
-        response = service.append_workspace_event(
+        response = await service.append_workspace_event(
             session,
             user=account,
             workspace_id=workspace_id,

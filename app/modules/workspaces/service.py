@@ -20,6 +20,7 @@ from app.modules.workspaces.schemas import (
     WorkspaceGenerateVideoResponse,
     WorkspaceRead,
 )
+from app.modules.workspaces.tutor import generate_tutor_response
 
 VALID_EVENT_TYPES = {
     "text",
@@ -91,7 +92,7 @@ def read_workspace(
     return workspace_to_schema(session, workspace) if workspace else None
 
 
-def append_workspace_event(
+async def append_workspace_event(
     session: Session,
     *,
     user: UserAccount,
@@ -113,12 +114,22 @@ def append_workspace_event(
         _resolve_owned_media_artifact(session, user=user, media_artifact_id=media_artifact_id)
 
     module = session.get(TrackModule, workspace.module_id)
-    event_metadata = dict(metadata)
+
+    # Call Gemini before saving so audit info goes into event metadata
+    tutor_response, ai_audit = await generate_tutor_response(
+        workspace=workspace,
+        event_type=normalized_event_type,
+        text_payload=text_payload,
+        events=list(workspace.events),
+    )
+
+    event_metadata = {**dict(metadata), "ai_audit": ai_audit}
     audit_metadata = {
         **metadata,
+        **ai_audit,
         "track_id": str(workspace.track_id),
         "module_id": str(workspace.module_id),
-        "tutor_policy": "deterministic_workspace_mvp",
+        "tutor_policy": ai_audit.get("ai_source", "unknown"),
     }
     mastery_result = _mastery_service.apply_event(
         session,
@@ -167,11 +178,7 @@ def append_workspace_event(
     assert workspace is not None
     return WorkspaceEventCreateResponse(
         event=event_to_schema(event),
-        tutor_response=_deterministic_tutor_response(
-            event_type=normalized_event_type,
-            text_payload=text_payload,
-            metadata=audit_metadata,
-        ),
+        tutor_response=tutor_response,
         mastery_update=mastery_result.update,
         workspace=workspace_to_schema(session, workspace),
     )
@@ -388,56 +395,8 @@ def _complete_workspace_module(
         track.status = "active"
 
 
-def _deterministic_tutor_response(
-    *,
-    event_type: str,
-    text_payload: str,
-    metadata: dict[str, Any],
-) -> TutorResponseRead | None:
-    if event_type == "text":
-        if not text_payload.strip():
-            return None
-        return TutorResponseRead(
-            text=(
-                "I saved that as workspace evidence. Try connecting it to the "
-                "module idea, then use the canvas if a diagram would make the "
-                "reasoning clearer."
-            ),
-            intent="ask_followup",
-            next_actions=["explain_reasoning", "use_canvas", "answer_quiz"],
-        )
-    if event_type == "canvas_sent":
-        element_count = metadata.get("element_count")
-        return TutorResponseRead(
-            text=(
-                f"I saved your canvas snapshot with {element_count or 'some'} "
-                "elements. Now write one sentence explaining what the sketch proves."
-            ),
-            intent="ask_followup",
-            next_actions=["summarize_canvas", "answer_quiz"],
-        )
-    if event_type == "quiz_answer":
-        if metadata.get("is_correct") is True:
-            return TutorResponseRead(
-                text="Correct. I updated this module evidence and you can move to the next step.",
-                intent="recommend_practice",
-                next_actions=["complete_module", "continue_next_module"],
-            )
-        return TutorResponseRead(
-            text=(
-                "Not quite. Review the graph behavior from the left and right sides, "
-                "then try the quiz again."
-            ),
-            intent="correct_misconception",
-            next_actions=["review_explanation", "use_canvas", "retry_quiz"],
-        )
-    if event_type == "media_generated":
-        return TutorResponseRead(
-            text="I recorded the generated media as a learning intervention for this module.",
-            intent="explain",
-            next_actions=["watch_media", "answer_quiz"],
-        )
-    return None
+# _deterministic_tutor_response removed: Gemini is now the primary tutor via tutor.py
+# Fallback logic lives in app.modules.workspaces.tutor._fallback_response
 
 
 def _latest_image_asset_id(events: list[WorkspaceEvent]) -> UUID | None:
