@@ -1,0 +1,47 @@
+{
+  "id": "sample_sequence_pattern",
+  "node_id": "km_c_matematika_pola_bilangan_perkalian_dan_pembagian",
+  "template_id": "manim.sequence_pattern.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "title": "Pola Bilangan",
+  "subtitle": "Cari aturan dari perubahan suku.",
+  "terms": [
+    2,
+    4,
+    6,
+    8
+  ],
+  "visual_pattern_type": "growing_dots",
+  "rule": "Tambah 2 setiap langkah",
+  "table_values": [
+    {
+      "n": 1,
+      "value": 2
+    },
+    {
+      "n": 2,
+      "value": 4
+    },
+    {
+      "n": 3,
+      "value": 6
+    }
+  ],
+  "target_term": {
+    "n": 5,
+    "value": 10
+  },
+  "steps": [
+    {
+      "title": "Amati suku",
+      "body": "Setiap suku bertambah dua."
+    },
+    {
+      "title": "Terapkan aturan",
+      "body": "Suku berikutnya adalah 10."
+    }
+  ],
+  "summary": "Pola dapat diteruskan jika aturan perubahannya diketahui.",
+  "voiceover_script": "Lihat deret dua, empat, enam, delapan. Setiap langkah bertambah dua."
+}

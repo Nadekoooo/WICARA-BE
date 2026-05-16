@@ -1,0 +1,56 @@
+{
+  "id": "sample_graph_quadratic",
+  "node_id": "km_e_matematika_fungsi_kuadrat",
+  "template_id": "manim.graph_explanation.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "title": "Grafik Fungsi Kuadrat",
+  "subtitle": "Parabola menunjukkan perubahan nilai fungsi.",
+  "function": {
+    "type": "quadratic",
+    "params": {
+      "a": 1,
+      "b": 0,
+      "c": 0
+    }
+  },
+  "x_range": [
+    -3,
+    3,
+    1
+  ],
+  "y_range": [
+    -1,
+    9,
+    1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "f(x)=x^2",
+  "steps": [
+    {
+      "title": "Bentuk parabola",
+      "body": "Grafik fungsi kuadrat berbentuk parabola."
+    },
+    {
+      "title": "Nilai berubah",
+      "body": "Saat x berubah, nilai f(x) berubah mengikuti kurva."
+    }
+  ],
+  "summary": "Grafik membantu melihat sifat fungsi secara visual.",
+  "voiceover_script": "Fungsi kuadrat membentuk parabola. Kita bisa membaca nilai fungsi dari titik pada grafik."
+}

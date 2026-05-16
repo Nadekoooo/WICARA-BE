@@ -47,6 +47,7 @@ def render_template_scene(
     template_path: str,
     scene_class: str,
     spec_json: dict[str, Any],
+    language: str | None = None,
     quality_profile: str,
     timeout_seconds: int | None = None,
     settings: Settings | None = None,
@@ -97,12 +98,18 @@ def render_template_scene(
     shutil.copyfile(base_scene, render_workdir / "base_scene.py")
     shutil.copyfile(template_file, render_workdir / "generated_template.py")
 
+    normalized_language = str(language or "").strip().lower()
+    spec_payload = dict(spec_json)
+    if normalized_language and not spec_payload.get("language"):
+        spec_payload["language"] = normalized_language
+        spec_payload.setdefault("locale", normalized_language)
+
     render_scene_path = render_workdir / "render_scene.py"
     render_scene_path.write_text(
         (
             "from generated_template import GeneratedTemplate\n\n"
             "class RenderScene(GeneratedTemplate):\n"
-            f"    SPEC = {json.dumps(spec_json, ensure_ascii=False, indent=4)}\n"
+            f"    SPEC = {json.dumps(spec_payload, ensure_ascii=False, indent=4)}\n"
         ),
         encoding="utf-8",
     )

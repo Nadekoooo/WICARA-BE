@@ -59,7 +59,7 @@ class Settings(BaseSettings):
         ),
     )
     media_tts_provider: str = Field(
-        default="edge_tts",
+        default="gtts_voiceover",
         validation_alias=AliasChoices(
             "WICARA_MEDIA_TTS_PROVIDER",
             "MEDIA_TTS_PROVIDER",
@@ -190,8 +190,12 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_media_tts_provider(cls, value: str) -> str:
         text = str(value).strip().lower()
-        if text not in {"edge_tts", "none"}:
-            raise ValueError("MEDIA_TTS_PROVIDER must be either 'edge_tts' or 'none'.")
+        if text == "edge_tts":
+            text = "gtts_voiceover"
+        if text not in {"gtts_voiceover", "none"}:
+            raise ValueError(
+                "MEDIA_TTS_PROVIDER must be either 'gtts_voiceover' or 'none'."
+            )
         return text
 
     @field_validator("media_duration_policy_mode", mode="before")

@@ -1,0 +1,45 @@
+{
+  "id": "sample_motion_glb",
+  "node_id": "km_e_fisika_gerak_lurus_beraturan",
+  "template_id": "manim.motion_kinematics.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "title": "Gerak Lurus Beraturan",
+  "subtitle": "Posisi bertambah sama setiap selang waktu.",
+  "scenario": "Gerak lurus beraturan",
+  "time_points": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "position_data": [
+    0,
+    2,
+    4,
+    6,
+    8
+  ],
+  "velocity_data": [
+    2,
+    2,
+    2,
+    2,
+    2
+  ],
+  "acceleration": 0,
+  "graph_type": "position_time",
+  "steps": [
+    {
+      "title": "Kecepatan tetap",
+      "body": "Benda menempuh jarak yang sama tiap detik."
+    },
+    {
+      "title": "Grafik lurus",
+      "body": "Posisi terhadap waktu membentuk garis lurus."
+    }
+  ],
+  "summary": "GLB memiliki kecepatan tetap dan percepatan nol.",
+  "voiceover_script": "Pada gerak lurus beraturan, posisi bertambah secara teratur setiap waktu."
+}

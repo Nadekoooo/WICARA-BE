@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import subprocess
 from dataclasses import dataclass
@@ -11,11 +10,6 @@ from uuid import UUID
 from app.core.config import Settings, get_settings
 from app.modules.learning.models import MediaArtifact
 from app.modules.learning.render_engine import RenderOutput
-
-try:  # pragma: no cover - optional runtime dependency
-    import edge_tts
-except ImportError:  # pragma: no cover - optional runtime dependency
-    edge_tts = None
 
 
 @dataclass(frozen=True)
@@ -80,47 +74,15 @@ def postprocess_render_output(
     tts_meta: dict[str, Any] = {
         "provider": resolved_settings.media_tts_provider,
         "required": bool(resolved_settings.media_tts_required),
+        "mode": "template_voiceover",
         "enabled": False,
-        "voice": None,
+        "audio_stream_present": False,
         "warning": None,
     }
-
-    audio_path: Path | None = None
-    if voiceover_script:
-        if resolved_settings.media_tts_provider == "none":
-            tts_meta["warning"] = "TTS provider disabled by configuration."
-            if resolved_settings.media_tts_required:
-                raise MediaPostprocessError(
-                    code="tts_error",
-                    message="TTS is required but MEDIA_TTS_PROVIDER is set to 'none'.",
-                    details={"provider": resolved_settings.media_tts_provider},
-                )
-        else:
-            audio_path = final_dir / "voiceover.mp3"
-            tts_voice = _voice_for_language(artifact.language)
-            _synthesize_edge_tts(
-                script=voiceover_script,
-                voice=tts_voice,
-                output_path=audio_path,
-            )
-            tts_meta.update(
-                {
-                    "enabled": True,
-                    "voice": tts_voice,
-                    "audio_path": str(audio_path),
-                }
-            )
-    elif resolved_settings.media_tts_required:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message="TTS is required but no voiceover script was found in spec_json.",
-            details={"template_id": artifact.template_id},
-        )
 
     final_video_path = final_dir / "final_video.mp4"
     ffmpeg_completed = _finalize_video_with_ffmpeg(
         source_video_path=source_video_path,
-        audio_path=audio_path,
         output_video_path=final_video_path,
         settings=resolved_settings,
     )
@@ -137,6 +99,36 @@ def postprocess_render_output(
         settings=resolved_settings,
     )
     duration_seconds = max(0, int(round(duration_raw)))
+    audio_stream_present, ffprobe_audio_stdout = _probe_video_audio_stream(
+        video_path=final_video_path,
+        settings=resolved_settings,
+    )
+
+    if voiceover_script and resolved_settings.media_tts_provider != "none":
+        tts_meta["enabled"] = True
+    if resolved_settings.media_tts_provider == "none":
+        tts_meta["warning"] = "TTS provider is disabled; video may contain no narration."
+    if resolved_settings.media_tts_required and not voiceover_script:
+        raise MediaPostprocessError(
+            code="tts_error",
+            message="TTS is required but no voiceover_script was found in spec_json.",
+            details={"template_id": artifact.template_id},
+        )
+    if resolved_settings.media_tts_required and resolved_settings.media_tts_provider == "none":
+        raise MediaPostprocessError(
+            code="tts_error",
+            message="TTS is required but MEDIA_TTS_PROVIDER is set to 'none'.",
+            details={"provider": resolved_settings.media_tts_provider},
+        )
+    if resolved_settings.media_tts_required and not audio_stream_present:
+        raise MediaPostprocessError(
+            code="tts_error",
+            message="TTS is required but rendered video does not contain an audio stream.",
+            details={"video_path": str(final_video_path)},
+        )
+    if tts_meta["enabled"] and not audio_stream_present:
+        tts_meta["warning"] = "Voiceover script exists but output video has no audio stream."
+    tts_meta["audio_stream_present"] = audio_stream_present
 
     quality_gate = _evaluate_duration_policy(
         spec_json=artifact.spec_json,
@@ -152,9 +144,6 @@ def postprocess_render_output(
 
     relative_video_path = _to_relative_path(final_video_path, output_root)
     relative_thumbnail_path = _to_relative_path(thumbnail_path, output_root)
-    relative_audio_path = (
-        _to_relative_path(audio_path, output_root) if audio_path is not None else None
-    )
 
     ffmpeg_meta = {
         "finalize_stdout": _tail_text(ffmpeg_completed.stdout),
@@ -162,6 +151,7 @@ def postprocess_render_output(
         "thumbnail_stdout": _tail_text(thumbnail_completed.stdout),
         "thumbnail_stderr": _tail_text(thumbnail_completed.stderr),
         "ffprobe_stdout": _tail_text(ffprobe_stdout),
+        "ffprobe_audio_stdout": _tail_text(ffprobe_audio_stdout),
         "duration_seconds_raw": duration_raw,
     }
 
@@ -173,101 +163,37 @@ def postprocess_render_output(
         duration_seconds=duration_seconds,
         transcript=voiceover_script,
         voiceover_script=voiceover_script,
-        audio_path=str(audio_path) if audio_path is not None else None,
-        relative_audio_path=relative_audio_path,
+        audio_path=None,
+        relative_audio_path=None,
         quality_gate=quality_gate,
         tts_meta=tts_meta,
         ffmpeg_meta=ffmpeg_meta,
     )
 
 
-def _synthesize_edge_tts(*, script: str, voice: str, output_path: Path) -> None:
-    if edge_tts is None:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message=(
-                "TTS provider 'edge_tts' is configured but dependency is missing. "
-                "Install with pip install edge-tts."
-            ),
-            details={"provider": "edge_tts"},
-        )
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    async def _generate() -> None:
-        communicator = edge_tts.Communicate(text=script, voice=voice)
-        await communicator.save(str(output_path))
-
-    try:
-        _run_async(_generate())
-    except MediaPostprocessError:
-        raise
-    except Exception as exc:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message="Edge TTS synthesis failed.",
-            details={
-                "voice": voice,
-                "error": str(exc),
-            },
-        ) from exc
-
-    if not output_path.exists() or output_path.stat().st_size <= 0:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message="Edge TTS synthesis produced empty audio output.",
-            details={"audio_path": str(output_path), "voice": voice},
-        )
-
-
-def _run_async(coro: Any) -> None:
-    asyncio.run(coro)
-
-
 def _finalize_video_with_ffmpeg(
     *,
     source_video_path: Path,
-    audio_path: Path | None,
     output_video_path: Path,
     settings: Settings,
 ) -> subprocess.CompletedProcess[str]:
     output_video_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if audio_path is None:
-        cmd = [
-            settings.media_ffmpeg_binary,
-            "-y",
-            "-i",
-            str(source_video_path),
-            "-map",
-            "0:v:0",
-            "-map",
-            "0:a?",
-            "-c:v",
-            "copy",
-            "-c:a",
-            "copy",
-            str(output_video_path),
-        ]
-    else:
-        cmd = [
-            settings.media_ffmpeg_binary,
-            "-y",
-            "-i",
-            str(source_video_path),
-            "-i",
-            str(audio_path),
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-shortest",
-            str(output_video_path),
-        ]
+    cmd = [
+        settings.media_ffmpeg_binary,
+        "-y",
+        "-i",
+        str(source_video_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a?",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        str(output_video_path),
+    ]
     return _run_command(
         cmd=cmd,
         timeout_seconds=settings.media_postprocess_timeout_seconds,
@@ -336,6 +262,42 @@ def _probe_video_duration_seconds(
             details={"stdout": _tail_text(completed.stdout)},
         )
     return duration, completed.stdout
+
+
+def _probe_video_audio_stream(
+    *,
+    video_path: Path,
+    settings: Settings,
+) -> tuple[bool, str]:
+    cmd = [
+        settings.media_ffprobe_binary,
+        "-v",
+        "error",
+        "-select_streams",
+        "a",
+        "-show_entries",
+        "stream=index",
+        "-of",
+        "json",
+        str(video_path),
+    ]
+    completed = _run_command(
+        cmd=cmd,
+        timeout_seconds=settings.media_postprocess_timeout_seconds,
+        error_code="ffmpeg_error",
+        step_name="Audio stream probe",
+    )
+    try:
+        payload = json.loads(completed.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        raise MediaPostprocessError(
+            code="ffmpeg_error",
+            message="Failed to parse ffprobe audio stream output.",
+            details={"stdout": _tail_text(completed.stdout)},
+        ) from exc
+    streams = payload.get("streams")
+    has_audio = isinstance(streams, list) and len(streams) > 0
+    return has_audio, completed.stdout
 
 
 def _parse_duration_from_ffprobe(output: str) -> float:
@@ -427,17 +389,6 @@ def _minimum_duration_seconds_for_audience(
     if normalized in {"sma", "high", "senior"}:
         return settings.media_duration_min_seconds_sma
     return settings.media_duration_min_seconds_default
-
-
-def _voice_for_language(language: str) -> str:
-    normalized = str(language or "").strip().lower()
-    if normalized in {"id", "id-id", "indonesian", "bahasa"}:
-        return "id-ID-GadisNeural"
-    if normalized in {"ms", "ms-my", "malay"}:
-        return "ms-MY-YasminNeural"
-    if normalized in {"ja", "ja-jp", "japanese"}:
-        return "ja-JP-NanamiNeural"
-    return "en-US-AriaNeural"
 
 
 def _build_voiceover_script(spec_json: dict[str, Any]) -> str:

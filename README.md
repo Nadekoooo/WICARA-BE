@@ -38,9 +38,11 @@ Important for Phase-4 render worker:
 - Render output is stored locally under `MEDIA_RENDER_OUTPUT_DIR` (default `tmp/media_renders`).
 
 Important for Phase-5 media post-process:
-- Install render extras for TTS (`python -m pip install -e \".[render]\"`).
+- Install render extras for voiceover (`python -m pip install -e \".[render]\"`).
+- Set `MEDIA_TTS_PROVIDER=gtts_voiceover` (or `none` to disable narration checks).
 - Ensure `ffmpeg` and `ffprobe` binaries are available in PATH, or set `MEDIA_FFMPEG_BINARY` and `MEDIA_FFPROBE_BINARY`.
-- Worker now finalizes output with voiceover + thumbnail + duration gate before job status becomes `ready`.
+- Voiceover is generated in-scene via `manim-voiceover + GTTSService` (multi-language from `language` field).
+- Worker post-process now focuses on finalization, audio stream probe, thumbnail extraction, and duration gate.
 - `video_url` remains source of truth; `playback_url` mirrors `video_url` as backward-compatible alias.
 
 Run tests:

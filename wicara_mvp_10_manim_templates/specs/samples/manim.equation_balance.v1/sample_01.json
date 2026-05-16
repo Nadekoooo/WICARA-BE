@@ -1,0 +1,41 @@
+{
+  "id": "sample_equation_balance",
+  "node_id": "km_d_matematika_persamaan_linear_satu_variabel",
+  "template_id": "manim.equation_balance.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "title": "Persamaan sebagai Timbangan",
+  "subtitle": "Operasi di kiri juga dilakukan di kanan.",
+  "equation": "2x + 3 = 11",
+  "left_expression": "2x + 3",
+  "right_expression": "11",
+  "solution_steps": [
+    {
+      "operation": "Kurangi 3",
+      "value": 3,
+      "left_result": "2x",
+      "right_result": "8",
+      "explanation": "Kurangi 3 di kedua sisi."
+    },
+    {
+      "operation": "Bagi 2",
+      "value": 2,
+      "left_result": "x",
+      "right_result": "4",
+      "explanation": "Bagi kedua sisi dengan 2."
+    }
+  ],
+  "final_solution": "x = 4",
+  "steps": [
+    {
+      "title": "Jaga seimbang",
+      "body": "Setiap operasi harus dilakukan pada kedua ruas."
+    },
+    {
+      "title": "Isolasi x",
+      "body": "Tujuannya membuat x berdiri sendiri."
+    }
+  ],
+  "summary": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara.",
+  "voiceover_script": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah."
+}

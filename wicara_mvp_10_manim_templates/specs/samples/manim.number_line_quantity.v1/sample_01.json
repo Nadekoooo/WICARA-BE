@@ -1,0 +1,46 @@
+{
+  "id": "sample_number_line_compare",
+  "node_id": "km_d_matematika_bilangan_bulat",
+  "template_id": "manim.number_line_quantity.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "title": "Bilangan pada Garis Bilangan",
+  "subtitle": "Semakin ke kanan, nilainya semakin besar.",
+  "number_range": {
+    "min": -5,
+    "max": 5,
+    "step": 1
+  },
+  "markers": [
+    {
+      "value": -3,
+      "label": "-3"
+    },
+    {
+      "value": 2,
+      "label": "2"
+    }
+  ],
+  "highlight_values": [
+    -3,
+    2
+  ],
+  "operation": {
+    "type": "compare",
+    "from": -3,
+    "to": 2,
+    "label": "2 lebih besar dari -3"
+  },
+  "steps": [
+    {
+      "title": "Lihat posisi angka",
+      "body": "-3 berada di kiri, sedangkan 2 berada di kanan."
+    },
+    {
+      "title": "Bandingkan nilainya",
+      "body": "Angka yang lebih kanan di garis bilangan bernilai lebih besar."
+    }
+  ],
+  "summary": "Pada garis bilangan, angka di kanan bernilai lebih besar.",
+  "voiceover_script": "Perhatikan garis bilangan ini. Angka minus tiga berada di kiri, sedangkan angka dua berada di kanan."
+}

@@ -712,7 +712,10 @@ def process_animation_job_for_worker(
             job=job,
             artifact=artifact,
             progress=92,
-            message="Running TTS, ffmpeg finalization, thumbnail extraction, and duration gate.",
+            message=(
+                "Finalizing rendered video, probing audio stream, extracting thumbnail, "
+                "and evaluating duration gate."
+            ),
         )
         postprocess_output = postprocess_render_output(
             job_id=job.id,
@@ -2146,6 +2149,7 @@ def _validate_job_payload(
             "schema_id": validation_result.schema_id,
             "resolved_from": validation_result.resolved_from,
             "used_alias": validation_result.used_alias,
+            "language": artifact.language,
         }
     )
     artifact.render_meta_json = render_meta
@@ -2186,6 +2190,7 @@ def _render_artifact_with_retry(
                 template_path=template_path,
                 scene_class=scene_class,
                 spec_json=artifact.spec_json,
+                language=artifact.language,
                 quality_profile=artifact.quality_profile,
                 timeout_seconds=timeout_seconds,
             )
@@ -2259,13 +2264,19 @@ def _attach_postprocess_output_to_artifact(
             "relative_video_path": output.relative_video_path,
             "local_thumbnail_path": output.thumbnail_path,
             "relative_thumbnail_path": output.relative_thumbnail_path,
-            "voiceover_audio_path": output.audio_path,
-            "relative_voiceover_audio_path": output.relative_audio_path,
             "quality_gate": output.quality_gate,
             "tts": output.tts_meta,
             "ffmpeg": output.ffmpeg_meta,
         }
     )
+    if output.audio_path:
+        render_meta["voiceover_audio_path"] = output.audio_path
+    else:
+        render_meta.pop("voiceover_audio_path", None)
+    if output.relative_audio_path:
+        render_meta["relative_voiceover_audio_path"] = output.relative_audio_path
+    else:
+        render_meta.pop("relative_voiceover_audio_path", None)
     artifact.render_meta_json = render_meta
     session.flush()
 

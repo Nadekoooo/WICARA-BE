@@ -1,0 +1,46 @@
+{
+  "id": "sample_force_resultant",
+  "node_id": "km_d_ipa_gaya_dan_resultan_gaya",
+  "template_id": "manim.force_diagram.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "title": "Resultan Gaya",
+  "subtitle": "Gaya berlawanan saling mengurangi.",
+  "object": {
+    "type": "box",
+    "label": "Kotak"
+  },
+  "forces": [
+    {
+      "label": "F1",
+      "magnitude": 10,
+      "unit": "N",
+      "direction": "right"
+    },
+    {
+      "label": "F2",
+      "magnitude": 4,
+      "unit": "N",
+      "direction": "left"
+    }
+  ],
+  "resultant": {
+    "magnitude": 6,
+    "unit": "N",
+    "direction": "right"
+  },
+  "motion_response": "Benda cenderung bergerak ke kanan.",
+  "force_scale": 0.25,
+  "steps": [
+    {
+      "title": "Dua gaya berlawanan",
+      "body": "Gaya kanan lebih besar daripada gaya kiri."
+    },
+    {
+      "title": "Cari selisih",
+      "body": "Resultan gaya adalah 6 N ke kanan."
+    }
+  ],
+  "summary": "Arah resultan gaya menentukan kecenderungan gerak benda.",
+  "voiceover_script": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan."
+}
