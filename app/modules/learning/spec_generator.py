@@ -1,15 +1,41 @@
 from __future__ import annotations
 
-import re
+import asyncio
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from app.modules.workspaces.models import WorkspaceSession
+from app.modules.ai import ai_client
+from app.modules.ai.errors import AIConfigurationError, AIError
+from app.modules.ai.schemas import AIGenerationResponse
+from app.modules.learning.template_registry import TemplateRegistryError, resolve_template_entry
+from app.modules.learning.template_validation import (
+    TemplateValidationError,
+    validate_template_spec,
+)
+from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 
-_PILOT_NODE_ID = "km_d_matematika_bilangan_bulat"
-_PILOT_CONCEPT_TYPE = "number_line_quantity_model"
-_PILOT_TEMPLATE_ID = "manim.number_line_quantity.v1"
-_PILOT_PREREQUISITES = ["km_c_matematika_bilangan_cacah_sampai_1000000"]
+_PROMPT_VERSION = "workspace_context_spec_gemini_v1"
+_DEFAULT_MODEL = "gemini-2.5-flash"
+_MAX_ATTEMPTS = 2
+_ROOT_DIR = Path(__file__).resolve().parents[3]
+_SAMPLE_SPECS_DIR = _ROOT_DIR / "wicara_mvp_10_manim_templates" / "specs" / "samples"
+
+_SYSTEM_INSTRUCTION = """
+You are a backend spec generator for Manim educational templates.
+Task:
+- Produce exactly one JSON object that follows the requested template schema.
+- Adapt content to the latest workspace conversation context.
+- Keep the tone instructional and concise for students.
+
+Hard requirements:
+- Return JSON only, no markdown, no explanation.
+- Keep `template_id` exactly as requested.
+- Use `language` exactly as requested.
+- Include narration fields so voiceover can be generated cleanly.
+- Keep values realistic and classroom-safe.
+""".strip()
 
 
 class WorkspaceContextSpecGenerationError(ValueError):
@@ -29,154 +55,92 @@ def generate_spec_from_workspace_context(
     language: str,
 ) -> WorkspaceGeneratedSpec:
     metadata = dict(workspace.metadata_json or {})
-    concept_type = str(metadata.get("active_concept_type") or "").strip().lower()
-    template_id = str(metadata.get("active_template_id") or "").strip().lower()
-    node_id = str(metadata.get("active_node_id") or "").strip()
-
-    if not concept_type:
-        raise WorkspaceContextSpecGenerationError(
-            "Workspace context is missing active_concept_type."
-        )
-    if not template_id:
+    raw_template_id = str(metadata.get("active_template_id") or "").strip().lower()
+    if not raw_template_id:
         raise WorkspaceContextSpecGenerationError(
             "Workspace context is missing active_template_id."
         )
-    if concept_type != _PILOT_CONCEPT_TYPE or template_id != _PILOT_TEMPLATE_ID:
-        raise WorkspaceContextSpecGenerationError(
-            "Only the number-line pilot context is supported for context_auto mode."
-        )
 
+    try:
+        resolved = resolve_template_entry(raw_template_id)
+    except TemplateRegistryError as exc:
+        raise WorkspaceContextSpecGenerationError(str(exc)) from exc
+
+    template_id = resolved.entry.template_id
+    node_id = str(metadata.get("active_node_id") or "").strip()
     normalized_language = _normalize_language(language)
-    is_id = normalized_language == "id"
-    learner_focus_text = _latest_learner_focus_text(workspace)
+    sample_spec = _load_sample_spec(template_id)
+    context_snapshot = _build_context_snapshot(
+        workspace=workspace,
+        metadata=metadata,
+        language=normalized_language,
+    )
 
-    title = (workspace.current_topic or "").strip()
-    if not title:
-        title = (
-            "Bilangan pada Garis Bilangan"
-            if is_id
-            else "Numbers on the Number Line"
+    last_error: str | None = None
+    last_response: str | None = None
+    validation_details: list[dict[str, Any]] = []
+    final_ai_response: AIGenerationResponse | None = None
+
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        user_instruction = _build_user_instruction(
+            template_id=template_id,
+            language=normalized_language,
+            workspace_id=str(workspace.id),
+            context_snapshot=context_snapshot,
+            sample_spec=sample_spec,
+            previous_error=last_error,
+            validation_details=validation_details,
+            previous_response=last_response,
+        )
+        ai_response = _generate_with_gemini(user_instruction=user_instruction)
+        final_ai_response = ai_response
+        candidate_payload = _parse_candidate_spec(ai_response.text)
+        candidate_payload["template_id"] = template_id
+        candidate_payload["language"] = normalized_language
+        candidate_payload.setdefault("id", f"context_auto_{workspace.id}")
+        if node_id:
+            candidate_payload.setdefault("node_id", node_id)
+
+        try:
+            validation_result = validate_template_spec(
+                template_id=template_id,
+                spec_json=candidate_payload,
+            )
+        except TemplateValidationError as exc:
+            last_error = exc.message
+            validation_details = exc.details
+            last_response = ai_response.text
+            if attempt >= _MAX_ATTEMPTS:
+                raise WorkspaceContextSpecGenerationError(
+                    f"Gemini generated an invalid spec for {template_id}: {exc.message}"
+                ) from exc
+            continue
+
+        debug_meta: dict[str, Any] = {
+            "spec_source": "context_auto_backend_gemini",
+            "prompt_version": _PROMPT_VERSION,
+            "resolved_template_id": template_id,
+            "resolved_node_id": node_id or None,
+            "resolved_concept_type": metadata.get("active_concept_type"),
+            "resolved_prerequisites": metadata.get("active_prerequisites"),
+            "context_source": metadata.get("context_source"),
+            "language": normalized_language,
+            "attempt": attempt,
+            "ai_source": ai_response.provider,
+            "ai_model": ai_response.model,
+            "ai_finish_reason": ai_response.finish_reason,
+            "input_tokens": ai_response.usage.input_tokens if ai_response.usage else None,
+            "output_tokens": ai_response.usage.output_tokens if ai_response.usage else None,
+            "conversation_turns_used": len(context_snapshot["recent_turns"]),
+        }
+        return WorkspaceGeneratedSpec(
+            template_id=template_id,
+            spec_json=validation_result.normalized_spec,
+            debug_meta=debug_meta,
         )
 
-    subtitle = (
-        "Semakin ke kanan, nilainya semakin besar."
-        if is_id
-        else "Values get larger as we move to the right."
-    )
-    if learner_focus_text:
-        subtitle = (
-            f"Fokus diskusi: {learner_focus_text[:90]}"
-            if is_id
-            else f"Discussion focus: {learner_focus_text[:90]}"
-        )
-    intro = (
-        "Perhatikan garis bilangan ini. Angka negatif di kiri dan angka positif di kanan."
-        if is_id
-        else "Look at this number line. Negative numbers are on the left and positive numbers are on the right."
-    )
-    step_1_narration = (
-        "Lihat posisi angkanya. Minus dua ada di kiri, sedangkan tiga ada di kanan."
-        if is_id
-        else "Observe the positions. Negative two is on the left, while three is on the right."
-    )
-    step_2_narration = (
-        "Bandingkan nilainya. Angka yang lebih kanan pada garis bilangan nilainya lebih besar."
-        if is_id
-        else "Now compare values. The number farther to the right is greater on a number line."
-    )
-    summary = (
-        "Pada garis bilangan, angka di kanan bernilai lebih besar."
-        if is_id
-        else "On a number line, numbers to the right are greater."
-    )
-
-    prerequisites = metadata.get("active_prerequisites")
-    if isinstance(prerequisites, list):
-        normalized_prerequisites = [
-            str(item).strip() for item in prerequisites if str(item).strip()
-        ]
-    else:
-        normalized_prerequisites = list(_PILOT_PREREQUISITES)
-
-    marker_values = _resolve_marker_values(learner_focus_text)
-    marker_left, marker_right = marker_values
-    marker_min = min(marker_values)
-    marker_max = max(marker_values)
-    range_min = marker_min - 3
-    range_max = marker_max + 3
-
-    spec_json: dict[str, Any] = {
-        "id": f"context_auto_{workspace.id}",
-        "node_id": node_id or _PILOT_NODE_ID,
-        "template_id": _PILOT_TEMPLATE_ID,
-        "phase": "D",
-        "audience_level": "smp",
-        "language": normalized_language,
-        "title": title,
-        "subtitle": subtitle,
-        "number_range": {"min": range_min, "max": range_max, "step": 1},
-        "markers": [
-            {"value": marker_left, "label": str(marker_left)},
-            {"value": marker_right, "label": str(marker_right)},
-        ],
-        "highlight_values": [marker_left, marker_right],
-        "operation": {
-            "type": "compare",
-            "from": marker_left,
-            "to": marker_right,
-            "label": (
-                f"{marker_right} lebih besar dari {marker_left}"
-                if is_id
-                else f"{marker_right} is greater than {marker_left}"
-            ),
-        },
-        "steps": [
-            {
-                "title": "Lihat posisi angka" if is_id else "Check positions",
-                "body": (
-                    f"{marker_left} berada di kiri, sedangkan {marker_right} berada di kanan."
-                    if is_id
-                    else f"{marker_left} is on the left, while {marker_right} is on the right."
-                ),
-                "narration": step_1_narration,
-            },
-            {
-                "title": "Bandingkan nilai" if is_id else "Compare values",
-                "body": (
-                    "Angka di kanan pada garis bilangan nilainya lebih besar."
-                    if is_id
-                    else "A number farther right on the number line has a larger value."
-                ),
-                "narration": step_2_narration,
-            },
-        ],
-        "summary": summary,
-        "voiceover_script": intro,
-        "intro_narration": intro,
-        "summary_narration": summary,
-        "narration_segments": [
-            {"slot": "intro", "text": intro},
-            {"slot": "step", "step_index": 1, "text": step_1_narration},
-            {"slot": "step", "step_index": 2, "text": step_2_narration},
-            {"slot": "summary", "text": summary},
-        ],
-    }
-
-    debug_meta: dict[str, Any] = {
-        "spec_source": "context_auto_backend",
-        "resolved_node_id": node_id or _PILOT_NODE_ID,
-        "resolved_concept_type": concept_type,
-        "resolved_template_id": _PILOT_TEMPLATE_ID,
-        "resolved_prerequisites": normalized_prerequisites,
-        "context_source": metadata.get("context_source"),
-        "language": normalized_language,
-        "learner_focus_text": learner_focus_text,
-    }
-
-    return WorkspaceGeneratedSpec(
-        template_id=_PILOT_TEMPLATE_ID,
-        spec_json=spec_json,
-        debug_meta=debug_meta,
+    raise WorkspaceContextSpecGenerationError(
+        "Gemini spec generation failed unexpectedly."
     )
 
 
@@ -199,32 +163,198 @@ def _normalize_language(language: str) -> str:
     return normalized[:16] or "id"
 
 
-def _latest_learner_focus_text(workspace: WorkspaceSession) -> str:
-    events = list(workspace.events or [])
-    for event in reversed(events):
-        if str(event.actor_type).strip().lower() != "learner":
-            continue
+def _load_sample_spec(template_id: str) -> dict[str, Any]:
+    sample_path = _SAMPLE_SPECS_DIR / template_id / "sample_01.json"
+    if not sample_path.exists():
+        raise WorkspaceContextSpecGenerationError(
+            f"Sample spec not found for template '{template_id}' at {sample_path}."
+        )
+    try:
+        payload = json.loads(sample_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkspaceContextSpecGenerationError(
+            f"Failed to load sample spec for '{template_id}': {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise WorkspaceContextSpecGenerationError(
+            f"Sample spec for '{template_id}' must be a JSON object."
+        )
+    return payload
+
+
+def _build_context_snapshot(
+    *,
+    workspace: WorkspaceSession,
+    metadata: dict[str, Any],
+    language: str,
+) -> dict[str, Any]:
+    recent_turns = _recent_turns(workspace.events or [], max_turns=8)
+    latest_learner_text = ""
+    for turn in reversed(recent_turns):
+        if turn["role"] == "learner":
+            latest_learner_text = turn["text"]
+            break
+
+    return {
+        "workspace_id": str(workspace.id),
+        "current_topic": (workspace.current_topic or "").strip(),
+        "language": language,
+        "active_node_id": _jsonable(metadata.get("active_node_id")),
+        "active_concept_type": _jsonable(metadata.get("active_concept_type")),
+        "active_template_id": _jsonable(metadata.get("active_template_id")),
+        "active_prerequisites": _jsonable(metadata.get("active_prerequisites")),
+        "context_source": _jsonable(metadata.get("context_source")),
+        "latest_learner_text": latest_learner_text,
+        "recent_turns": recent_turns,
+    }
+
+
+def _recent_turns(events: list[WorkspaceEvent], *, max_turns: int) -> list[dict[str, str]]:
+    lines: list[dict[str, str]] = []
+    for event in events[-(max_turns * 2) :]:
         text = str(event.text_payload or "").strip()
-        if text:
-            return text
-    return ""
+        if not text:
+            continue
+        actor = str(event.actor_type or "").strip().lower()
+        role = "learner" if actor == "learner" else "assistant"
+        lines.append({"role": role, "text": text})
+    return lines[-max_turns:]
 
 
-def _resolve_marker_values(learner_focus_text: str) -> tuple[int, int]:
-    if learner_focus_text:
-        matches = re.findall(r"(?<!\d)-?\d+(?!\d)", learner_focus_text)
-        parsed: list[int] = []
-        for match in matches:
-            try:
-                value = int(match)
-            except ValueError:
-                continue
-            if value not in parsed:
-                parsed.append(value)
-        if len(parsed) >= 2:
-            first, second = parsed[0], parsed[1]
-            left, right = sorted((first, second))
-            if left == right:
-                return left - 1, right + 1
-            return left, right
-    return -2, 3
+def _build_user_instruction(
+    *,
+    template_id: str,
+    language: str,
+    workspace_id: str,
+    context_snapshot: dict[str, Any],
+    sample_spec: dict[str, Any],
+    previous_error: str | None,
+    validation_details: list[dict[str, Any]],
+    previous_response: str | None,
+) -> str:
+    base_payload: dict[str, Any] = {
+        "task": "generate_template_spec_json",
+        "template_id": template_id,
+        "language": language,
+        "workspace_id": workspace_id,
+        "instructions": [
+            "Use the sample spec structure as reference.",
+            "Adapt the content to the context conversation.",
+            "Keep required fields complete.",
+            "Keep narration fields coherent with steps.",
+            "Do not return markdown.",
+        ],
+        "context_snapshot": context_snapshot,
+        "sample_spec_reference": sample_spec,
+    }
+    if previous_error:
+        base_payload["retry_feedback"] = {
+            "previous_error": previous_error,
+            "validation_details": validation_details,
+            "previous_response": previous_response,
+        }
+    return json.dumps(base_payload, ensure_ascii=True, indent=2)
+
+
+def _generate_with_gemini(*, user_instruction: str) -> AIGenerationResponse:
+    params = {
+        "temperature": 0.3,
+        "maxOutputTokens": 3072,
+        "responseMimeType": "application/json",
+    }
+    try:
+        return _run_async_generate(
+            system_instruction=_SYSTEM_INSTRUCTION,
+            user_instruction=user_instruction,
+            params=params,
+        )
+    except AIConfigurationError as exc:
+        raise WorkspaceContextSpecGenerationError(str(exc)) from exc
+    except AIError as exc:
+        raise WorkspaceContextSpecGenerationError(
+            f"Gemini spec generation failed: {exc}"
+        ) from exc
+
+
+def _run_async_generate(
+    *,
+    system_instruction: str,
+    user_instruction: str,
+    params: dict[str, Any],
+) -> AIGenerationResponse:
+    async def _call() -> AIGenerationResponse:
+        return await ai_client.generate(
+            provider="gemini",
+            model=_DEFAULT_MODEL,
+            system_instruction=system_instruction,
+            user_instruction=user_instruction,
+            params=params,
+        )
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_call())
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(lambda: asyncio.run(_call())).result()
+
+
+def _parse_candidate_spec(raw_text: str) -> dict[str, Any]:
+    text = (raw_text or "").strip()
+    if not text:
+        raise WorkspaceContextSpecGenerationError("Gemini returned an empty response.")
+
+    candidates = [text]
+    fenced = _extract_fenced_json(text)
+    if fenced:
+        candidates.append(fenced)
+    sliced = _slice_outer_object(text)
+    if sliced and sliced not in candidates:
+        candidates.append(sliced)
+
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+
+    raise WorkspaceContextSpecGenerationError(
+        "Gemini response is not a valid JSON object for spec generation."
+    )
+
+
+def _extract_fenced_json(text: str) -> str:
+    marker = "```"
+    start = text.find(marker)
+    if start < 0:
+        return ""
+    end = text.find(marker, start + len(marker))
+    if end < 0:
+        return ""
+    chunk = text[start + len(marker) : end].strip()
+    if chunk.lower().startswith("json"):
+        chunk = chunk[4:].strip()
+    return chunk
+
+
+def _slice_outer_object(text: str) -> str:
+    left = text.find("{")
+    right = text.rfind("}")
+    if left < 0 or right < 0 or right <= left:
+        return ""
+    return text[left : right + 1]
+
+
+def _jsonable(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(item) for item in value]
+    return str(value)
