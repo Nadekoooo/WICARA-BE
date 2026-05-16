@@ -1,14 +1,25 @@
 from manim import *
+import os
 import math
 import re
 import textwrap
+from pathlib import Path
 
 try:
     from manim_voiceover import VoiceoverScene
+    from manim_voiceover.helper import remove_bookmarks
+    from manim_voiceover.services.base import SpeechService
     from manim_voiceover.services.gtts import GTTSService
+    try:
+        from openai import OpenAI
+    except ImportError:
+        OpenAI = None
 except ImportError:
     VoiceoverScene = Scene
+    SpeechService = None
+    remove_bookmarks = lambda text: text
     GTTSService = None
+    OpenAI = None
 
 LANGUAGE_ALIASES = {
     "id": "id",
@@ -401,6 +412,124 @@ def _split_voiceover_script(script: str, max_chars: int = 220) -> list[str]:
     return [segment for segment in segments if segment]
 
 
+def _normalize_tts_provider(value) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {
+        "gtts": "gtts_voiceover",
+        "gtts_voiceover": "gtts_voiceover",
+        "openai": "openai_voiceover",
+        "openai_tts": "openai_voiceover",
+        "openai_voiceover": "openai_voiceover",
+        "none": "none",
+    }
+    return mapping.get(normalized, "gtts_voiceover")
+
+
+if SpeechService is not None and OpenAI is not None:
+    class OpenAIFallbackVoiceoverService(SpeechService):
+        def __init__(
+            self,
+            *,
+            api_key: str | None = None,
+            model_primary: str = "gpt-4o-mini-tts",
+            model_fallback: str = "tts-1",
+            voice_primary: str = "marin",
+            voice_fallback: str = "alloy",
+            response_format: str = "wav",
+            instructions: str = "",
+            **kwargs,
+        ):
+            self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+            self.model_primary = model_primary
+            self.model_fallback = model_fallback
+            self.voice_primary = voice_primary
+            self.voice_fallback = voice_fallback
+            self.response_format = str(response_format or "wav").lower()
+            self.instructions = " ".join(str(instructions or "").split())
+            super().__init__(**kwargs)
+
+        def _request_tts(self, *, model: str, voice: str, input_text: str, output_path: Path):
+            payload = {
+                "model": model,
+                "voice": voice,
+                "input": input_text,
+                "response_format": self.response_format,
+            }
+            if self.instructions and model.startswith("gpt-4o-mini-tts"):
+                payload["instructions"] = self.instructions
+            with self.client.audio.speech.with_streaming_response.create(**payload) as response:
+                response.stream_to_file(output_path)
+
+        def generate_from_text(self, text: str, cache_dir: str = None, path: str = None, **kwargs) -> dict:
+            cache_root = Path(cache_dir) if cache_dir is not None else Path(self.cache_dir)
+            input_text = remove_bookmarks(text)
+            speed = kwargs.get("speed", 1.0)
+            input_data = {
+                "input_text": input_text,
+                "service": "openai_speech_api",
+                "config": {
+                    "model_primary": self.model_primary,
+                    "model_fallback": self.model_fallback,
+                    "voice_primary": self.voice_primary,
+                    "voice_fallback": self.voice_fallback,
+                    "response_format": self.response_format,
+                    "speed": speed,
+                },
+            }
+            cached_result = self.get_cached_result(input_data, cache_root)
+            if cached_result is not None:
+                return cached_result
+
+            extension = self.response_format if self.response_format != "pcm" else "wav"
+            audio_file = path or f"{self.get_audio_basename(input_data)}.{extension}"
+            output_path = cache_root / audio_file
+
+            used_model = self.model_primary
+            used_voice = self.voice_primary
+            try:
+                self._request_tts(
+                    model=self.model_primary,
+                    voice=self.voice_primary,
+                    input_text=input_text,
+                    output_path=output_path,
+                )
+            except Exception:
+                used_model = self.model_fallback
+                used_voice = self.voice_fallback
+                self._request_tts(
+                    model=self.model_fallback,
+                    voice=self.voice_fallback,
+                    input_text=input_text,
+                    output_path=output_path,
+                )
+
+            return {
+                "input_text": text,
+                "input_data": input_data,
+                "original_audio": audio_file,
+                "tts_engine": "openai_speech_api",
+                "model": used_model,
+                "voice": used_voice,
+            }
+else:
+    OpenAIFallbackVoiceoverService = None
+
+
+def _dedupe_voiceover_segments(segments: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for segment in segments:
+        cleaned = " ".join(str(segment or "").split())
+        if not cleaned:
+            continue
+        key = cleaned.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(cleaned)
+    return deduped
+
+
 class WicaraTemplateScene(VoiceoverScene):
     SPEC = {}
 
@@ -412,6 +541,14 @@ class WicaraTemplateScene(VoiceoverScene):
         self._voiceover_segments: list[str] = []
         self._voiceover_index = 0
         self._voiceover_provider = "none"
+        self._requested_tts_provider = "gtts_voiceover"
+        self._openai_primary_model = "gpt-4o-mini-tts"
+        self._openai_fallback_model = "tts-1"
+        self._openai_primary_voice = "marin"
+        self._openai_fallback_voice = "alloy"
+        self._openai_response_format = "wav"
+        self._openai_instructions = ""
+        self._openai_fallback_attempted = False
 
     # --------------------------------------------------------
     # Layout zones
@@ -432,49 +569,178 @@ class WicaraTemplateScene(VoiceoverScene):
     # --------------------------------------------------------
     # Text/card helpers
     # --------------------------------------------------------
-    def _build_fallback_voiceover_script(self, spec):
-        parts = [
-            " ".join(str(spec.get("title", "")).split()),
-            " ".join(str(spec.get("subtitle", "")).split()),
-        ]
+    def _clean_voice_text(self, value):
+        return " ".join(str(value or "").split())
+
+    def _build_structured_voiceover_segments(self, spec):
+        segments: list[str] = []
+        title = self._clean_voice_text(spec.get("title"))
+        subtitle = self._clean_voice_text(spec.get("subtitle"))
+        if title and subtitle:
+            segments.append(f"{title}. {subtitle}")
+        elif title:
+            segments.append(title)
+        elif subtitle:
+            segments.append(subtitle)
 
         steps = spec.get("steps")
         if isinstance(steps, list):
-            for step in steps:
+            for index, step in enumerate(steps):
                 if not isinstance(step, dict):
                     continue
-                step_title = " ".join(str(step.get("title", "")).split())
-                step_body = " ".join(str(step.get("body", "")).split())
-                sentence = " ".join(part for part in [step_title, step_body] if part)
+                default_step_title = (
+                    f"{self.tr_key('step_prefix', spec, fallback='Langkah')} {index + 1}"
+                )
+                step_title = self._clean_voice_text(step.get("title", default_step_title))
+                step_body = self._clean_voice_text(step.get("body"))
+                if step_title and step_body:
+                    if not step_title.endswith((".", "!", "?")):
+                        step_title = f"{step_title}."
+                    sentence = f"{step_title} {step_body}"
+                else:
+                    sentence = step_title or step_body
                 if sentence:
-                    parts.append(sentence)
+                    segments.extend(_split_voiceover_script(sentence, max_chars=180))
 
-        parts.append(" ".join(str(spec.get("summary", "")).split()))
-        return " ".join(part for part in parts if part)
+        summary = self._clean_voice_text(spec.get("summary"))
+        if summary:
+            segments.extend(_split_voiceover_script(summary, max_chars=200))
+        return segments
+
+    def _build_voiceover_segments(self, spec):
+        explicit_script = self._clean_voice_text(spec.get("voiceover_script"))
+        explicit_segments = _split_voiceover_script(explicit_script)
+
+        # Optional advanced mode: upstream model can pass per-step narration directly.
+        structured_segments: list[str] = []
+        raw_segments = spec.get("narration_segments")
+        if isinstance(raw_segments, list):
+            for item in raw_segments:
+                if isinstance(item, str):
+                    structured_segments.extend(_split_voiceover_script(item, max_chars=180))
+                elif isinstance(item, dict):
+                    text = self._clean_voice_text(item.get("text"))
+                    if text:
+                        structured_segments.extend(_split_voiceover_script(text, max_chars=180))
+
+        if not structured_segments:
+            structured_segments = self._build_structured_voiceover_segments(spec)
+
+        if explicit_segments and structured_segments:
+            # Keep explicit intro but still cover all educational steps.
+            return _dedupe_voiceover_segments(explicit_segments + structured_segments)
+        if explicit_segments:
+            return _dedupe_voiceover_segments(explicit_segments)
+        return _dedupe_voiceover_segments(structured_segments)
+
+    def _resolve_tts_provider(self, spec):
+        requested = (
+            spec.get("tts_provider")
+            or spec.get("voiceover_provider")
+            or os.getenv("MEDIA_TTS_PROVIDER")
+            or "gtts_voiceover"
+        )
+        normalized = _normalize_tts_provider(requested)
+        self._requested_tts_provider = normalized
+        return normalized
+
+    def _resolve_openai_voiceover_config(self, spec):
+        self._openai_primary_model = str(
+            spec.get("tts_model_primary")
+            or spec.get("tts_model")
+            or os.getenv("MEDIA_OPENAI_TTS_MODEL_PRIMARY")
+            or "gpt-4o-mini-tts"
+        ).strip()
+        self._openai_fallback_model = str(
+            spec.get("tts_model_fallback")
+            or os.getenv("MEDIA_OPENAI_TTS_MODEL_FALLBACK")
+            or "tts-1"
+        ).strip()
+        self._openai_primary_voice = str(
+            spec.get("tts_voice_primary")
+            or spec.get("tts_voice")
+            or os.getenv("MEDIA_OPENAI_TTS_VOICE_PRIMARY")
+            or "marin"
+        ).strip()
+        self._openai_fallback_voice = str(
+            spec.get("tts_voice_fallback")
+            or os.getenv("MEDIA_OPENAI_TTS_VOICE_FALLBACK")
+            or "alloy"
+        ).strip()
+        self._openai_response_format = str(
+            spec.get("tts_response_format")
+            or os.getenv("MEDIA_OPENAI_TTS_RESPONSE_FORMAT")
+            or "wav"
+        ).strip().lower()
+        self._openai_instructions = " ".join(
+            str(
+                spec.get("tts_instructions")
+                or os.getenv("MEDIA_OPENAI_TTS_INSTRUCTIONS")
+                or ""
+            ).split()
+        )
+
+    def _configure_openai_voiceover(self, spec):
+        self._resolve_openai_voiceover_config(spec)
+        if OpenAIFallbackVoiceoverService is None:
+            return False
+        api_key = str(os.getenv("OPENAI_API_KEY") or "").strip()
+        if not api_key:
+            return False
+        self.set_speech_service(
+            OpenAIFallbackVoiceoverService(
+                api_key=api_key,
+                model_primary=self._openai_primary_model,
+                model_fallback=self._openai_fallback_model,
+                voice_primary=self._openai_primary_voice,
+                voice_fallback=self._openai_fallback_voice,
+                response_format=self._openai_response_format,
+                instructions=self._openai_instructions,
+            )
+        )
+        self._voiceover_provider = "openai_voiceover"
+        self._openai_fallback_attempted = False
+        return True
+
+    def _configure_gtts_voiceover(self, spec):
+        if GTTSService is None:
+            return False
+        language = self.resolve_language(spec)
+        gtts_lang = _voiceover_lang_for_gtts(language)
+        self.set_speech_service(GTTSService(lang=gtts_lang))
+        self._voiceover_provider = "gtts_voiceover"
+        return True
 
     def _initialize_voiceover(self, spec):
         if self._voiceover_initialized:
             return
 
         self._voiceover_initialized = True
-        if GTTSService is None:
-            self._voiceover_provider = "none"
-            return
 
-        explicit_script = " ".join(str(spec.get("voiceover_script", "")).split())
-        script = explicit_script or self._build_fallback_voiceover_script(spec)
-        segments = _split_voiceover_script(script)
+        segments = self._build_voiceover_segments(spec)
         if not segments:
             self._voiceover_provider = "none"
             return
 
-        language = self.resolve_language(spec)
-        gtts_lang = _voiceover_lang_for_gtts(language)
-        self.set_speech_service(GTTSService(lang=gtts_lang))
+        provider = self._resolve_tts_provider(spec)
+        configured = False
+        if provider == "none":
+            self._voiceover_provider = "none"
+            return
+        if provider == "openai_voiceover":
+            configured = self._configure_openai_voiceover(spec)
+            if not configured:
+                configured = self._configure_gtts_voiceover(spec)
+        else:
+            configured = self._configure_gtts_voiceover(spec)
+
+        if not configured:
+            self._voiceover_provider = "none"
+            return
+
         self._voiceover_segments = segments
         self._voiceover_index = 0
         self._voiceover_enabled = True
-        self._voiceover_provider = "gtts_voiceover"
 
     def _next_voiceover_segment(self):
         if not self._voiceover_enabled:
@@ -485,11 +751,7 @@ class WicaraTemplateScene(VoiceoverScene):
         self._voiceover_index += 1
         return segment
 
-    def play(self, *args, **kwargs):
-        segment = self._next_voiceover_segment()
-        if not segment:
-            return super().play(*args, **kwargs)
-
+    def _play_with_voiceover_segment(self, segment, *args, **kwargs):
         run_time = kwargs.get("run_time")
         try:
             with self.voiceover(text=segment) as tracker:
@@ -501,8 +763,42 @@ class WicaraTemplateScene(VoiceoverScene):
                         updated_kwargs["run_time"] = max(float(run_time), float(tracker.duration))
                 return super().play(*args, **updated_kwargs)
         except Exception:
+            if self._voiceover_provider == "openai_voiceover" and not self._openai_fallback_attempted:
+                self._openai_fallback_attempted = True
+                try:
+                    self.set_speech_service(
+                        OpenAIFallbackVoiceoverService(
+                            api_key=os.getenv("OPENAI_API_KEY"),
+                            model_primary=self._openai_fallback_model,
+                            model_fallback=self._openai_fallback_model,
+                            voice_primary=self._openai_fallback_voice,
+                            voice_fallback=self._openai_fallback_voice,
+                            response_format=self._openai_response_format,
+                        )
+                    )
+                    return self._play_with_voiceover_segment(segment, *args, **kwargs)
+                except Exception:
+                    if self._configure_gtts_voiceover(self.SPEC):
+                        return self._play_with_voiceover_segment(segment, *args, **kwargs)
             self._voiceover_enabled = False
             return super().play(*args, **kwargs)
+
+    def play_with_voiceover(self, narration_text, *args, **kwargs):
+        if not narration_text or not self._voiceover_enabled:
+            return self.play(*args, **kwargs)
+        narration = self._clean_voice_text(narration_text)
+        if not narration:
+            return self.play(*args, **kwargs)
+        # Keep auto segment cursor aligned to avoid duplicate narration later.
+        if self._voiceover_index < len(self._voiceover_segments):
+            self._voiceover_index += 1
+        return self._play_with_voiceover_segment(narration, *args, **kwargs)
+
+    def play(self, *args, **kwargs):
+        segment = self._next_voiceover_segment()
+        if not segment:
+            return super().play(*args, **kwargs)
+        return self._play_with_voiceover_segment(segment, *args, **kwargs)
 
     def resolve_language(self, spec=None):
         payload = spec if isinstance(spec, dict) else getattr(self, "SPEC", {})
@@ -640,16 +936,24 @@ class WicaraTemplateScene(VoiceoverScene):
         card.to_edge(DOWN, buff=0.28)
         return card
 
-    def replace_card(self, previous_card, next_card, zone="right"):
+    def replace_card(self, previous_card, next_card, zone="right", narration_text=None):
         if zone == "right":
             self.place_right_card(next_card)
         elif zone == "bottom":
             self.place_summary_card(next_card)
 
         if previous_card is None:
-            self.play(FadeIn(next_card, shift=LEFT * 0.15), run_time=0.55)
+            self.play_with_voiceover(
+                narration_text,
+                FadeIn(next_card, shift=LEFT * 0.15),
+                run_time=0.55,
+            )
         else:
-            self.play(ReplacementTransform(previous_card, next_card), run_time=0.50)
+            self.play_with_voiceover(
+                narration_text,
+                ReplacementTransform(previous_card, next_card),
+                run_time=0.50,
+            )
 
         return next_card
 
@@ -681,12 +985,14 @@ class WicaraTemplateScene(VoiceoverScene):
         steps = require(spec, "steps")
 
         for i, step in enumerate(steps[:max_steps]):
+            step_title = step.get(
+                "title",
+                f"{self.tr_key('step_prefix', spec, fallback='Langkah')} {i + 1}",
+            )
+            step_body = step.get("body", "")
             card = self.make_card(
-                step.get(
-                    "title",
-                    f"{self.tr_key('step_prefix', spec, fallback='Langkah')} {i + 1}",
-                ),
-                step.get("body", ""),
+                step_title,
+                step_body,
                 color=step.get("color", TEAL),
             )
             active_card = self.replace_card(active_card, card)

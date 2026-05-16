@@ -41,9 +41,10 @@ Important for Phase-4 render worker:
 
 Important for Phase-5 media post-process:
 - Install render extras for voiceover (`python -m pip install -e \".[render]\"`).
-- Set `MEDIA_TTS_PROVIDER=gtts_voiceover` (or `none` to disable narration checks).
+- Set `MEDIA_TTS_PROVIDER=gtts_voiceover`, `openai_voiceover`, or `none`.
+- For OpenAI TTS, set `OPENAI_API_KEY` and optional `MEDIA_OPENAI_TTS_*` overrides in `.env`.
 - Ensure `ffmpeg` and `ffprobe` binaries are available in PATH, or set `MEDIA_FFMPEG_BINARY` and `MEDIA_FFPROBE_BINARY`.
-- Voiceover is generated in-scene via `manim-voiceover + GTTSService` (multi-language from `language` field).
+- Voiceover is generated in-scene via `manim-voiceover` (`GTTSService` or OpenAI Speech API fallback chain).
 - Worker post-process now focuses on finalization, audio stream probe, thumbnail extraction, and duration gate.
 - Storage upload is handled after post-process. Default backend is local (`MEDIA_STORAGE_BACKEND=local`) and files are served from `/media-storage/*`.
 - Worker writes stage-level structured logs keyed by `job_id`/`artifact_id` and stores timing metrics in `render_meta_json.worker_metrics`.

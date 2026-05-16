@@ -18,7 +18,7 @@ python -m pip install -e ".[test,render]"
 ```
 
 Catatan:
-1. `render` extra wajib untuk `manim-voiceover[gtts]`.
+1. `render` extra wajib untuk `manim-voiceover` (GTTS + OpenAI TTS).
 2. Repo ini mem-pin `setuptools<81` supaya `manim-voiceover` yang masih import `pkg_resources` tetap jalan.
 
 ## 3) Prepare env file
@@ -31,8 +31,15 @@ Minimal config untuk test local manim:
 1. `MEDIA_JOB_QUEUE_BACKEND=noop`
 2. `MEDIA_STORAGE_BACKEND=local`
 3. `MEDIA_STORAGE_PUBLIC_BASE_URL=/media-storage`
-4. `MEDIA_TTS_PROVIDER=gtts_voiceover`
+4. `MEDIA_TTS_PROVIDER=gtts_voiceover` atau `openai_voiceover`
 5. `MEDIA_TTS_REQUIRED=true` (opsional, tapi disarankan kalau audio wajib ada)
+
+Jika pakai OpenAI TTS, tambahkan:
+1. `OPENAI_API_KEY=...`
+2. `MEDIA_OPENAI_TTS_MODEL_PRIMARY=gpt-4o-mini-tts`
+3. `MEDIA_OPENAI_TTS_MODEL_FALLBACK=tts-1`
+4. `MEDIA_OPENAI_TTS_VOICE_PRIMARY=marin`
+5. `MEDIA_OPENAI_TTS_VOICE_FALLBACK=alloy`
 
 Untuk Supabase pooler, gunakan connection string pooler dari dashboard (host `*.pooler.supabase.com`).
 
@@ -78,5 +85,6 @@ Solusi: update ke kode terbaru repo ini. Session/engine sudah men-disable prepar
 3. Video `ready` tapi tidak ada audio
 Solusi:
 1. pastikan `manim-voiceover` terpasang (`pip install -e ".[render]"`)
-2. set `MEDIA_TTS_REQUIRED=true` agar job gagal jika stream audio tidak ada
+2. untuk OpenAI TTS, pastikan `OPENAI_API_KEY` valid
+3. set `MEDIA_TTS_REQUIRED=true` agar job gagal jika stream audio tidak ada
 3. queue ulang job

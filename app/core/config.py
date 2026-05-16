@@ -262,9 +262,15 @@ class Settings(BaseSettings):
         text = str(value).strip().lower()
         if text == "edge_tts":
             text = "gtts_voiceover"
-        if text not in {"gtts_voiceover", "none"}:
+        aliases = {
+            "gtts": "gtts_voiceover",
+            "openai": "openai_voiceover",
+            "openai_tts": "openai_voiceover",
+        }
+        text = aliases.get(text, text)
+        if text not in {"gtts_voiceover", "openai_voiceover", "none"}:
             raise ValueError(
-                "MEDIA_TTS_PROVIDER must be either 'gtts_voiceover' or 'none'."
+                "MEDIA_TTS_PROVIDER must be one of: 'gtts_voiceover', 'openai_voiceover', or 'none'."
             )
         return text
 
