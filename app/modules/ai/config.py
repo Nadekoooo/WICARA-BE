@@ -6,7 +6,19 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+DEFAULT_AI_PROVIDER = "gemini"
+DEFAULT_AI_MODEL = "gemini-2.5-flash"
+
+
 class AISettings(BaseSettings):
+    ai_provider: str = Field(
+        default=DEFAULT_AI_PROVIDER,
+        validation_alias=AliasChoices("AI_PROVIDER", "WICARA_AI_PROVIDER"),
+    )
+    ai_model: str = Field(
+        default=DEFAULT_AI_MODEL,
+        validation_alias=AliasChoices("AI_MODEL", "WICARA_AI_MODEL"),
+    )
     gemini_api_key: str = Field(
         default="",
         validation_alias=AliasChoices("GEMINI_API_KEY", "WICARA_GEMINI_API_KEY"),
@@ -24,7 +36,7 @@ class AISettings(BaseSettings):
         ),
     )
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
 
 
 @lru_cache

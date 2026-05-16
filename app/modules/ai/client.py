@@ -31,8 +31,8 @@ class AIClient:
     async def generate(
         self,
         *,
-        provider: str,
-        model: str,
+        provider: str | None = None,
+        model: str | None = None,
         system_instruction: str | None = None,
         user_instruction: str | None = None,
         inputs: list[dict[str, Any]] | None = None,
@@ -57,8 +57,8 @@ class AIClient:
     def _build_request(
         self,
         *,
-        provider: str,
-        model: str,
+        provider: str | None,
+        model: str | None,
         system_instruction: str | None,
         user_instruction: str | None,
         inputs: list[dict[str, Any]] | None,
@@ -67,8 +67,8 @@ class AIClient:
         try:
             return AIGenerationRequest.model_validate(
                 {
-                    "provider": provider,
-                    "model": model,
+                    "provider": provider or self._settings.ai_provider,
+                    "model": model or self._settings.ai_model,
                     "system_instruction": system_instruction,
                     "user_instruction": user_instruction,
                     "inputs": inputs or [],
