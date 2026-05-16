@@ -6,6 +6,7 @@ from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+_PROJECT_ROOT = _ENV_PATH.parent
 
 
 class Settings(BaseSettings):
@@ -361,3 +362,14 @@ def _quote_database_credentials(url: str) -> str:
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def get_project_root() -> Path:
+    return _PROJECT_ROOT
+
+
+def resolve_project_path(path_value: str | Path) -> Path:
+    path = Path(path_value)
+    if path.is_absolute():
+        return path.resolve()
+    return (_PROJECT_ROOT / path).resolve()

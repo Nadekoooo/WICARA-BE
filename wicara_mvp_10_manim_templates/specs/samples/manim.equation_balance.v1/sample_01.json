@@ -4,6 +4,7 @@
   "template_id": "manim.equation_balance.v1",
   "phase": "D",
   "audience_level": "smp",
+  "language": "id",
   "title": "Persamaan sebagai Timbangan",
   "subtitle": "Operasi di kiri juga dilakukan di kanan.",
   "equation": "2x + 3 = 11",
@@ -65,3 +66,5 @@
     }
   ]
 }
+
+

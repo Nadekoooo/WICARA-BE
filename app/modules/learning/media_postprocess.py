@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from app.core.config import Settings, get_settings
+import httpx
+
+from app.core.config import Settings, get_settings, resolve_project_path
 from app.modules.learning.models import MediaArtifact
 from app.modules.learning.render_engine import RenderOutput
 
@@ -57,7 +59,7 @@ def postprocess_render_output(
     settings: Settings | None = None,
 ) -> MediaPostprocessOutput:
     resolved_settings = settings or get_settings()
-    output_root = (Path.cwd() / resolved_settings.media_render_output_dir).resolve()
+    output_root = resolve_project_path(resolved_settings.media_render_output_dir)
     workspace_dir = output_root / str(job_id)
     final_dir = workspace_dir / "final"
     final_dir.mkdir(parents=True, exist_ok=True)
@@ -87,18 +89,21 @@ def postprocess_render_output(
         settings=resolved_settings,
     )
 
-    thumbnail_path = final_dir / "thumbnail.jpg"
-    thumbnail_completed = _extract_thumbnail_with_ffmpeg(
-        video_path=final_video_path,
-        thumbnail_path=thumbnail_path,
-        settings=resolved_settings,
-    )
-
     duration_raw, ffprobe_stdout = _probe_video_duration_seconds(
         video_path=final_video_path,
         settings=resolved_settings,
     )
     duration_seconds = max(0, int(round(duration_raw)))
+    thumbnail_seek_seconds = _resolve_thumbnail_seek_seconds(duration_raw)
+
+    thumbnail_path = final_dir / "thumbnail.jpg"
+    thumbnail_completed, thumbnail_seek_used = _extract_thumbnail_with_ffmpeg(
+        video_path=final_video_path,
+        thumbnail_path=thumbnail_path,
+        seek_seconds=thumbnail_seek_seconds,
+        settings=resolved_settings,
+    )
+
     audio_stream_present, ffprobe_audio_stdout = _probe_video_audio_stream(
         video_path=final_video_path,
         settings=resolved_settings,
@@ -153,6 +158,7 @@ def postprocess_render_output(
         "ffprobe_stdout": _tail_text(ffprobe_stdout),
         "ffprobe_audio_stdout": _tail_text(ffprobe_audio_stdout),
         "duration_seconds_raw": duration_raw,
+        "thumbnail_seek_seconds": thumbnail_seek_used,
     }
 
     return MediaPostprocessOutput(
@@ -206,31 +212,62 @@ def _extract_thumbnail_with_ffmpeg(
     *,
     video_path: Path,
     thumbnail_path: Path,
+    seek_seconds: float,
     settings: Settings,
-) -> subprocess.CompletedProcess[str]:
+) -> tuple[subprocess.CompletedProcess[str], float]:
     thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        settings.media_ffmpeg_binary,
-        "-y",
-        "-i",
-        str(video_path),
-        "-frames:v",
-        "1",
-        str(thumbnail_path),
-    ]
-    completed = _run_command(
-        cmd=cmd,
-        timeout_seconds=settings.media_postprocess_timeout_seconds,
-        error_code="ffmpeg_error",
-        step_name="Thumbnail extraction",
+    candidates: list[float] = []
+    for raw in (seek_seconds, 0.0):
+        value = max(0.0, float(raw))
+        if not any(abs(value - existing) < 0.001 for existing in candidates):
+            candidates.append(value)
+
+    last_error: MediaPostprocessError | None = None
+    for candidate in candidates:
+        thumbnail_path.unlink(missing_ok=True)
+        cmd = [
+            settings.media_ffmpeg_binary,
+            "-y",
+            "-ss",
+            f"{candidate:.3f}",
+            "-i",
+            str(video_path),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(thumbnail_path),
+        ]
+        try:
+            completed = _run_command(
+                cmd=cmd,
+                timeout_seconds=settings.media_postprocess_timeout_seconds,
+                error_code="ffmpeg_error",
+                step_name=f"Thumbnail extraction (seek={candidate:.3f}s)",
+            )
+        except MediaPostprocessError as exc:
+            last_error = exc
+            continue
+
+        if thumbnail_path.exists() and thumbnail_path.stat().st_size > 0:
+            return completed, candidate
+
+    if last_error is not None:
+        raise last_error
+    raise MediaPostprocessError(
+        code="ffmpeg_error",
+        message="Thumbnail extraction finished without output file.",
+        details={"thumbnail_path": str(thumbnail_path)},
     )
-    if not thumbnail_path.exists() or thumbnail_path.stat().st_size <= 0:
-        raise MediaPostprocessError(
-            code="ffmpeg_error",
-            message="Thumbnail extraction finished without output file.",
-            details={"thumbnail_path": str(thumbnail_path)},
-        )
-    return completed
+
+
+def _resolve_thumbnail_seek_seconds(duration_seconds_raw: float, target_seconds: float = 5.0) -> float:
+    duration = max(0.0, float(duration_seconds_raw or 0.0))
+    if duration <= 0:
+        return 0.0
+    # Keep a small buffer from the exact video end.
+    safe_end = max(0.0, duration - 0.2)
+    return max(0.0, min(float(target_seconds), safe_end))
 
 
 def _probe_video_duration_seconds(

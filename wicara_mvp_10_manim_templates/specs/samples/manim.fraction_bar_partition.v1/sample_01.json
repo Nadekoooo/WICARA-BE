@@ -4,6 +4,7 @@
   "template_id": "manim.fraction_bar_partition.v1",
   "phase": "B",
   "audience_level": "sd",
+  "language": "id",
   "title": "Pecahan Senilai",
   "subtitle": "Bagian yang sama bisa ditulis berbeda.",
   "representations": [
@@ -69,3 +70,5 @@
     }
   ]
 }
+
+

@@ -10,7 +10,7 @@ from uuid import UUID
 
 import httpx
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings, get_settings, resolve_project_path
 
 
 @dataclass(frozen=True)
@@ -101,7 +101,7 @@ def _upload_to_local_storage(
     source_thumbnail: Path,
     settings: Settings,
 ) -> MediaStorageUploadOutput:
-    storage_root = (Path.cwd() / settings.media_storage_local_dir).resolve()
+    storage_root = resolve_project_path(settings.media_storage_local_dir)
     storage_root.mkdir(parents=True, exist_ok=True)
 
     target_video = storage_root / object_video_path

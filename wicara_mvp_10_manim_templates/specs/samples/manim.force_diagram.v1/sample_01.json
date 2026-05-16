@@ -4,6 +4,7 @@
   "template_id": "manim.force_diagram.v1",
   "phase": "D",
   "audience_level": "smp",
+  "language": "id",
   "title": "Resultan Gaya",
   "subtitle": "Gaya berlawanan saling mengurangi.",
   "object": {
@@ -68,3 +69,5 @@
     }
   ]
 }
+
+

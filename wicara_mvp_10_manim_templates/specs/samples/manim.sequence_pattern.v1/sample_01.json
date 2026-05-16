@@ -4,6 +4,7 @@
   "template_id": "manim.sequence_pattern.v1",
   "phase": "C",
   "audience_level": "sd",
+  "language": "id",
   "title": "Pola Bilangan",
   "subtitle": "Cari aturan dari perubahan suku.",
   "terms": [
@@ -69,3 +70,5 @@
     }
   ]
 }
+
+

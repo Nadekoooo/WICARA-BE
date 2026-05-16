@@ -3,7 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from app.modules.learning.template_registry import (
     TemplateRegistryError,
@@ -63,6 +71,12 @@ class NarrationSegmentSpec(BaseModel):
 class BaseTemplateSpec(BaseModel):
     phase: str = Field(default="D", min_length=1, max_length=8)
     audience_level: str = Field(default="smp", min_length=1, max_length=16)
+    language: str = Field(
+        default="id",
+        min_length=2,
+        max_length=16,
+        validation_alias=AliasChoices("language", "locale", "lang"),
+    )
     title: str = Field(..., min_length=1, max_length=255)
     subtitle: str = Field(default="", max_length=255)
     steps: list[StepSpec] = Field(..., min_length=1, max_length=12)
@@ -72,6 +86,27 @@ class BaseTemplateSpec(BaseModel):
     summary_narration: str = Field(default="", max_length=1200)
     narration_segments: list[NarrationSegmentSpec] = Field(default_factory=list, max_length=64)
     model_config = ConfigDict(extra="allow")
+
+    @field_validator("language", mode="before")
+    @classmethod
+    def normalize_language(cls, value: Any) -> str:
+        normalized = str(value or "").strip().lower()
+        if not normalized:
+            return "id"
+        aliases = {
+            "indonesian": "id",
+            "bahasa": "id",
+            "english": "en",
+            "vietnamese": "vi",
+            "malay": "ms",
+            "japanese": "ja",
+        }
+        normalized = aliases.get(normalized, normalized)
+        if "-" in normalized:
+            base = normalized.split("-", 1)[0]
+            if base:
+                normalized = base
+        return normalized[:16]
 
 
 class NumberRangeSpec(BaseModel):

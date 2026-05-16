@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -8,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_AI_PROVIDER = "gemini"
 DEFAULT_AI_MODEL = "gemini-2.5-flash"
+_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
 
 
 class AISettings(BaseSettings):
@@ -36,7 +38,12 @@ class AISettings(BaseSettings):
         ),
     )
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
+    model_config = SettingsConfigDict(
+        env_file=_ENV_PATH,
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
 
 @lru_cache
