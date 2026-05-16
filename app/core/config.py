@@ -58,6 +58,86 @@ class Settings(BaseSettings):
             "MEDIA_RENDER_MAX_ATTEMPTS",
         ),
     )
+    media_tts_provider: str = Field(
+        default="edge_tts",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_TTS_PROVIDER",
+            "MEDIA_TTS_PROVIDER",
+        ),
+    )
+    media_tts_required: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_TTS_REQUIRED",
+            "MEDIA_TTS_REQUIRED",
+        ),
+    )
+    media_ffmpeg_binary: str = Field(
+        default="ffmpeg",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_FFMPEG_BINARY",
+            "MEDIA_FFMPEG_BINARY",
+        ),
+    )
+    media_ffprobe_binary: str = Field(
+        default="ffprobe",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_FFPROBE_BINARY",
+            "MEDIA_FFPROBE_BINARY",
+        ),
+    )
+    media_postprocess_timeout_seconds: int = Field(
+        default=180,
+        ge=30,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_POSTPROCESS_TIMEOUT_SECONDS",
+            "MEDIA_POSTPROCESS_TIMEOUT_SECONDS",
+        ),
+    )
+    media_duration_policy_mode: str = Field(
+        default="soft_fail",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_DURATION_POLICY_MODE",
+            "MEDIA_DURATION_POLICY_MODE",
+        ),
+    )
+    media_duration_min_seconds_sd: int = Field(
+        default=60,
+        ge=0,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_DURATION_MIN_SECONDS_SD",
+            "MEDIA_DURATION_MIN_SECONDS_SD",
+        ),
+    )
+    media_duration_min_seconds_smp: int = Field(
+        default=90,
+        ge=0,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_DURATION_MIN_SECONDS_SMP",
+            "MEDIA_DURATION_MIN_SECONDS_SMP",
+        ),
+    )
+    media_duration_min_seconds_sma: int = Field(
+        default=120,
+        ge=0,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_DURATION_MIN_SECONDS_SMA",
+            "MEDIA_DURATION_MIN_SECONDS_SMA",
+        ),
+    )
+    media_duration_min_seconds_default: int = Field(
+        default=90,
+        ge=0,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_DURATION_MIN_SECONDS_DEFAULT",
+            "MEDIA_DURATION_MIN_SECONDS_DEFAULT",
+        ),
+    )
     supabase_project_url: str = Field(
         default="https://gwbqhirtkgkghnpahtgt.supabase.co",
         validation_alias=AliasChoices("WICARA_SUPABASE_PROJECT_URL", "SUPABASE_PROJECT_URL"),
@@ -104,6 +184,24 @@ class Settings(BaseSettings):
         text = str(value).strip().lower()
         if text not in {"redis", "noop"}:
             raise ValueError("MEDIA_JOB_QUEUE_BACKEND must be either 'redis' or 'noop'.")
+        return text
+
+    @field_validator("media_tts_provider", mode="before")
+    @classmethod
+    def normalize_media_tts_provider(cls, value: str) -> str:
+        text = str(value).strip().lower()
+        if text not in {"edge_tts", "none"}:
+            raise ValueError("MEDIA_TTS_PROVIDER must be either 'edge_tts' or 'none'.")
+        return text
+
+    @field_validator("media_duration_policy_mode", mode="before")
+    @classmethod
+    def normalize_media_duration_policy_mode(cls, value: str) -> str:
+        text = str(value).strip().lower()
+        if text not in {"off", "soft_fail", "hard_fail"}:
+            raise ValueError(
+                "MEDIA_DURATION_POLICY_MODE must be one of: off, soft_fail, hard_fail."
+            )
         return text
 
 

@@ -37,6 +37,12 @@ Important for Phase-4 render worker:
 - Ensure system dependencies for Manim are available (for example FFmpeg and LaTeX toolchain if your template needs it).
 - Render output is stored locally under `MEDIA_RENDER_OUTPUT_DIR` (default `tmp/media_renders`).
 
+Important for Phase-5 media post-process:
+- Install render extras for TTS (`python -m pip install -e \".[render]\"`).
+- Ensure `ffmpeg` and `ffprobe` binaries are available in PATH, or set `MEDIA_FFMPEG_BINARY` and `MEDIA_FFPROBE_BINARY`.
+- Worker now finalizes output with voiceover + thumbnail + duration gate before job status becomes `ready`.
+- `video_url` remains source of truth; `playback_url` mirrors `video_url` as backward-compatible alias.
+
 Run tests:
 
 ```powershell

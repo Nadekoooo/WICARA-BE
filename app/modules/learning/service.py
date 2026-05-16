@@ -73,6 +73,11 @@ from app.modules.learning.render_engine import (
     RenderOutput,
     render_template_scene,
 )
+from app.modules.learning.media_postprocess import (
+    MediaPostprocessError,
+    MediaPostprocessOutput,
+    postprocess_render_output,
+)
 from app.modules.learning.template_validation import (
     TemplateValidationError,
     validate_template_spec,
@@ -699,14 +704,39 @@ def process_animation_job_for_worker(
             session,
             job=job,
             artifact=artifact,
-            progress=90,
+            progress=88,
             message="Render output stored in local artifact path.",
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=92,
+            message="Running TTS, ffmpeg finalization, thumbnail extraction, and duration gate.",
+        )
+        postprocess_output = postprocess_render_output(
+            job_id=job.id,
+            artifact=artifact,
+            render_output=render_output,
+            settings=settings,
+        )
+        _attach_postprocess_output_to_artifact(
+            session,
+            artifact=artifact,
+            output=postprocess_output,
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=97,
+            message="Media post-process finished.",
         )
         _mark_job_ready(
             session,
             job=job,
             artifact=artifact,
-            final_message="Render lifecycle finished. Artifact is ready.",
+            final_message="Render lifecycle finished. Artifact is ready for playback.",
         )
         return True
     except TemplateValidationError as exc:
@@ -720,6 +750,16 @@ def process_animation_job_for_worker(
         )
         return False
     except RenderEngineError as exc:
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except MediaPostprocessError as exc:
         _mark_job_failed(
             session,
             job=job,
@@ -2174,17 +2214,56 @@ def _attach_render_output_to_artifact(
     render_output: RenderOutput,
     attempts_used: int,
 ) -> None:
-    artifact.video_url = render_output.video_path
-    artifact.playback_url = render_output.video_path
     render_meta = dict(artifact.render_meta_json or {})
     render_meta.update(
         {
-            "local_video_path": render_output.video_path,
-            "relative_video_path": render_output.relative_video_path,
+            "local_render_video_path": render_output.video_path,
+            "relative_render_video_path": render_output.relative_video_path,
             "render_attempts_used": attempts_used,
             "render_completed_at": datetime.now(UTC).isoformat(),
             "manim_stdout_tail": render_output.stdout,
             "manim_stderr_tail": render_output.stderr,
+        }
+    )
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _attach_postprocess_output_to_artifact(
+    session: Session,
+    *,
+    artifact: MediaArtifact,
+    output: MediaPostprocessOutput,
+) -> None:
+    artifact.video_url = output.video_path
+    artifact.playback_url = output.video_path
+    artifact.thumbnail_url = output.thumbnail_path
+    artifact.duration_seconds = int(output.duration_seconds)
+    artifact.transcript = output.transcript
+
+    notes = list(artifact.notes_json or [])
+    quality_message = str(output.quality_gate.get("message", "")).strip()
+    quality_result = str(output.quality_gate.get("result", "")).strip().lower()
+    if quality_result == "warning" and quality_message and quality_message not in notes:
+        notes.append(quality_message)
+    artifact.notes_json = notes
+
+    metadata = dict(artifact.metadata_json or {})
+    metadata["quality_gate"] = output.quality_gate
+    artifact.metadata_json = metadata
+
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "local_video_path": output.video_path,
+            "relative_video_path": output.relative_video_path,
+            "local_thumbnail_path": output.thumbnail_path,
+            "relative_thumbnail_path": output.relative_thumbnail_path,
+            "voiceover_audio_path": output.audio_path,
+            "relative_voiceover_audio_path": output.relative_audio_path,
+            "quality_gate": output.quality_gate,
+            "tts": output.tts_meta,
+            "ffmpeg": output.ffmpeg_meta,
         }
     )
     artifact.render_meta_json = render_meta
