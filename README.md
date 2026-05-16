@@ -32,6 +32,11 @@ Run media worker process for animation jobs:
 python -m app.workers.media_worker
 ```
 
+Important for Phase-4 render worker:
+- Install Manim runtime in the worker environment (`python -m pip install manim`).
+- Ensure system dependencies for Manim are available (for example FFmpeg and LaTeX toolchain if your template needs it).
+- Render output is stored locally under `MEDIA_RENDER_OUTPUT_DIR` (default `tmp/media_renders`).
+
 Run tests:
 
 ```powershell

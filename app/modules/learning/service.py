@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 from app.modules.curriculum.models import KnowledgeConcept, Subject
@@ -66,6 +67,11 @@ from app.modules.learning.schemas import (
     ConsistencySummaryRead,
     WeeklyReportResponse,
     ProgressRead,
+)
+from app.modules.learning.render_engine import (
+    RenderEngineError,
+    RenderOutput,
+    render_template_scene,
 )
 from app.modules.learning.template_validation import (
     TemplateValidationError,
@@ -166,7 +172,6 @@ DAILY_REVIEW_TEMPLATES: list[dict[str, Any]] = [
 MEDIA_JOB_PROGRESS_STAGES: list[tuple[int, str]] = [
     (20, "Validating render payload."),
     (45, "Preparing template rendering inputs."),
-    (75, "Executing render pipeline placeholder."),
 ]
 
 
@@ -665,6 +670,7 @@ def process_animation_job_for_worker(
         return True
 
     try:
+        settings = get_settings()
         _mark_job_processing(session, job=job, artifact=artifact)
         _validate_job_payload(session=session, job=job, artifact=artifact)
         for progress, message in MEDIA_JOB_PROGRESS_STAGES:
@@ -675,9 +681,44 @@ def process_animation_job_for_worker(
                 progress=progress,
                 message=message,
             )
-        _mark_job_ready(session, job=job, artifact=artifact)
+        render_output, attempts_used = _render_artifact_with_retry(
+            session,
+            job=job,
+            artifact=artifact,
+            max_attempts=settings.media_render_max_attempts,
+            timeout_seconds=settings.media_render_timeout_seconds,
+        )
+        _attach_render_output_to_artifact(
+            session,
+            artifact=artifact,
+            render_output=render_output,
+            attempts_used=attempts_used,
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=90,
+            message="Render output stored in local artifact path.",
+        )
+        _mark_job_ready(
+            session,
+            job=job,
+            artifact=artifact,
+            final_message="Render lifecycle finished. Artifact is ready.",
+        )
         return True
     except TemplateValidationError as exc:
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except RenderEngineError as exc:
         _mark_job_failed(
             session,
             job=job,
@@ -1996,10 +2037,11 @@ def _mark_job_ready(
     *,
     job: MediaJob,
     artifact: MediaArtifact,
+    final_message: str | None = None,
 ) -> None:
     job.status = "ready"
     job.progress = 100
-    job.message = "Render lifecycle finished. Artifact is ready."
+    job.message = final_message or "Render lifecycle finished. Artifact is ready."
     job.error = None
     job.finished_at = datetime.now(UTC)
     artifact.status = "ready"
@@ -2062,6 +2104,85 @@ def _validate_job_payload(
             "schema_id": validation_result.schema_id,
             "resolved_from": validation_result.resolved_from,
             "used_alias": validation_result.used_alias,
+        }
+    )
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _render_artifact_with_retry(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    max_attempts: int,
+    timeout_seconds: int,
+) -> tuple[RenderOutput, int]:
+    attempts_limit = max(1, int(max_attempts))
+    render_meta = dict(artifact.render_meta_json or {})
+    template_path = str(render_meta.get("template_path", "")).strip()
+    scene_class = str(render_meta.get("scene_class", "GeneratedTemplate")).strip()
+    if not template_path:
+        raise RenderEngineError(
+            code="render_error",
+            message="Render metadata does not contain template_path.",
+            details={"job_id": str(job.id), "template_id": artifact.template_id},
+        )
+
+    last_error: RenderEngineError | None = None
+    for attempt in range(1, attempts_limit + 1):
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=60,
+            message=f"Running Manim render attempt {attempt}/{attempts_limit}.",
+        )
+        try:
+            output = render_template_scene(
+                job_id=job.id,
+                template_path=template_path,
+                scene_class=scene_class,
+                spec_json=artifact.spec_json,
+                quality_profile=artifact.quality_profile,
+                timeout_seconds=timeout_seconds,
+            )
+            return output, attempt
+        except RenderEngineError as exc:
+            last_error = exc
+            if attempt < attempts_limit:
+                _update_job_progress(
+                    session,
+                    job=job,
+                    artifact=artifact,
+                    progress=68,
+                    message=f"Render attempt {attempt} failed. Retrying attempt {attempt + 1}/{attempts_limit}.",
+                )
+                continue
+            break
+
+    assert last_error is not None
+    raise last_error
+
+
+def _attach_render_output_to_artifact(
+    session: Session,
+    *,
+    artifact: MediaArtifact,
+    render_output: RenderOutput,
+    attempts_used: int,
+) -> None:
+    artifact.video_url = render_output.video_path
+    artifact.playback_url = render_output.video_path
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "local_video_path": render_output.video_path,
+            "relative_video_path": render_output.relative_video_path,
+            "render_attempts_used": attempts_used,
+            "render_completed_at": datetime.now(UTC).isoformat(),
+            "manim_stdout_tail": render_output.stdout,
+            "manim_stderr_tail": render_output.stderr,
         }
     )
     artifact.render_meta_json = render_meta

@@ -33,6 +33,31 @@ class Settings(BaseSettings):
             "MEDIA_JOB_DEQUEUE_TIMEOUT_SECONDS",
         ),
     )
+    media_render_output_dir: str = Field(
+        default="tmp/media_renders",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_RENDER_OUTPUT_DIR",
+            "MEDIA_RENDER_OUTPUT_DIR",
+        ),
+    )
+    media_render_timeout_seconds: int = Field(
+        default=240,
+        ge=30,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_RENDER_TIMEOUT_SECONDS",
+            "MEDIA_RENDER_TIMEOUT_SECONDS",
+        ),
+    )
+    media_render_max_attempts: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_RENDER_MAX_ATTEMPTS",
+            "MEDIA_RENDER_MAX_ATTEMPTS",
+        ),
+    )
     supabase_project_url: str = Field(
         default="https://gwbqhirtkgkghnpahtgt.supabase.co",
         validation_alias=AliasChoices("WICARA_SUPABASE_PROJECT_URL", "SUPABASE_PROJECT_URL"),
