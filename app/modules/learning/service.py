@@ -1437,57 +1437,104 @@ def _today_daily_session(session: Session, *, user: UserAccount) -> AssessmentSe
 
 
 def _ensure_sample_media_artifacts(session: Session, *, user: UserAccount) -> None:
-    if session.scalar(select(MediaArtifact.id).where(MediaArtifact.user_id == user.id).limit(1)):
-        return
     tracks = _user_tracks(session, user=user)
     track = tracks[0] if tracks else None
     first_module = track.modules[0] if track and track.modules else None
     second_module = track.modules[1] if track and len(track.modules) > 1 else None
+    seed_source = "media_gallery_demo_videos_20260515"
     samples = [
         {
             "module": first_module,
-            "title": "Limits from graphs",
-            "subtitle": "Approaching a value without touching it",
-            "duration_seconds": 258,
-            "transcript": "A limit describes the value a graph approaches as x gets close to a point.",
+            "title": "Perkalian",
+            "subtitle": "Video konsep perkalian",
+            "duration_seconds": 300,
+            "playback_url": (
+                "https://gwbqhirtkgkghnpahtgt.supabase.co/storage/v1/object/public/"
+                "video/perkalian.mp4"
+            ),
+            "transcript": "Video pembelajaran perkalian untuk demo galeri.",
             "notes": [
-                "Generated as durable seeded media so the gallery is not frontend-only.",
-                "Connect this with the prerequisite checkpoint before derivative rules.",
+                "Demo gallery seed.",
+                "Source: Supabase public object storage.",
             ],
         },
         {
             "module": second_module,
-            "title": "Derivatives intuition",
-            "subtitle": "What does a derivative tell us?",
-            "duration_seconds": 405,
-            "transcript": "A derivative measures local rate of change and appears as tangent slope.",
+            "title": "Aljabar",
+            "subtitle": "Video konsep aljabar",
+            "duration_seconds": 300,
+            "playback_url": (
+                "https://gwbqhirtkgkghnpahtgt.supabase.co/storage/v1/object/public/"
+                "video/aljabar.mp4"
+            ),
+            "transcript": "Video pembelajaran aljabar untuk demo galeri.",
             "notes": [
-                "Use the tangent-line idea before memorizing rules.",
-                "Canvas evidence can later attach a learner's own graph sketch.",
+                "Demo gallery seed.",
+                "Source: Supabase public object storage.",
             ],
         },
     ]
+    existing_artifacts = list(
+        session.scalars(select(MediaArtifact).where(MediaArtifact.user_id == user.id))
+    )
+    existing_by_url = {
+        item.playback_url.strip(): item
+        for item in existing_artifacts
+        if item.playback_url.strip()
+    }
+    existing_by_title = {
+        item.title.strip().lower(): item
+        for item in existing_artifacts
+        if item.title.strip()
+    }
+    has_changes = False
     for sample in samples:
         module = sample["module"]
-        session.add(
-            MediaArtifact(
-                user_id=user.id,
-                track_id=track.id if track else None,
-                module_id=module.id if module else None,
-                concept_id=module.concept_id if module else None,
-                artifact_type="video",
-                title=str(sample["title"]),
-                subtitle=str(sample["subtitle"]),
-                status="ready",
-                duration_seconds=int(sample["duration_seconds"]),
-                thumbnail_url="",
-                playback_url="",
-                transcript=str(sample["transcript"]),
-                notes_json=list(sample["notes"]),
-                metadata_json={"seed_source": "media_gallery_mvp"},
+        playback_url = str(sample["playback_url"]).strip()
+        existing = existing_by_url.get(playback_url)
+        if existing is None:
+            existing = existing_by_title.get(str(sample["title"]).strip().lower())
+
+        if existing is None:
+            session.add(
+                MediaArtifact(
+                    user_id=user.id,
+                    track_id=track.id if track else None,
+                    module_id=module.id if module else None,
+                    concept_id=module.concept_id if module else None,
+                    artifact_type="video",
+                    title=str(sample["title"]),
+                    subtitle=str(sample["subtitle"]),
+                    status="ready",
+                    duration_seconds=int(sample["duration_seconds"]),
+                    thumbnail_url="",
+                    playback_url=playback_url,
+                    transcript=str(sample["transcript"]),
+                    notes_json=list(sample["notes"]),
+                    metadata_json={"seed_source": seed_source},
+                )
             )
-        )
-    session.commit()
+            has_changes = True
+            continue
+
+        existing.track_id = track.id if track else existing.track_id
+        existing.module_id = module.id if module else existing.module_id
+        existing.concept_id = module.concept_id if module else existing.concept_id
+        existing.artifact_type = "video"
+        existing.title = str(sample["title"])
+        existing.subtitle = str(sample["subtitle"])
+        existing.status = "ready"
+        existing.duration_seconds = int(sample["duration_seconds"])
+        existing.playback_url = playback_url
+        existing.transcript = str(sample["transcript"])
+        existing.notes_json = list(sample["notes"])
+        metadata = dict(existing.metadata_json or {})
+        metadata["seed_source"] = seed_source
+        existing.metadata_json = metadata
+        has_changes = True
+
+    if has_changes:
+        session.commit()
 
 
 def _date_range_bounds(start: date, end: date) -> tuple[datetime, datetime]:
