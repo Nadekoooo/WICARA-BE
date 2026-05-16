@@ -80,10 +80,23 @@ Solusi: reinstall dependency render di venv aktif:
 python -m pip install -e ".[render]"
 ```
 
-2. `prepared statement "_pg3_0" does not exist` atau `DuplicatePreparedStatement`
+2. `'sox' is not recognized as an internal or external command`
+Solusi: install SoX lalu refresh terminal/PATH.
+```powershell
+winget install --id ChrisBagwell.SoX --exact --accept-source-agreements --accept-package-agreements
+where sox
+sox --version
+```
+Kalau `where sox` masih kosong, tutup dan buka lagi terminal. Jika tetap belum kebaca, refresh PATH di session aktif:
+```powershell
+$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+where sox
+```
+
+3. `prepared statement "_pg3_0" does not exist` atau `DuplicatePreparedStatement`
 Solusi: update ke kode terbaru repo ini. Session/engine sudah men-disable prepared statement otomatis saat host Supabase pooler terdeteksi.
 
-3. Video `ready` tapi tidak ada audio
+4. Video `ready` tapi tidak ada audio
 Solusi:
 1. pastikan `manim-voiceover` terpasang (`pip install -e ".[render]"`)
 2. untuk OpenAI TTS, pastikan `OPENAI_API_KEY` valid
