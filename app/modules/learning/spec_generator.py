@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -47,6 +48,7 @@ def generate_spec_from_workspace_context(
 
     normalized_language = _normalize_language(language)
     is_id = normalized_language == "id"
+    learner_focus_text = _latest_learner_focus_text(workspace)
 
     title = (workspace.current_topic or "").strip()
     if not title:
@@ -61,6 +63,12 @@ def generate_spec_from_workspace_context(
         if is_id
         else "Values get larger as we move to the right."
     )
+    if learner_focus_text:
+        subtitle = (
+            f"Fokus diskusi: {learner_focus_text[:90]}"
+            if is_id
+            else f"Discussion focus: {learner_focus_text[:90]}"
+        )
     intro = (
         "Perhatikan garis bilangan ini. Angka negatif di kiri dan angka positif di kanan."
         if is_id
@@ -90,6 +98,13 @@ def generate_spec_from_workspace_context(
     else:
         normalized_prerequisites = list(_PILOT_PREREQUISITES)
 
+    marker_values = _resolve_marker_values(learner_focus_text)
+    marker_left, marker_right = marker_values
+    marker_min = min(marker_values)
+    marker_max = max(marker_values)
+    range_min = marker_min - 3
+    range_max = marker_max + 3
+
     spec_json: dict[str, Any] = {
         "id": f"context_auto_{workspace.id}",
         "node_id": node_id or _PILOT_NODE_ID,
@@ -99,26 +114,29 @@ def generate_spec_from_workspace_context(
         "language": normalized_language,
         "title": title,
         "subtitle": subtitle,
-        "number_range": {"min": -6, "max": 6, "step": 1},
-        "markers": [{"value": -2, "label": "-2"}, {"value": 3, "label": "3"}],
-        "highlight_values": [-2, 3],
+        "number_range": {"min": range_min, "max": range_max, "step": 1},
+        "markers": [
+            {"value": marker_left, "label": str(marker_left)},
+            {"value": marker_right, "label": str(marker_right)},
+        ],
+        "highlight_values": [marker_left, marker_right],
         "operation": {
             "type": "compare",
-            "from": -2,
-            "to": 3,
+            "from": marker_left,
+            "to": marker_right,
             "label": (
-                "3 lebih besar dari -2"
+                f"{marker_right} lebih besar dari {marker_left}"
                 if is_id
-                else "3 is greater than -2"
+                else f"{marker_right} is greater than {marker_left}"
             ),
         },
         "steps": [
             {
                 "title": "Lihat posisi angka" if is_id else "Check positions",
                 "body": (
-                    "-2 berada di kiri, sedangkan 3 berada di kanan."
+                    f"{marker_left} berada di kiri, sedangkan {marker_right} berada di kanan."
                     if is_id
-                    else "-2 is on the left, while 3 is on the right."
+                    else f"{marker_left} is on the left, while {marker_right} is on the right."
                 ),
                 "narration": step_1_narration,
             },
@@ -152,6 +170,7 @@ def generate_spec_from_workspace_context(
         "resolved_prerequisites": normalized_prerequisites,
         "context_source": metadata.get("context_source"),
         "language": normalized_language,
+        "learner_focus_text": learner_focus_text,
     }
 
     return WorkspaceGeneratedSpec(
@@ -178,3 +197,34 @@ def _normalize_language(language: str) -> str:
         if base:
             normalized = base
     return normalized[:16] or "id"
+
+
+def _latest_learner_focus_text(workspace: WorkspaceSession) -> str:
+    events = list(workspace.events or [])
+    for event in reversed(events):
+        if str(event.actor_type).strip().lower() != "learner":
+            continue
+        text = str(event.text_payload or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _resolve_marker_values(learner_focus_text: str) -> tuple[int, int]:
+    if learner_focus_text:
+        matches = re.findall(r"(?<!\d)-?\d+(?!\d)", learner_focus_text)
+        parsed: list[int] = []
+        for match in matches:
+            try:
+                value = int(match)
+            except ValueError:
+                continue
+            if value not in parsed:
+                parsed.append(value)
+        if len(parsed) >= 2:
+            first, second = parsed[0], parsed[1]
+            left, right = sorted((first, second))
+            if left == right:
+                return left - 1, right + 1
+            return left, right
+    return -2, 3
