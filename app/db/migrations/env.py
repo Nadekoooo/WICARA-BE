@@ -1,7 +1,6 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy.engine import make_url
 from sqlalchemy import create_engine, pool
 
 from app.core.config import get_settings
@@ -22,20 +21,6 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def _engine_connect_args(database_url: str) -> dict[str, object]:
-    try:
-        url = make_url(database_url)
-    except Exception:
-        return {}
-
-    backend = url.get_backend_name()
-    driver = url.get_driver_name()
-    host = (url.host or "").lower()
-    if backend == "postgresql" and driver == "psycopg" and "pooler.supabase.com" in host:
-        return {"prepare_threshold": None}
-    return {}
-
-
 def run_migrations_offline() -> None:
     context.configure(
         url=settings.database_url,
@@ -52,7 +37,6 @@ def run_migrations_online() -> None:
     connectable = create_engine(
         settings.database_url,
         poolclass=pool.NullPool,
-        connect_args=_engine_connect_args(settings.database_url),
     )
 
     with connectable.connect() as connection:

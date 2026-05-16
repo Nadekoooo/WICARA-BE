@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.modules.learning.schemas import AnimationQueueResponse, MediaArtifactRead
+from app.modules.learning.schemas import MediaArtifactRead
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -20,15 +20,6 @@ class WorkspaceEventCreateRequest(BaseModel):
     text_payload: str = ""
     image_asset_id: UUID | None = None
     media_artifact_id: UUID | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class WorkspaceGenerateVideoRequest(BaseModel):
-    template_id: str = Field(..., min_length=3, max_length=120)
-    spec_json: dict[str, Any] = Field(default_factory=dict)
-    language: str = Field(default="id", min_length=2, max_length=16)
-    quality_profile: str = Field(default="standard", min_length=2, max_length=32)
-    concept_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -78,10 +69,4 @@ class WorkspaceEventCreateResponse(BaseModel):
     event: WorkspaceEventRead
     tutor_response: TutorResponseRead | None = None
     mastery_update: WorkspaceMasteryUpdateRead | None = None
-    workspace: WorkspaceRead
-
-
-class WorkspaceGenerateVideoResponse(BaseModel):
-    queue: AnimationQueueResponse
-    event: WorkspaceEventRead
     workspace: WorkspaceRead
