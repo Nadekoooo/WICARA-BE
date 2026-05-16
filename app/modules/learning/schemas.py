@@ -180,6 +180,8 @@ class MediaArtifactStatusResponse(BaseModel):
     status: str
     progress: int
     error: str | None = None
+    error_code: str | None = None
+    error_details: dict[str, Any] | None = None
 
 
 class AnimationQueueRequest(BaseModel):

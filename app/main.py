@@ -1,8 +1,14 @@
+import logging
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -19,6 +25,22 @@ def create_app() -> FastAPI:
     @application.get("/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    local_media_storage_dir = (Path.cwd() / settings.media_storage_local_dir).resolve()
+    local_media_storage_dir.mkdir(parents=True, exist_ok=True)
+    media_mount_path = (settings.media_storage_public_base_url or "/media-storage").strip()
+    if media_mount_path.startswith("/"):
+        application.mount(
+            media_mount_path,
+            StaticFiles(directory=str(local_media_storage_dir)),
+            name="media-storage",
+        )
+    else:
+        logger.warning(
+            "Skipping local media static mount because MEDIA_STORAGE_PUBLIC_BASE_URL "
+            "is not a local path: %s",
+            media_mount_path,
+        )
 
     application.include_router(api_router, prefix=settings.api_v1_prefix)
     return application

@@ -43,6 +43,8 @@ Important for Phase-5 media post-process:
 - Ensure `ffmpeg` and `ffprobe` binaries are available in PATH, or set `MEDIA_FFMPEG_BINARY` and `MEDIA_FFPROBE_BINARY`.
 - Voiceover is generated in-scene via `manim-voiceover + GTTSService` (multi-language from `language` field).
 - Worker post-process now focuses on finalization, audio stream probe, thumbnail extraction, and duration gate.
+- Storage upload is handled after post-process. Default backend is local (`MEDIA_STORAGE_BACKEND=local`) and files are served from `/media-storage/*`.
+- Worker writes stage-level structured logs keyed by `job_id`/`artifact_id` and stores timing metrics in `render_meta_json.worker_metrics`.
 - `video_url` remains source of truth; `playback_url` mirrors `video_url` as backward-compatible alias.
 
 Run tests:

@@ -229,3 +229,15 @@ Yang sengaja tidak di-cover di dokumen ini:
 - pretest/posttest/daily logic
 - canvas parser intelligence
 - report aggregation non-media
+
+## 8. Status Implementasi (May 2026)
+
+Status pengerjaan phase untuk pipeline Manim:
+
+1. Phase 1 - **Done**
+2. Phase 2 - **Done**
+3. Phase 3 - **Done**
+4. Phase 4 - **Done**
+5. Phase 5 - **Done** (VoiceoverScene + GTTS, multi-bahasa)
+6. Phase 6 - **Done** (storage upload + URL final artifact)
+7. Phase 7 - **Done** (structured log, failure taxonomy, retry policy, worker metrics)

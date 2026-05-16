@@ -95,6 +95,61 @@ class Settings(BaseSettings):
             "MEDIA_POSTPROCESS_TIMEOUT_SECONDS",
         ),
     )
+    media_postprocess_max_attempts: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_POSTPROCESS_MAX_ATTEMPTS",
+            "MEDIA_POSTPROCESS_MAX_ATTEMPTS",
+        ),
+    )
+    media_storage_backend: str = Field(
+        default="local",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_STORAGE_BACKEND",
+            "MEDIA_STORAGE_BACKEND",
+        ),
+    )
+    media_storage_local_dir: str = Field(
+        default="tmp/media_storage",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_STORAGE_LOCAL_DIR",
+            "MEDIA_STORAGE_LOCAL_DIR",
+        ),
+    )
+    media_storage_public_base_url: str = Field(
+        default="/media-storage",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_STORAGE_PUBLIC_BASE_URL",
+            "MEDIA_STORAGE_PUBLIC_BASE_URL",
+        ),
+    )
+    media_storage_upload_timeout_seconds: int = Field(
+        default=120,
+        ge=10,
+        le=1800,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_STORAGE_UPLOAD_TIMEOUT_SECONDS",
+            "MEDIA_STORAGE_UPLOAD_TIMEOUT_SECONDS",
+        ),
+    )
+    media_upload_max_attempts: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_UPLOAD_MAX_ATTEMPTS",
+            "MEDIA_UPLOAD_MAX_ATTEMPTS",
+        ),
+    )
+    media_storage_supabase_bucket: str = Field(
+        default="media-artifacts",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_STORAGE_SUPABASE_BUCKET",
+            "MEDIA_STORAGE_SUPABASE_BUCKET",
+        ),
+    )
     media_duration_policy_mode: str = Field(
         default="soft_fail",
         validation_alias=AliasChoices(
@@ -158,6 +213,13 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("WICARA_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY"),
     )
+    supabase_service_role_key: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "WICARA_SUPABASE_SERVICE_ROLE_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY",
+        ),
+    )
     cors_allow_origins: list[str] = [
         "http://localhost",
         "http://localhost:*",
@@ -206,6 +268,14 @@ class Settings(BaseSettings):
             raise ValueError(
                 "MEDIA_DURATION_POLICY_MODE must be one of: off, soft_fail, hard_fail."
             )
+        return text
+
+    @field_validator("media_storage_backend", mode="before")
+    @classmethod
+    def normalize_media_storage_backend(cls, value: str) -> str:
+        text = str(value).strip().lower()
+        if text not in {"local", "supabase"}:
+            raise ValueError("MEDIA_STORAGE_BACKEND must be either 'local' or 'supabase'.")
         return text
 
 

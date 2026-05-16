@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -77,6 +78,11 @@ from app.modules.learning.media_postprocess import (
     MediaPostprocessError,
     MediaPostprocessOutput,
     postprocess_render_output,
+)
+from app.modules.learning.storage import (
+    MediaStorageError,
+    MediaStorageUploadOutput,
+    upload_media_artifact_files,
 )
 from app.modules.learning.template_validation import (
     TemplateValidationError,
@@ -642,7 +648,8 @@ def get_animation_job_status(
     job, artifact = row
     video_url = _coalesce_video_url(artifact)
     thumbnail_url = _optional_text(artifact.thumbnail_url)
-    error_details = artifact.render_meta_json.get("error_details")
+    render_meta = artifact.render_meta_json if isinstance(artifact.render_meta_json, dict) else {}
+    error_details = render_meta.get("error_details")
     return AnimationJobStatusResponse(
         job_id=job.id,
         status=job.status,
@@ -675,10 +682,30 @@ def process_animation_job_for_worker(
     if job.status in {"ready", "failed"}:
         return True
 
+    worker_started = time.perf_counter()
+    timing_meta: dict[str, float] = {}
+    context = {
+        "job_id": str(job.id),
+        "artifact_id": str(artifact.id),
+        "template_id": artifact.template_id,
+    }
+
     try:
         settings = get_settings()
+        _log_job_event(
+            level="info",
+            stage="worker_start",
+            message="Worker started processing media job.",
+            context=context,
+        )
         _mark_job_processing(session, job=job, artifact=artifact)
         _validate_job_payload(session=session, job=job, artifact=artifact)
+        _log_job_event(
+            level="info",
+            stage="validation_ok",
+            message="Template payload validation succeeded.",
+            context=context,
+        )
         for progress, message in MEDIA_JOB_PROGRESS_STAGES:
             _update_job_progress(
                 session,
@@ -687,6 +714,8 @@ def process_animation_job_for_worker(
                 progress=progress,
                 message=message,
             )
+
+        render_started = time.perf_counter()
         render_output, attempts_used = _render_artifact_with_retry(
             session,
             job=job,
@@ -694,6 +723,7 @@ def process_animation_job_for_worker(
             max_attempts=settings.media_render_max_attempts,
             timeout_seconds=settings.media_render_timeout_seconds,
         )
+        timing_meta["render_seconds"] = round(time.perf_counter() - render_started, 3)
         _attach_render_output_to_artifact(
             session,
             artifact=artifact,
@@ -707,6 +737,12 @@ def process_animation_job_for_worker(
             progress=88,
             message="Render output stored in local artifact path.",
         )
+        _log_job_event(
+            level="info",
+            stage="render_ok",
+            message="Manim rendering completed.",
+            context={**context, "attempts_used": attempts_used, **timing_meta},
+        )
         _update_job_progress(
             session,
             job=job,
@@ -717,12 +753,15 @@ def process_animation_job_for_worker(
                 "and evaluating duration gate."
             ),
         )
-        postprocess_output = postprocess_render_output(
-            job_id=job.id,
+        postprocess_started = time.perf_counter()
+        postprocess_output, postprocess_attempts = _postprocess_output_with_retry(
+            session=session,
+            job=job,
             artifact=artifact,
             render_output=render_output,
             settings=settings,
         )
+        timing_meta["postprocess_seconds"] = round(time.perf_counter() - postprocess_started, 3)
         _attach_postprocess_output_to_artifact(
             session,
             artifact=artifact,
@@ -735,14 +774,70 @@ def process_animation_job_for_worker(
             progress=97,
             message="Media post-process finished.",
         )
+        _log_job_event(
+            level="info",
+            stage="postprocess_ok",
+            message="Media post-process completed.",
+            context={**context, "attempts_used": postprocess_attempts, **timing_meta},
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=99,
+            message="Uploading final media artifact to storage.",
+        )
+        upload_started = time.perf_counter()
+        storage_output, upload_attempts = _upload_media_files_with_retry(
+            session=session,
+            job=job,
+            artifact=artifact,
+            postprocess_output=postprocess_output,
+            settings=settings,
+        )
+        timing_meta["upload_seconds"] = round(time.perf_counter() - upload_started, 3)
+        _attach_storage_output_to_artifact(
+            session=session,
+            artifact=artifact,
+            storage_output=storage_output,
+        )
+        _log_job_event(
+            level="info",
+            stage="upload_ok",
+            message="Media artifact uploaded to storage backend.",
+            context={
+                **context,
+                "attempts_used": upload_attempts,
+                "storage_backend": storage_output.storage_backend,
+                **timing_meta,
+            },
+        )
+        timing_meta["total_seconds"] = round(time.perf_counter() - worker_started, 3)
+        _attach_worker_metrics_to_artifact(
+            session=session,
+            artifact=artifact,
+            metrics=timing_meta,
+        )
         _mark_job_ready(
             session,
             job=job,
             artifact=artifact,
             final_message="Render lifecycle finished. Artifact is ready for playback.",
         )
+        _log_job_event(
+            level="info",
+            stage="worker_done",
+            message="Media job completed successfully.",
+            context={**context, **timing_meta},
+        )
         return True
     except TemplateValidationError as exc:
+        _log_job_event(
+            level="error",
+            stage="validation_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
         _mark_job_failed(
             session,
             job=job,
@@ -752,7 +847,29 @@ def process_animation_job_for_worker(
             error_details=exc.to_dict(),
         )
         return False
+    except ValueError as exc:
+        _log_job_event(
+            level="error",
+            stage="validation_failed",
+            message=str(exc),
+            context={**context, "error_code": "validation_error"},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=str(exc),
+            error_code="validation_error",
+            error_details={"code": "validation_error", "message": str(exc)},
+        )
+        return False
     except RenderEngineError as exc:
+        _log_job_event(
+            level="error",
+            stage="render_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
         _mark_job_failed(
             session,
             job=job,
@@ -763,6 +880,28 @@ def process_animation_job_for_worker(
         )
         return False
     except MediaPostprocessError as exc:
+        _log_job_event(
+            level="error",
+            stage="postprocess_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except MediaStorageError as exc:
+        _log_job_event(
+            level="error",
+            stage="upload_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
         _mark_job_failed(
             session,
             job=job,
@@ -773,11 +912,19 @@ def process_animation_job_for_worker(
         )
         return False
     except Exception as exc:
+        _log_job_event(
+            level="exception",
+            stage="worker_failed",
+            message=str(exc),
+            context={**context, "error_code": "unknown_error"},
+        )
         _mark_job_failed(
             session,
             job=job,
             artifact=artifact,
             error_message=str(exc),
+            error_code="unknown_error",
+            error_details={"code": "unknown_error", "message": str(exc)},
         )
         return False
 
@@ -826,11 +973,19 @@ def get_media_artifact_status(
     if artifact is None:
         return None
     progress = artifact.metadata_json.get("progress")
+    render_meta = artifact.render_meta_json if isinstance(artifact.render_meta_json, dict) else {}
+    error_details = render_meta.get("error_details")
     return MediaArtifactStatusResponse(
         artifact_id=artifact.id,
         status=artifact.status,
         progress=int(progress) if isinstance(progress, int) else (100 if artifact.status == "ready" else 0),
         error=str(artifact.metadata_json.get("error")) if artifact.metadata_json.get("error") else None,
+        error_code=(
+            str(artifact.metadata_json.get("error_code"))
+            if artifact.metadata_json.get("error_code")
+            else None
+        ),
+        error_details=error_details if isinstance(error_details, dict) else None,
     )
 
 
@@ -2212,6 +2367,108 @@ def _render_artifact_with_retry(
     raise last_error
 
 
+def _postprocess_output_with_retry(
+    *,
+    session: Session,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    render_output: RenderOutput,
+    settings: Any,
+) -> tuple[MediaPostprocessOutput, int]:
+    attempts_limit = max(1, int(settings.media_postprocess_max_attempts))
+    last_error: MediaPostprocessError | None = None
+
+    for attempt in range(1, attempts_limit + 1):
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=92,
+            message=f"Running media post-process attempt {attempt}/{attempts_limit}.",
+        )
+        try:
+            output = postprocess_render_output(
+                job_id=job.id,
+                artifact=artifact,
+                render_output=render_output,
+                settings=settings,
+            )
+            return output, attempt
+        except MediaPostprocessError as exc:
+            last_error = exc
+            if not _should_retry_postprocess_error(exc.code):
+                break
+            if attempt < attempts_limit:
+                _update_job_progress(
+                    session,
+                    job=job,
+                    artifact=artifact,
+                    progress=94,
+                    message=(
+                        f"Post-process attempt {attempt} failed ({exc.code}). "
+                        f"Retrying attempt {attempt + 1}/{attempts_limit}."
+                    ),
+                )
+                continue
+            break
+
+    assert last_error is not None
+    raise last_error
+
+
+def _upload_media_files_with_retry(
+    *,
+    session: Session,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    postprocess_output: MediaPostprocessOutput,
+    settings: Any,
+) -> tuple[MediaStorageUploadOutput, int]:
+    attempts_limit = max(1, int(settings.media_upload_max_attempts))
+    last_error: MediaStorageError | None = None
+
+    for attempt in range(1, attempts_limit + 1):
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=99,
+            message=f"Uploading media files attempt {attempt}/{attempts_limit}.",
+        )
+        try:
+            output = upload_media_artifact_files(
+                job_id=job.id,
+                artifact_id=artifact.id,
+                local_video_path=postprocess_output.video_path,
+                local_thumbnail_path=postprocess_output.thumbnail_path,
+                settings=settings,
+            )
+            return output, attempt
+        except MediaStorageError as exc:
+            last_error = exc
+            if attempt < attempts_limit:
+                _update_job_progress(
+                    session,
+                    job=job,
+                    artifact=artifact,
+                    progress=99,
+                    message=(
+                        f"Upload attempt {attempt} failed ({exc.code}). "
+                        f"Retrying attempt {attempt + 1}/{attempts_limit}."
+                    ),
+                )
+                continue
+            break
+
+    assert last_error is not None
+    raise last_error
+
+
+def _should_retry_postprocess_error(error_code: str) -> bool:
+    normalized = str(error_code or "").strip().lower()
+    return normalized in {"ffmpeg_error", "tts_error"}
+
+
 def _attach_render_output_to_artifact(
     session: Session,
     *,
@@ -2240,9 +2497,6 @@ def _attach_postprocess_output_to_artifact(
     artifact: MediaArtifact,
     output: MediaPostprocessOutput,
 ) -> None:
-    artifact.video_url = output.video_path
-    artifact.playback_url = output.video_path
-    artifact.thumbnail_url = output.thumbnail_path
     artifact.duration_seconds = int(output.duration_seconds)
     artifact.transcript = output.transcript
 
@@ -2279,6 +2533,67 @@ def _attach_postprocess_output_to_artifact(
         render_meta.pop("relative_voiceover_audio_path", None)
     artifact.render_meta_json = render_meta
     session.flush()
+
+
+def _attach_storage_output_to_artifact(
+    *,
+    session: Session,
+    artifact: MediaArtifact,
+    storage_output: MediaStorageUploadOutput,
+) -> None:
+    artifact.video_url = storage_output.video_url
+    artifact.playback_url = storage_output.video_url
+    artifact.thumbnail_url = storage_output.thumbnail_url
+
+    metadata = dict(artifact.metadata_json or {})
+    metadata["storage"] = {
+        "backend": storage_output.storage_backend,
+        "object_video_path": storage_output.object_video_path,
+        "object_thumbnail_path": storage_output.object_thumbnail_path,
+        "meta": storage_output.meta,
+    }
+    artifact.metadata_json = metadata
+
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta["storage_backend"] = storage_output.storage_backend
+    render_meta["video_object_path"] = storage_output.object_video_path
+    render_meta["thumbnail_object_path"] = storage_output.object_thumbnail_path
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _attach_worker_metrics_to_artifact(
+    *,
+    session: Session,
+    artifact: MediaArtifact,
+    metrics: dict[str, float],
+) -> None:
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta["worker_metrics"] = {
+        "render_seconds": metrics.get("render_seconds", 0.0),
+        "postprocess_seconds": metrics.get("postprocess_seconds", 0.0),
+        "upload_seconds": metrics.get("upload_seconds", 0.0),
+        "total_seconds": metrics.get("total_seconds", 0.0),
+    }
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _log_job_event(
+    *,
+    level: str,
+    stage: str,
+    message: str,
+    context: dict[str, Any],
+) -> None:
+    payload = {"stage": stage, **context}
+    if level == "error":
+        logger.error("%s | context=%s", message, payload)
+        return
+    if level == "exception":
+        logger.exception("%s | context=%s", message, payload)
+        return
+    logger.info("%s | context=%s", message, payload)
 
 
 def _sync_artifact_job_state(
