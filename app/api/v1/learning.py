@@ -67,6 +67,51 @@ def learning_queue(
     return service.get_learning_queue(session, user=account)
 
 
+@router.post(
+    "/animation/queue",
+    response_model=schemas.AnimationQueueResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def queue_animation(
+    payload: schemas.AnimationQueueRequest,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.AnimationQueueResponse:
+    try:
+        return service.queue_animation_job(
+            session,
+            user=account,
+            workspace_id=payload.workspace_id,
+            concept_id=payload.concept_id,
+            template_id=payload.template_id,
+            spec_json=payload.spec_json,
+            language=payload.language,
+            quality_profile=payload.quality_profile,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.get(
+    "/animation/status/{job_id}",
+    response_model=schemas.AnimationJobStatusResponse,
+)
+def animation_job_status(
+    job_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.AnimationJobStatusResponse:
+    job = service.get_animation_job_status(session, user=account, job_id=job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Animation job was not found.",
+        )
+    return job
+
+
 @router.get("/tracks/{track_id}/modules", response_model=schemas.TrackRead)
 def track_modules(
     track_id: UUID,

@@ -20,9 +20,12 @@ from app.modules.learning.models import (
     LearningGoal,
     LearningTrack,
     MediaArtifact,
+    MediaJob,
     TrackModule,
 )
 from app.modules.learning.schemas import (
+    AnimationJobStatusResponse,
+    AnimationQueueResponse,
     ActionRead,
     AssessmentOptionRead,
     AssessmentQuestionRead,
@@ -62,6 +65,7 @@ from app.modules.learning.schemas import (
     WeeklyReportResponse,
     ProgressRead,
 )
+from app.modules.workspaces.models import WorkspaceSession
 
 
 PRETEST_TEMPLATES: list[dict[str, Any]] = [
@@ -476,6 +480,110 @@ def update_track_module_state(
     session.commit()
     session.refresh(track)
     return TrackModuleStateUpdateResponse(track=track_to_schema(track))
+
+
+def queue_animation_job(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID | None,
+    concept_id: UUID | None,
+    template_id: str,
+    spec_json: dict[str, Any],
+    language: str,
+    quality_profile: str,
+) -> AnimationQueueResponse:
+    normalized_template_id = template_id.strip()
+    if not normalized_template_id:
+        raise ValueError("template_id must not be empty.")
+
+    workspace = _resolve_owned_workspace(session, user=user, workspace_id=workspace_id)
+    resolved_concept_id = _resolve_concept_id(
+        session,
+        concept_id=concept_id,
+        workspace=workspace,
+    )
+    normalized_language = _normalize_short_label(language, fallback="id", max_length=16)
+    normalized_quality = _normalize_short_label(
+        quality_profile, fallback="standard", max_length=32
+    )
+    artifact = MediaArtifact(
+        user_id=user.id,
+        track_id=workspace.track_id if workspace else None,
+        module_id=workspace.module_id if workspace else None,
+        workspace_id=workspace.id if workspace else None,
+        concept_id=resolved_concept_id,
+        template_id=normalized_template_id,
+        spec_json=dict(spec_json),
+        language=normalized_language,
+        quality_profile=normalized_quality,
+        artifact_type="video",
+        title=_queued_artifact_title(spec_json, normalized_template_id),
+        subtitle=_queued_artifact_subtitle(spec_json),
+        status="queued",
+        duration_seconds=0,
+        thumbnail_url="",
+        playback_url="",
+        video_url="",
+        transcript="",
+        notes_json=[],
+        metadata_json={
+            "source": "animation_queue_api",
+            "progress": 0,
+            "job_state": "queued",
+        },
+        render_meta_json={},
+    )
+    session.add(artifact)
+    session.flush()
+
+    job = MediaJob(
+        artifact_id=artifact.id,
+        status="queued",
+        progress=0,
+        message="Job is queued for rendering.",
+        attempt=0,
+        error=None,
+    )
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return AnimationQueueResponse(
+        job_id=job.id,
+        artifact_id=artifact.id,
+        status=job.status,
+    )
+
+
+def get_animation_job_status(
+    session: Session,
+    *,
+    user: UserAccount,
+    job_id: UUID,
+) -> AnimationJobStatusResponse | None:
+    row = session.execute(
+        select(MediaJob, MediaArtifact)
+        .join(MediaArtifact, MediaArtifact.id == MediaJob.artifact_id)
+        .where(
+            MediaJob.id == job_id,
+            MediaArtifact.user_id == user.id,
+        )
+    ).first()
+    if row is None:
+        return None
+
+    job, artifact = row
+    video_url = artifact.video_url or artifact.playback_url
+    return AnimationJobStatusResponse(
+        job_id=job.id,
+        status=job.status,
+        progress=max(0, min(100, int(job.progress or 0))),
+        message=job.message or "",
+        artifact_id=artifact.id,
+        video_url=video_url,
+        thumbnail_url=artifact.thumbnail_url,
+        error=job.error,
+    )
 
 
 def list_media_artifacts(session: Session, *, user: UserAccount) -> MediaArtifactListResponse:
@@ -897,6 +1005,7 @@ def track_to_schema(track: LearningTrack) -> TrackRead:
 
 
 def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
+    playback_url = artifact.playback_url or artifact.video_url
     return MediaArtifactRead(
         id=artifact.id,
         title=artifact.title,
@@ -906,7 +1015,7 @@ def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
         duration_seconds=artifact.duration_seconds,
         duration_label=_duration_label(artifact.duration_seconds),
         thumbnail_url=artifact.thumbnail_url,
-        playback_url=artifact.playback_url,
+        playback_url=playback_url,
         transcript=artifact.transcript,
         notes=artifact.notes_json,
         track_id=artifact.track_id,
@@ -1675,6 +1784,65 @@ def _find_concept_by_hints(
         if concept is not None:
             return concept
     return session.scalar(select(KnowledgeConcept).order_by(KnowledgeConcept.display_order))
+
+
+def _resolve_owned_workspace(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID | None,
+) -> WorkspaceSession | None:
+    if workspace_id is None:
+        return None
+    workspace = session.scalar(
+        select(WorkspaceSession).where(
+            WorkspaceSession.id == workspace_id,
+            WorkspaceSession.user_id == user.id,
+        )
+    )
+    if workspace is None:
+        raise LookupError("Workspace session was not found.")
+    return workspace
+
+
+def _resolve_concept_id(
+    session: Session,
+    *,
+    concept_id: UUID | None,
+    workspace: WorkspaceSession | None,
+) -> UUID | None:
+    if concept_id is not None:
+        concept = session.get(KnowledgeConcept, concept_id)
+        if concept is None:
+            raise LookupError("Concept was not found.")
+        return concept.id
+    if workspace is None:
+        return None
+    module = session.get(TrackModule, workspace.module_id)
+    if module is None:
+        return None
+    return module.concept_id
+
+
+def _queued_artifact_title(spec_json: dict[str, Any], template_id: str) -> str:
+    raw_title = spec_json.get("title")
+    if isinstance(raw_title, str) and raw_title.strip():
+        return raw_title.strip()[:255]
+    return f"Generated video ({template_id})"
+
+
+def _queued_artifact_subtitle(spec_json: dict[str, Any]) -> str:
+    raw_subtitle = spec_json.get("subtitle")
+    if isinstance(raw_subtitle, str) and raw_subtitle.strip():
+        return raw_subtitle.strip()[:255]
+    return "Queued for Manim rendering"
+
+
+def _normalize_short_label(value: str, *, fallback: str, max_length: int) -> str:
+    normalized = value.strip().lower()
+    if not normalized:
+        return fallback
+    return normalized[:max_length]
 
 
 def _resolve_submission_targets(

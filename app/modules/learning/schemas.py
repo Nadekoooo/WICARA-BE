@@ -178,6 +178,32 @@ class MediaArtifactStatusResponse(BaseModel):
     error: str | None = None
 
 
+class AnimationQueueRequest(BaseModel):
+    workspace_id: UUID | None = None
+    concept_id: UUID | None = None
+    template_id: str = Field(..., min_length=3, max_length=120)
+    spec_json: dict[str, Any] = Field(default_factory=dict)
+    language: str = Field(default="id", min_length=2, max_length=16)
+    quality_profile: str = Field(default="standard", min_length=2, max_length=32)
+
+
+class AnimationQueueResponse(BaseModel):
+    job_id: UUID
+    artifact_id: UUID
+    status: str
+
+
+class AnimationJobStatusResponse(BaseModel):
+    job_id: UUID
+    status: str
+    progress: int
+    message: str
+    artifact_id: UUID
+    video_url: str
+    thumbnail_url: str
+    error: str | None = None
+
+
 class ActionRead(BaseModel):
     label: str
     action_type: str
