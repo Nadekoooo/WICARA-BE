@@ -67,6 +67,10 @@ from app.modules.learning.schemas import (
     WeeklyReportResponse,
     ProgressRead,
 )
+from app.modules.learning.template_validation import (
+    TemplateValidationError,
+    validate_template_spec,
+)
 from app.modules.workspaces.models import WorkspaceSession
 
 logger = logging.getLogger(__name__)
@@ -503,7 +507,7 @@ def queue_animation_job(
     language: str,
     quality_profile: str,
 ) -> AnimationQueueResponse:
-    normalized_template_id = template_id.strip()
+    normalized_template_id = template_id.strip().lower()
     if not normalized_template_id:
         raise ValueError("template_id must not be empty.")
 
@@ -517,20 +521,47 @@ def queue_animation_job(
     normalized_quality = _normalize_short_label(
         quality_profile, fallback="standard", max_length=32
     )
+    validation_result = None
+    validation_error: TemplateValidationError | None = None
+    try:
+        validation_result = validate_template_spec(
+            template_id=normalized_template_id,
+            spec_json=spec_json,
+        )
+    except TemplateValidationError as exc:
+        validation_error = exc
+
+    canonical_template_id = (
+        validation_result.template_id
+        if validation_result is not None
+        else (validation_error.template_id or normalized_template_id)
+    )
+    normalized_spec = (
+        validation_result.normalized_spec
+        if validation_result is not None
+        else dict(spec_json)
+    )
+    job_status = "queued" if validation_error is None else "failed"
+    job_message = (
+        "Job is queued for rendering."
+        if validation_error is None
+        else "Template validation failed."
+    )
+    error_details = validation_error.to_dict() if validation_error is not None else None
     artifact = MediaArtifact(
         user_id=user.id,
         track_id=workspace.track_id if workspace else None,
         module_id=workspace.module_id if workspace else None,
         workspace_id=workspace.id if workspace else None,
         concept_id=resolved_concept_id,
-        template_id=normalized_template_id,
-        spec_json=dict(spec_json),
+        template_id=canonical_template_id,
+        spec_json=normalized_spec,
         language=normalized_language,
         quality_profile=normalized_quality,
         artifact_type="video",
-        title=_queued_artifact_title(spec_json, normalized_template_id),
-        subtitle=_queued_artifact_subtitle(spec_json),
-        status="queued",
+        title=_queued_artifact_title(normalized_spec, canonical_template_id),
+        subtitle=_queued_artifact_subtitle(normalized_spec),
+        status=job_status,
         duration_seconds=0,
         thumbnail_url="",
         playback_url="",
@@ -540,32 +571,44 @@ def queue_animation_job(
         metadata_json={
             "source": "animation_queue_api",
             "progress": 0,
-            "job_state": "queued",
+            "job_state": job_status,
         },
-        render_meta_json={},
+        render_meta_json=_initial_render_meta(
+            validation_result=validation_result,
+            validation_error=error_details,
+        ),
     )
     session.add(artifact)
     session.flush()
 
     job = MediaJob(
         artifact_id=artifact.id,
-        status="queued",
+        status=job_status,
         progress=0,
-        message="Job is queued for rendering.",
+        message=job_message,
         attempt=0,
-        error=None,
+        error=validation_error.message if validation_error is not None else None,
     )
     session.add(job)
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=validation_error.message if validation_error is not None else None,
+        error_details=error_details,
+        error_code=validation_error.code if validation_error is not None else None,
+    )
     session.commit()
     session.refresh(job)
-    published = _publish_media_job_to_queue(job_id=job.id)
-    if not published:
-        job.message = "Job queued in database. Waiting for worker polling fallback."
-        session.commit()
+    if validation_error is None:
+        published = _publish_media_job_to_queue(job_id=job.id)
+        if not published:
+            job.message = "Job queued in database. Waiting for worker polling fallback."
+            session.commit()
     return AnimationQueueResponse(
         job_id=job.id,
         artifact_id=artifact.id,
         status=job.status,
+        error_details=error_details,
     )
 
 
@@ -588,6 +631,7 @@ def get_animation_job_status(
 
     job, artifact = row
     video_url = artifact.video_url or artifact.playback_url
+    error_details = artifact.render_meta_json.get("error_details")
     return AnimationJobStatusResponse(
         job_id=job.id,
         status=job.status,
@@ -597,6 +641,7 @@ def get_animation_job_status(
         video_url=video_url,
         thumbnail_url=artifact.thumbnail_url,
         error=job.error,
+        error_details=error_details if isinstance(error_details, dict) else None,
     )
 
 
@@ -621,7 +666,7 @@ def process_animation_job_for_worker(
 
     try:
         _mark_job_processing(session, job=job, artifact=artifact)
-        _validate_job_payload(job=job, artifact=artifact)
+        _validate_job_payload(session=session, job=job, artifact=artifact)
         for progress, message in MEDIA_JOB_PROGRESS_STAGES:
             _update_job_progress(
                 session,
@@ -632,6 +677,16 @@ def process_animation_job_for_worker(
             )
         _mark_job_ready(session, job=job, artifact=artifact)
         return True
+    except TemplateValidationError as exc:
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
     except Exception as exc:
         _mark_job_failed(
             session,
@@ -1864,6 +1919,28 @@ def _load_job_with_artifact(
     ).first()
 
 
+def _initial_render_meta(
+    *,
+    validation_result: Any | None,
+    validation_error: dict[str, Any] | None,
+) -> dict[str, Any]:
+    render_meta: dict[str, Any] = {}
+    if validation_result is not None:
+        render_meta.update(
+            {
+                "template_path": validation_result.template_path,
+                "scene_class": validation_result.scene_class,
+                "schema_id": validation_result.schema_id,
+                "resolved_from": validation_result.resolved_from,
+                "used_alias": validation_result.used_alias,
+            }
+        )
+    if validation_error is not None:
+        render_meta["error_details"] = validation_error
+        render_meta["error_code"] = validation_error.get("code")
+    return render_meta
+
+
 def _mark_job_processing(
     session: Session,
     *,
@@ -1882,7 +1959,13 @@ def _mark_job_processing(
     if job.started_at is None:
         job.started_at = datetime.now(UTC)
     artifact.status = "processing"
-    _sync_artifact_job_state(artifact=artifact, job=job, error_message=None)
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=None,
+        error_details=None,
+        error_code=None,
+    )
     session.commit()
 
 
@@ -1898,7 +1981,13 @@ def _update_job_progress(
     job.progress = max(0, min(100, int(progress)))
     job.message = message
     artifact.status = "processing"
-    _sync_artifact_job_state(artifact=artifact, job=job, error_message=None)
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=None,
+        error_details=None,
+        error_code=None,
+    )
     session.commit()
 
 
@@ -1914,7 +2003,13 @@ def _mark_job_ready(
     job.error = None
     job.finished_at = datetime.now(UTC)
     artifact.status = "ready"
-    _sync_artifact_job_state(artifact=artifact, job=job, error_message=None)
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=None,
+        error_details=None,
+        error_code=None,
+    )
     session.commit()
 
 
@@ -1924,6 +2019,8 @@ def _mark_job_failed(
     job: MediaJob,
     artifact: MediaArtifact,
     error_message: str,
+    error_code: str | None = None,
+    error_details: dict[str, Any] | None = None,
 ) -> None:
     cleaned_error = (error_message or "Unknown media worker error.").strip()[:2000]
     job.status = "failed"
@@ -1931,15 +2028,44 @@ def _mark_job_failed(
     job.error = cleaned_error
     job.finished_at = datetime.now(UTC)
     artifact.status = "failed"
-    _sync_artifact_job_state(artifact=artifact, job=job, error_message=cleaned_error)
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=cleaned_error,
+        error_details=error_details,
+        error_code=error_code,
+    )
     session.commit()
 
 
-def _validate_job_payload(*, job: MediaJob, artifact: MediaArtifact) -> None:
+def _validate_job_payload(
+    *,
+    session: Session,
+    job: MediaJob,
+    artifact: MediaArtifact,
+) -> None:
     if not artifact.template_id.strip():
         raise ValueError(f"Job {job.id} has empty template_id.")
     if not isinstance(artifact.spec_json, dict):
         raise ValueError(f"Job {job.id} has invalid spec_json payload.")
+    validation_result = validate_template_spec(
+        template_id=artifact.template_id,
+        spec_json=artifact.spec_json,
+    )
+    artifact.template_id = validation_result.template_id
+    artifact.spec_json = validation_result.normalized_spec
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "template_path": validation_result.template_path,
+            "scene_class": validation_result.scene_class,
+            "schema_id": validation_result.schema_id,
+            "resolved_from": validation_result.resolved_from,
+            "used_alias": validation_result.used_alias,
+        }
+    )
+    artifact.render_meta_json = render_meta
+    session.flush()
 
 
 def _sync_artifact_job_state(
@@ -1947,6 +2073,8 @@ def _sync_artifact_job_state(
     artifact: MediaArtifact,
     job: MediaJob,
     error_message: str | None,
+    error_details: dict[str, Any] | None,
+    error_code: str | None,
 ) -> None:
     metadata = dict(artifact.metadata_json or {})
     metadata.update(
@@ -1958,8 +2086,11 @@ def _sync_artifact_job_state(
     )
     if error_message:
         metadata["error"] = error_message
+        if error_code:
+            metadata["error_code"] = error_code
     else:
         metadata.pop("error", None)
+        metadata.pop("error_code", None)
     artifact.metadata_json = metadata
 
     render_meta = dict(artifact.render_meta_json or {})
@@ -1972,8 +2103,15 @@ def _sync_artifact_job_state(
     )
     if error_message:
         render_meta["error"] = error_message
+        if error_code:
+            render_meta["error_code"] = error_code
     else:
         render_meta.pop("error", None)
+        render_meta.pop("error_code", None)
+    if error_details:
+        render_meta["error_details"] = error_details
+    else:
+        render_meta.pop("error_details", None)
     artifact.render_meta_json = render_meta
 
 

@@ -191,6 +191,7 @@ class AnimationQueueResponse(BaseModel):
     job_id: UUID
     artifact_id: UUID
     status: str
+    error_details: dict[str, Any] | None = None
 
 
 class AnimationJobStatusResponse(BaseModel):
@@ -202,6 +203,7 @@ class AnimationJobStatusResponse(BaseModel):
     video_url: str
     thumbnail_url: str
     error: str | None = None
+    error_details: dict[str, Any] | None = None
 
 
 class ActionRead(BaseModel):
