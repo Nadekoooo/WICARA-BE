@@ -722,6 +722,7 @@ def process_animation_job_for_worker(
             artifact=artifact,
             max_attempts=settings.media_render_max_attempts,
             timeout_seconds=settings.media_render_timeout_seconds,
+            settings=settings,
         )
         timing_meta["render_seconds"] = round(time.perf_counter() - render_started, 3)
         _attach_render_output_to_artifact(
@@ -2371,6 +2372,7 @@ def _render_artifact_with_retry(
     artifact: MediaArtifact,
     max_attempts: int,
     timeout_seconds: int,
+    settings: Any,
 ) -> tuple[RenderOutput, int]:
     attempts_limit = max(1, int(max_attempts))
     render_meta = dict(artifact.render_meta_json or {})
@@ -2401,6 +2403,7 @@ def _render_artifact_with_retry(
                 language=artifact.language,
                 quality_profile=artifact.quality_profile,
                 timeout_seconds=timeout_seconds,
+                settings=settings,
             )
             return output, attempt
         except RenderEngineError as exc:

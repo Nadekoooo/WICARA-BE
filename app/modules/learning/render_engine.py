@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -60,7 +61,8 @@ def render_template_scene(
     render_workdir.mkdir(parents=True, exist_ok=True)
     media_dir.mkdir(parents=True, exist_ok=True)
 
-    template_file = (Path.cwd() / template_path).resolve()
+    _project_root = Path(__file__).resolve().parent.parent.parent.parent
+    template_file = (_project_root / template_path).resolve()
     if not template_file.exists():
         raise RenderEngineError(
             code="render_error",
@@ -103,13 +105,18 @@ def render_template_scene(
     if normalized_language and not spec_payload.get("language"):
         spec_payload["language"] = normalized_language
         spec_payload.setdefault("locale", normalized_language)
+    spec_payload = _inject_runtime_tts_spec(
+        spec_payload=spec_payload,
+        settings=resolved_settings,
+    )
 
     render_scene_path = render_workdir / "render_scene.py"
+    spec_repr = repr(spec_payload)
     render_scene_path.write_text(
         (
             "from generated_template import GeneratedTemplate\n\n"
             "class RenderScene(GeneratedTemplate):\n"
-            f"    SPEC = {json.dumps(spec_payload, ensure_ascii=False, indent=4)}\n"
+            f"    SPEC = {spec_repr}\n"
         ),
         encoding="utf-8",
     )
@@ -127,6 +134,7 @@ def render_template_scene(
         str(media_dir),
         "--disable_caching",
     ]
+    render_env = _build_render_env(resolved_settings)
     try:
         completed = subprocess.run(
             cmd,
@@ -135,6 +143,7 @@ def render_template_scene(
             capture_output=True,
             timeout=timeout,
             check=False,
+            env=render_env,
         )
     except subprocess.TimeoutExpired as exc:
         raise RenderEngineError(
@@ -175,6 +184,43 @@ def render_template_scene(
         stdout=_tail_text(completed.stdout),
         stderr=_tail_text(completed.stderr),
     )
+
+
+def _inject_runtime_tts_spec(*, spec_payload: dict[str, Any], settings: Settings) -> dict[str, Any]:
+    payload = dict(spec_payload)
+    explicit_provider = str(
+        payload.get("tts_provider") or payload.get("voiceover_provider") or ""
+    ).strip()
+    if not explicit_provider:
+        provider_from_settings = str(settings.media_tts_provider or "").strip().lower()
+        if provider_from_settings == "gtts_voiceover" and settings.openai_api_key:
+            payload["tts_provider"] = "openai_voiceover"
+        else:
+            payload["tts_provider"] = settings.media_tts_provider
+
+    provider = str(payload.get("tts_provider") or "").strip().lower()
+    if provider == "openai_voiceover":
+        payload.setdefault("tts_model_primary", settings.media_openai_tts_model_primary)
+        payload.setdefault("tts_model_fallback", settings.media_openai_tts_model_fallback)
+        payload.setdefault("tts_voice_primary", settings.media_openai_tts_voice_primary)
+        payload.setdefault("tts_voice_fallback", settings.media_openai_tts_voice_fallback)
+        payload.setdefault("tts_response_format", settings.media_openai_tts_response_format)
+        payload.setdefault("tts_instructions", settings.media_openai_tts_instructions)
+    return payload
+
+
+def _build_render_env(settings: Settings) -> dict[str, str]:
+    env = dict(os.environ)
+    env["MEDIA_TTS_PROVIDER"] = settings.media_tts_provider
+    env["MEDIA_OPENAI_TTS_MODEL_PRIMARY"] = settings.media_openai_tts_model_primary
+    env["MEDIA_OPENAI_TTS_MODEL_FALLBACK"] = settings.media_openai_tts_model_fallback
+    env["MEDIA_OPENAI_TTS_VOICE_PRIMARY"] = settings.media_openai_tts_voice_primary
+    env["MEDIA_OPENAI_TTS_VOICE_FALLBACK"] = settings.media_openai_tts_voice_fallback
+    env["MEDIA_OPENAI_TTS_RESPONSE_FORMAT"] = settings.media_openai_tts_response_format
+    env["MEDIA_OPENAI_TTS_INSTRUCTIONS"] = settings.media_openai_tts_instructions or ""
+    if settings.openai_api_key:
+        env["OPENAI_API_KEY"] = settings.openai_api_key
+    return env
 
 
 def _quality_profile_to_manim_flag(profile: str) -> str:

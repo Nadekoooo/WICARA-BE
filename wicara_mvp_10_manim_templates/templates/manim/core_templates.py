@@ -862,8 +862,6 @@ class WicaraTemplateScene(VoiceoverScene):
             return
         if provider == "openai_voiceover":
             configured = self._configure_openai_voiceover(spec)
-            if not configured:
-                configured = self._configure_gtts_voiceover(spec)
         else:
             configured = self._configure_gtts_voiceover(spec)
 
@@ -923,8 +921,7 @@ class WicaraTemplateScene(VoiceoverScene):
                     )
                     return self._play_with_voiceover_segment(segment, *args, **kwargs)
                 except Exception:
-                    if self._configure_gtts_voiceover(self.SPEC):
-                        return self._play_with_voiceover_segment(segment, *args, **kwargs)
+                    raise
             self._voiceover_enabled = False
             return super().play(*args, **kwargs)
 
