@@ -70,6 +70,7 @@ Current implemented API surface:
 - `POST /api/v1/workspaces`
 - `GET /api/v1/workspaces/{workspace_id}`
 - `POST /api/v1/workspaces/{workspace_id}/events`
+- `POST /api/v1/workspaces/{workspace_id}/generate-video`
 - `GET /api/v1/daily-evaluations/today`
 - `POST /api/v1/daily-evaluations/{assessment_session_id}/answers`
 - `GET /api/v1/media-artifacts`
@@ -78,6 +79,10 @@ Current implemented API surface:
 - `POST /api/v1/animation/queue`
 - `GET /api/v1/animation/status/{job_id}`
 - `GET /api/v1/reports/weekly/latest`
+
+Media URL contract:
+- `video_url` is the source of truth for playback URL.
+- `playback_url` is kept as backward-compatible alias and mirrors `video_url`.
 
 ## 1. Executive Summary
 

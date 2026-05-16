@@ -635,7 +635,8 @@ def get_animation_job_status(
         return None
 
     job, artifact = row
-    video_url = artifact.video_url or artifact.playback_url
+    video_url = _coalesce_video_url(artifact)
+    thumbnail_url = _optional_text(artifact.thumbnail_url)
     error_details = artifact.render_meta_json.get("error_details")
     return AnimationJobStatusResponse(
         job_id=job.id,
@@ -644,7 +645,7 @@ def get_animation_job_status(
         message=job.message or "",
         artifact_id=artifact.id,
         video_url=video_url,
-        thumbnail_url=artifact.thumbnail_url,
+        thumbnail_url=thumbnail_url,
         error=job.error,
         error_details=error_details if isinstance(error_details, dict) else None,
     )
@@ -1157,7 +1158,7 @@ def track_to_schema(track: LearningTrack) -> TrackRead:
 
 
 def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
-    playback_url = artifact.playback_url or artifact.video_url
+    video_url = _coalesce_video_url(artifact)
     return MediaArtifactRead(
         id=artifact.id,
         title=artifact.title,
@@ -1166,8 +1167,9 @@ def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
         status=artifact.status,
         duration_seconds=artifact.duration_seconds,
         duration_label=_duration_label(artifact.duration_seconds),
-        thumbnail_url=artifact.thumbnail_url,
-        playback_url=playback_url,
+        thumbnail_url=_optional_text(artifact.thumbnail_url),
+        video_url=video_url,
+        playback_url=video_url,
         transcript=artifact.transcript,
         notes=artifact.notes_json,
         track_id=artifact.track_id,
@@ -2286,6 +2288,20 @@ def _queued_artifact_subtitle(spec_json: dict[str, Any]) -> str:
     if isinstance(raw_subtitle, str) and raw_subtitle.strip():
         return raw_subtitle.strip()[:255]
     return "Queued for Manim rendering"
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _coalesce_video_url(artifact: MediaArtifact) -> str | None:
+    primary = _optional_text(artifact.video_url)
+    if primary:
+        return primary
+    return _optional_text(artifact.playback_url)
 
 
 def _normalize_short_label(value: str, *, fallback: str, max_length: int) -> str:
