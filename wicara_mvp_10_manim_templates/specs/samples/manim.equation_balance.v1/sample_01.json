@@ -15,14 +15,16 @@
       "value": 3,
       "left_result": "2x",
       "right_result": "8",
-      "explanation": "Kurangi 3 di kedua sisi."
+      "explanation": "Kurangi 3 di kedua sisi.",
+      "narration": "Kurangi tiga di kedua sisi agar persamaan tetap seimbang."
     },
     {
       "operation": "Bagi 2",
       "value": 2,
       "left_result": "x",
       "right_result": "4",
-      "explanation": "Bagi kedua sisi dengan 2."
+      "explanation": "Bagi kedua sisi dengan 2.",
+      "narration": "Bagi kedua sisi dengan dua supaya x berdiri sendiri."
     }
   ],
   "final_solution": "x = 4",

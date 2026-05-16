@@ -1928,7 +1928,22 @@ class EquationBalanceTemplate(WicaraTemplateScene):
                 step.get("explanation", ""),
                 color=TEAL,
             )
-            active_card = self.replace_card(active_card, card)
+            operation_text = self._clean_voice_text(step.get("operation", "Operasi"))
+            explanation_text = self._clean_voice_text(step.get("explanation", ""))
+            solution_step_narration = self._clean_voice_text(
+                step.get("narration") or step.get("voiceover")
+            )
+            if not solution_step_narration:
+                if operation_text and explanation_text:
+                    solution_step_narration = f"{operation_text}. {explanation_text}"
+                else:
+                    solution_step_narration = operation_text or explanation_text
+
+            active_card = self.replace_card(
+                active_card,
+                card,
+                narration_text=solution_step_narration,
+            )
 
             lead_tilt = -0.06 if step_index % 2 == 0 else 0.06
             tilt_to(lead_tilt, run_time=0.30)

@@ -172,6 +172,7 @@ class EquationSolutionStepSpec(BaseModel):
     left_result: str = Field(..., min_length=1, max_length=80)
     right_result: str = Field(..., min_length=1, max_length=80)
     explanation: str = Field(default="", max_length=220)
+    narration: str = Field(default="", max_length=1200)
     model_config = ConfigDict(extra="allow")
 
 
