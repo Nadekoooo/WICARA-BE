@@ -33,6 +33,12 @@ VALID_EVENT_TYPES = {
 VALID_ACTOR_TYPES = {"learner", "tutor", "system"}
 _mastery_service = WorkspaceMasteryService()
 
+_PILOT_NODE_ID = "km_d_matematika_bilangan_bulat"
+_PILOT_CONCEPT_TYPE = "number_line_quantity_model"
+_PILOT_TEMPLATE_ID = "manim.number_line_quantity.v1"
+_PILOT_PREREQUISITES = ["km_c_matematika_bilangan_cacah_sampai_1000000"]
+_PILOT_CONTEXT_SOURCE = "hardcoded_number_line_pilot"
+
 
 def create_or_resume_workspace(
     session: Session,
@@ -73,6 +79,7 @@ def create_or_resume_workspace(
         workspace.content_mode = _normalize_content_mode(content_mode)
         workspace.status = "active"
         workspace.updated_at = datetime.now(UTC)
+    _apply_workspace_pilot_context(workspace)
     module.status = "active"
     track.status = "active"
 
@@ -356,6 +363,20 @@ def _normalize_actor_type(actor_type: str) -> str:
 def _normalize_content_mode(content_mode: str) -> str:
     normalized = content_mode.strip().lower().replace("-", "_").replace(" ", "_")
     return normalized or "chat"
+
+
+def _apply_workspace_pilot_context(workspace: WorkspaceSession) -> None:
+    metadata = dict(workspace.metadata_json or {})
+    metadata.update(
+        {
+            "active_node_id": _PILOT_NODE_ID,
+            "active_concept_type": _PILOT_CONCEPT_TYPE,
+            "active_template_id": _PILOT_TEMPLATE_ID,
+            "active_prerequisites": list(_PILOT_PREREQUISITES),
+            "context_source": _PILOT_CONTEXT_SOURCE,
+        }
+    )
+    workspace.metadata_json = metadata
 
 
 def _complete_workspace_module(
