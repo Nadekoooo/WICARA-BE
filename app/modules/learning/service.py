@@ -832,6 +832,7 @@ def process_animation_job_for_worker(
         )
         return True
     except TemplateValidationError as exc:
+        _rollback_session_quietly(session)
         _log_job_event(
             level="error",
             stage="validation_failed",
@@ -848,6 +849,7 @@ def process_animation_job_for_worker(
         )
         return False
     except ValueError as exc:
+        _rollback_session_quietly(session)
         _log_job_event(
             level="error",
             stage="validation_failed",
@@ -864,6 +866,7 @@ def process_animation_job_for_worker(
         )
         return False
     except RenderEngineError as exc:
+        _rollback_session_quietly(session)
         _log_job_event(
             level="error",
             stage="render_failed",
@@ -880,6 +883,7 @@ def process_animation_job_for_worker(
         )
         return False
     except MediaPostprocessError as exc:
+        _rollback_session_quietly(session)
         _log_job_event(
             level="error",
             stage="postprocess_failed",
@@ -896,6 +900,7 @@ def process_animation_job_for_worker(
         )
         return False
     except MediaStorageError as exc:
+        _rollback_session_quietly(session)
         _log_job_event(
             level="error",
             stage="upload_failed",
@@ -912,6 +917,7 @@ def process_animation_job_for_worker(
         )
         return False
     except Exception as exc:
+        _rollback_session_quietly(session)
         _log_job_event(
             level="exception",
             stage="worker_failed",
@@ -2641,6 +2647,13 @@ def _log_job_event(
         logger.exception("%s | context=%s", message, payload)
         return
     logger.info("%s | context=%s", message, payload)
+
+
+def _rollback_session_quietly(session: Session) -> None:
+    try:
+        session.rollback()
+    except Exception:
+        logger.exception("Failed to rollback session after worker error.")
 
 
 def _sync_artifact_job_state(

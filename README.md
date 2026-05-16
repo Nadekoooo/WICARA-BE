@@ -14,6 +14,8 @@ Create a local `.env` from the example file and adjust the database or Supabase 
 Copy-Item .env.example .env
 ```
 
+For complete local Manim worker setup and troubleshooting, see `SETUP_VENV_MANIM.md`.
+
 Run database migrations when PostgreSQL is available:
 
 ```powershell
