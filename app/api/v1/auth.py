@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -21,6 +22,7 @@ from app.modules.accounts.models import UserAccount
 from app.modules.accounts.service import get_learner_profile, sync_supabase_user
 from app.modules.accounts.supabase import (
     SupabaseTokenError,
+    refresh_access_token,
     register_with_password,
     sign_in_with_google_id_token,
     sign_in_with_password,
@@ -34,6 +36,7 @@ def _auth_session_response(
     *,
     account: UserAccount,
     token: str,
+    refresh_token: str = "",
 ) -> AuthSessionResponse:
     profile = get_learner_profile(session, account)
     return AuthSessionResponse(
@@ -41,6 +44,7 @@ def _auth_session_response(
         display_name=account.display_name,
         role=account.role,
         token=token,
+        refresh_token=refresh_token,
         email=account.email,
         onboarding_completed=bool(profile and profile.onboarding_completed),
     )
@@ -64,7 +68,7 @@ async def sign_in_with_backend(
     settings: Settings = Depends(get_settings),
 ) -> AuthSessionResponse:
     try:
-        access_token = await sign_in_with_password(
+        access_token, supabase_refresh_token = await sign_in_with_password(
             settings=settings,
             email_or_phone=payload.email_or_phone,
             password=payload.password,
@@ -76,7 +80,9 @@ async def sign_in_with_backend(
         ) from exc
     claims = verify_supabase_token_or_401(access_token, settings)
     account = sync_supabase_user(session, claims=claims, role=payload.role)
-    return _auth_session_response(session, account=account, token=access_token)
+    return _auth_session_response(
+        session, account=account, token=access_token, refresh_token=supabase_refresh_token
+    )
 
 
 @router.post("/register", response_model=AuthSessionResponse)
@@ -86,7 +92,7 @@ async def register_with_backend(
     settings: Settings = Depends(get_settings),
 ) -> AuthSessionResponse:
     try:
-        access_token = await register_with_password(
+        access_token, supabase_refresh_token = await register_with_password(
             settings=settings,
             email=payload.email,
             password=payload.password,
@@ -99,7 +105,9 @@ async def register_with_backend(
         ) from exc
     claims = verify_supabase_token_or_401(access_token, settings)
     account = sync_supabase_user(session, claims=claims, role=payload.role)
-    return _auth_session_response(session, account=account, token=access_token)
+    return _auth_session_response(
+        session, account=account, token=access_token, refresh_token=supabase_refresh_token
+    )
 
 
 @router.post("/google", response_model=AuthSessionResponse)
@@ -109,7 +117,7 @@ async def sign_in_with_google(
     settings: Settings = Depends(get_settings),
 ) -> AuthSessionResponse:
     try:
-        access_token = await sign_in_with_google_id_token(
+        access_token, supabase_refresh_token = await sign_in_with_google_id_token(
             settings=settings,
             id_token=payload.id_token,
             access_token=payload.access_token,
@@ -122,7 +130,37 @@ async def sign_in_with_google(
         ) from exc
     claims = verify_supabase_token_or_401(access_token, settings)
     account = sync_supabase_user(session, claims=claims, role=payload.role)
-    return _auth_session_response(session, account=account, token=access_token)
+    return _auth_session_response(
+        session, account=account, token=access_token, refresh_token=supabase_refresh_token
+    )
+
+
+class _RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh", response_model=AuthSessionResponse)
+async def refresh_session(
+    payload: _RefreshRequest,
+    session: Session = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> AuthSessionResponse:
+    """Exchange a Supabase refresh_token for a new access_token + refresh_token pair."""
+    try:
+        access_token, new_refresh_token = await refresh_access_token(
+            settings=settings,
+            refresh_token=payload.refresh_token,
+        )
+    except SupabaseTokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
+    claims = verify_supabase_token_or_401(access_token, settings)
+    account = sync_supabase_user(session, claims=claims, role="learner")
+    return _auth_session_response(
+        session, account=account, token=access_token, refresh_token=new_refresh_token
+    )
 
 
 @router.get("/me", response_model=UserAccountRead)

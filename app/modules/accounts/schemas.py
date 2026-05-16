@@ -35,6 +35,7 @@ class AuthSessionResponse(BaseModel):
     display_name: str
     role: str
     token: str
+    refresh_token: str = ""
     email: str | None = None
     onboarding_completed: bool = False
 
