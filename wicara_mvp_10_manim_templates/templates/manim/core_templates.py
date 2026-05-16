@@ -577,6 +577,15 @@ class WicaraTemplateScene(VoiceoverScene):
     def _clean_voice_text(self, value):
         return " ".join(str(value or "").split())
 
+    def _join_narration_parts(self, first, second):
+        first_text = self._clean_voice_text(first)
+        second_text = self._clean_voice_text(second)
+        if first_text and second_text:
+            if not first_text.endswith((".", "!", "?")):
+                first_text = f"{first_text}."
+            return f"{first_text} {second_text}"
+        return first_text or second_text
+
     def _build_structured_voiceover_segments(self, spec):
         segments: list[str] = []
         title = self._clean_voice_text(spec.get("title"))
@@ -1063,7 +1072,14 @@ class WicaraTemplateScene(VoiceoverScene):
         )
 
         group.move_to(box.get_center())
-        return VGroup(box, group)
+        card = VGroup(box, group)
+        card.wicara_card_title = self._clean_voice_text(localized_title)
+        card.wicara_card_body = self._clean_voice_text(localized_body)
+        card.wicara_card_narration = self._join_narration_parts(
+            card.wicara_card_title,
+            card.wicara_card_body,
+        )
+        return card
 
     def place_right_card(self, card):
         card.move_to(self.right_card_center())
@@ -1079,8 +1095,14 @@ class WicaraTemplateScene(VoiceoverScene):
         elif zone == "bottom":
             self.place_summary_card(next_card)
 
-        if narration_text is None and previous_card is None:
-            narration_text = self._pop_segmented_narration(slot="intro")
+        if narration_text is None and self._voiceover_mode == "segmented":
+            narration_text = self._clean_voice_text(
+                getattr(next_card, "wicara_card_narration", "")
+            )
+            if previous_card is None:
+                intro = self._pop_segmented_narration(slot="intro")
+                if intro:
+                    narration_text = intro
 
         if previous_card is None:
             self.play_with_voiceover(
