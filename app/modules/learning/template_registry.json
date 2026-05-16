@@ -1,0 +1,124 @@
+{
+  "templates": [
+    {
+      "template_id": "manim.elementary_arithmetic_blocks.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_arithmetic_blocks_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.elementary_arithmetic_blocks.v1",
+      "aliases": [
+        "manim.elementary_arithmetic_blocks",
+        "manim.elementary_arithmetic_blocks_v1",
+        "elementary_arithmetic_blocks_v1",
+        "elementary_arithmetic_blocks"
+      ]
+    },
+    {
+      "template_id": "manim.equation_balance.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/equation_balance_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.equation_balance.v1",
+      "aliases": [
+        "manim.equation_balance",
+        "manim.equation_balance_v1",
+        "equation_balance_v1",
+        "equation_balance"
+      ]
+    },
+    {
+      "template_id": "manim.force_diagram.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/force_diagram_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.force_diagram.v1",
+      "aliases": [
+        "manim.force_diagram",
+        "manim.force_diagram_v1",
+        "force_diagram_v1",
+        "force_diagram"
+      ]
+    },
+    {
+      "template_id": "manim.fraction_bar_partition.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/fraction_bar_partition_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.fraction_bar_partition.v1",
+      "aliases": [
+        "manim.fraction_bar_partition",
+        "manim.fraction_bar_partition_v1",
+        "fraction_bar_partition_v1",
+        "fraction_bar_partition"
+      ]
+    },
+    {
+      "template_id": "manim.geometry_area_volume.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/geometry_area_volume_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.geometry_area_volume.v1",
+      "aliases": [
+        "manim.geometry_area_volume",
+        "manim.geometry_area_volume_v1",
+        "geometry_area_volume_v1",
+        "geometry_area_volume"
+      ]
+    },
+    {
+      "template_id": "manim.graph_explanation.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/graph_explanation_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.graph_explanation.v1",
+      "aliases": [
+        "manim.graph_explanation",
+        "manim.graph_explanation_v1",
+        "graph_explanation_v1",
+        "graph_explanation"
+      ]
+    },
+    {
+      "template_id": "manim.motion_kinematics.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/motion_kinematics_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.motion_kinematics.v1",
+      "aliases": [
+        "manim.motion_kinematics",
+        "manim.motion_kinematics_v1",
+        "motion_kinematics_v1",
+        "motion_kinematics"
+      ]
+    },
+    {
+      "template_id": "manim.number_line_quantity.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/number_line_quantity_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.number_line_quantity.v1",
+      "aliases": [
+        "manim.number_line_quantity",
+        "manim.number_line_quantity_v1",
+        "number_line_quantity_v1",
+        "number_line_quantity"
+      ]
+    },
+    {
+      "template_id": "manim.ratio_proportion.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/ratio_proportion_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.ratio_proportion.v1",
+      "aliases": [
+        "manim.ratio_proportion",
+        "manim.ratio_proportion_v1",
+        "ratio_proportion_v1",
+        "ratio_proportion"
+      ]
+    },
+    {
+      "template_id": "manim.sequence_pattern.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/sequence_pattern_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.sequence_pattern.v1",
+      "aliases": [
+        "manim.sequence_pattern",
+        "manim.sequence_pattern_v1",
+        "sequence_pattern_v1",
+        "sequence_pattern"
+      ]
+    }
+  ]
+}

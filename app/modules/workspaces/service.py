@@ -10,13 +10,14 @@ from sqlalchemy.orm import Session, selectinload
 from app.modules.accounts.models import UserAccount
 from app.modules.inputs.service import create_workspace_input_event
 from app.modules.learning.models import LearningTrack, MediaArtifact, TrackModule
-from app.modules.learning.service import media_artifact_to_schema
+from app.modules.learning.service import media_artifact_to_schema, queue_animation_job
 from app.modules.workspaces.mastery import WorkspaceMasteryService
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 from app.modules.workspaces.schemas import (
     TutorResponseRead,
     WorkspaceEventCreateResponse,
     WorkspaceEventRead,
+    WorkspaceGenerateVideoResponse,
     WorkspaceRead,
 )
 from app.modules.workspaces.tutor import generate_tutor_response
@@ -180,6 +181,63 @@ async def append_workspace_event(
         tutor_response=tutor_response,
         mastery_update=mastery_result.update,
         workspace=workspace_to_schema(session, workspace),
+    )
+
+
+def queue_workspace_video_generation(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID,
+    template_id: str,
+    spec_json: dict[str, Any],
+    language: str,
+    quality_profile: str,
+    concept_id: UUID | None,
+    metadata: dict[str, Any],
+) -> WorkspaceGenerateVideoResponse | None:
+    workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
+    if workspace is None:
+        return None
+
+    queue = queue_animation_job(
+        session,
+        user=user,
+        workspace_id=workspace.id,
+        concept_id=concept_id,
+        template_id=template_id,
+        spec_json=spec_json,
+        language=language,
+        quality_profile=quality_profile,
+    )
+    event_metadata = {
+        **metadata,
+        "source": "workspace_generate_video_api",
+        "template_id": template_id.strip().lower(),
+        "job_id": str(queue.job_id),
+        "artifact_id": str(queue.artifact_id),
+        "queue_status": queue.status,
+    }
+    if queue.error_details is not None:
+        event_metadata["error_details"] = queue.error_details
+
+    event_response = append_workspace_event(
+        session,
+        user=user,
+        workspace_id=workspace.id,
+        event_type="media_generated",
+        actor_type="system",
+        text_payload="",
+        image_asset_id=None,
+        media_artifact_id=queue.artifact_id,
+        metadata=event_metadata,
+    )
+    if event_response is None:
+        return None
+    return WorkspaceGenerateVideoResponse(
+        queue=queue,
+        event=event_response.event,
+        workspace=event_response.workspace,
     )
 
 

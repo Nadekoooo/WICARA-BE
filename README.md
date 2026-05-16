@@ -14,6 +14,8 @@ Create a local `.env` from the example file and adjust the database or Supabase 
 Copy-Item .env.example .env
 ```
 
+For complete local Manim worker setup and troubleshooting, see `SETUP_VENV_MANIM.md`.
+
 Run database migrations when PostgreSQL is available:
 
 ```powershell
@@ -37,6 +39,28 @@ Run the FastAPI development server:
 ```powershell
 uvicorn app.main:app --reload
 ```
+
+Run media worker process for animation jobs:
+
+```powershell
+python -m app.workers.media_worker
+```
+
+Important for Phase-4 render worker:
+- Install Manim runtime in the worker environment (`python -m pip install manim`).
+- Ensure system dependencies for Manim are available (for example FFmpeg and LaTeX toolchain if your template needs it).
+- Render output is stored locally under `MEDIA_RENDER_OUTPUT_DIR` (default `tmp/media_renders`).
+
+Important for Phase-5 media post-process:
+- Install render extras for voiceover (`python -m pip install -e \".[render]\"`).
+- Set `MEDIA_TTS_PROVIDER=gtts_voiceover`, `openai_voiceover`, or `none`.
+- For OpenAI TTS, set `OPENAI_API_KEY` and optional `MEDIA_OPENAI_TTS_*` overrides in `.env`.
+- Ensure `ffmpeg` and `ffprobe` binaries are available in PATH, or set `MEDIA_FFMPEG_BINARY` and `MEDIA_FFPROBE_BINARY`.
+- Voiceover is generated in-scene via `manim-voiceover` (`GTTSService` or OpenAI Speech API fallback chain).
+- Worker post-process now focuses on finalization, audio stream probe, thumbnail extraction, and duration gate.
+- Storage upload is handled after post-process. Default backend is local (`MEDIA_STORAGE_BACKEND=local`) and files are served from `/media-storage/*`.
+- Worker writes stage-level structured logs keyed by `job_id`/`artifact_id` and stores timing metrics in `render_meta_json.worker_metrics`.
+- `video_url` remains source of truth; `playback_url` mirrors `video_url` as backward-compatible alias.
 
 Run tests:
 
@@ -71,12 +95,19 @@ Current implemented API surface:
 - `POST /api/v1/workspaces`
 - `GET /api/v1/workspaces/{workspace_id}`
 - `POST /api/v1/workspaces/{workspace_id}/events`
+- `POST /api/v1/workspaces/{workspace_id}/generate-video`
 - `GET /api/v1/daily-evaluations/today`
 - `POST /api/v1/daily-evaluations/{assessment_session_id}/answers`
 - `GET /api/v1/media-artifacts`
 - `GET /api/v1/media-artifacts/{artifact_id}`
 - `GET /api/v1/media-artifacts/{artifact_id}/status`
+- `POST /api/v1/animation/queue`
+- `GET /api/v1/animation/status/{job_id}`
 - `GET /api/v1/reports/weekly/latest`
+
+Media URL contract:
+- `video_url` is the source of truth for playback URL.
+- `playback_url` is kept as backward-compatible alias and mirrors `video_url`.
 
 ## 1. Executive Summary
 

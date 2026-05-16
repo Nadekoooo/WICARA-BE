@@ -70,3 +70,36 @@ async def append_workspace_event(
     if response is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace was not found.")
     return response
+
+
+@router.post(
+    "/{workspace_id}/generate-video",
+    response_model=schemas.WorkspaceGenerateVideoResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def generate_workspace_video(
+    workspace_id: UUID,
+    payload: schemas.WorkspaceGenerateVideoRequest,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WorkspaceGenerateVideoResponse:
+    try:
+        response = service.queue_workspace_video_generation(
+            session,
+            user=account,
+            workspace_id=workspace_id,
+            template_id=payload.template_id,
+            spec_json=payload.spec_json,
+            language=payload.language,
+            quality_profile=payload.quality_profile,
+            concept_id=payload.concept_id,
+            metadata=payload.metadata,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    if response is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace was not found.")
+    return response

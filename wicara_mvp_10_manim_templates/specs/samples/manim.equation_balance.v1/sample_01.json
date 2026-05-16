@@ -1,0 +1,67 @@
+{
+  "id": "sample_equation_balance",
+  "node_id": "km_d_matematika_persamaan_linear_satu_variabel",
+  "template_id": "manim.equation_balance.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "title": "Persamaan sebagai Timbangan",
+  "subtitle": "Operasi di kiri juga dilakukan di kanan.",
+  "equation": "2x + 3 = 11",
+  "left_expression": "2x + 3",
+  "right_expression": "11",
+  "solution_steps": [
+    {
+      "operation": "Kurangi 3",
+      "value": 3,
+      "left_result": "2x",
+      "right_result": "8",
+      "explanation": "Kurangi 3 di kedua sisi.",
+      "narration": "Kurangi tiga di kedua sisi agar persamaan tetap seimbang."
+    },
+    {
+      "operation": "Bagi 2",
+      "value": 2,
+      "left_result": "x",
+      "right_result": "4",
+      "explanation": "Bagi kedua sisi dengan 2.",
+      "narration": "Bagi kedua sisi dengan dua supaya x berdiri sendiri."
+    }
+  ],
+  "final_solution": "x = 4",
+  "steps": [
+    {
+      "title": "Jaga seimbang",
+      "body": "Setiap operasi harus dilakukan pada kedua ruas.",
+      "narration": "Jaga seimbang. Setiap operasi harus dilakukan pada kedua ruas."
+    },
+    {
+      "title": "Isolasi x",
+      "body": "Tujuannya membuat x berdiri sendiri.",
+      "narration": "Isolasi x. Tujuannya membuat x berdiri sendiri."
+    }
+  ],
+  "summary": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara.",
+  "voiceover_script": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah.",
+  "intro_narration": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah.",
+  "summary_narration": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Jaga seimbang. Setiap operasi harus dilakukan pada kedua ruas."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Isolasi x. Tujuannya membuat x berdiri sendiri."
+    },
+    {
+      "slot": "summary",
+      "text": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara."
+    }
+  ]
+}
