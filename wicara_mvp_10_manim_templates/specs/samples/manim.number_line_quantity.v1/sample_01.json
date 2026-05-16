@@ -4,6 +4,7 @@
   "template_id": "manim.number_line_quantity.v1",
   "phase": "D",
   "audience_level": "smp",
+  "language": "id",
   "title": "Bilangan pada Garis Bilangan",
   "subtitle": "Semakin ke kanan, nilainya semakin besar.",
   "number_range": {
@@ -68,3 +69,5 @@
     }
   ]
 }
+
+

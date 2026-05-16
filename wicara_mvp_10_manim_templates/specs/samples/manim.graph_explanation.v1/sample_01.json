@@ -4,6 +4,7 @@
   "template_id": "manim.graph_explanation.v1",
   "phase": "E",
   "audience_level": "sma",
+  "language": "id",
   "title": "Grafik Fungsi Kuadrat",
   "subtitle": "Parabola menunjukkan perubahan nilai fungsi.",
   "function": {
@@ -78,3 +79,5 @@
     }
   ]
 }
+
+

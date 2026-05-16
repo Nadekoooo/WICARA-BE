@@ -4,6 +4,7 @@
   "template_id": "manim.motion_kinematics.v1",
   "phase": "E",
   "audience_level": "sma",
+  "language": "id",
   "title": "Gerak Lurus Beraturan",
   "subtitle": "Posisi bertambah sama setiap selang waktu.",
   "scenario": "Gerak lurus beraturan",
@@ -67,3 +68,5 @@
     }
   ]
 }
+
+

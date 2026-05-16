@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings, get_settings, resolve_project_path
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,7 @@ def render_template_scene(
     settings: Settings | None = None,
 ) -> RenderOutput:
     resolved_settings = settings or get_settings()
-    output_root = (Path.cwd() / resolved_settings.media_render_output_dir).resolve()
+    output_root = resolve_project_path(resolved_settings.media_render_output_dir)
     workspace_dir = output_root / str(job_id)
     render_workdir = workspace_dir / "work"
     media_dir = workspace_dir / "media"

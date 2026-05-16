@@ -1,12 +1,11 @@
 import logging
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
-from app.core.config import get_settings
+from app.core.config import get_settings, resolve_project_path
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    local_media_storage_dir = (Path.cwd() / settings.media_storage_local_dir).resolve()
+    local_media_storage_dir = resolve_project_path(settings.media_storage_local_dir)
     local_media_storage_dir.mkdir(parents=True, exist_ok=True)
     media_mount_path = (settings.media_storage_public_base_url or "/media-storage").strip()
     if media_mount_path.startswith("/"):

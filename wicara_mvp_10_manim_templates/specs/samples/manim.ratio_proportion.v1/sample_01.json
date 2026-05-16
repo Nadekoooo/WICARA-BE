@@ -4,6 +4,7 @@
   "template_id": "manim.ratio_proportion.v1",
   "phase": "D",
   "audience_level": "smp",
+  "language": "id",
   "title": "Rasio Gula dan Air",
   "subtitle": "Rasio menjaga perbandingan dua kuantitas.",
   "context": "Membuat sirup",
@@ -70,3 +71,5 @@
     }
   ]
 }
+
+

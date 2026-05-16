@@ -4,6 +4,7 @@
   "template_id": "manim.elementary_arithmetic_blocks.v1",
   "phase": "A",
   "audience_level": "sd",
+  "language": "id",
   "title": "Menjumlahkan dengan Blok",
   "subtitle": "Gabungkan dua kelompok benda.",
   "operation_type": "addition",
@@ -58,3 +59,5 @@
     }
   ]
 }
+
+

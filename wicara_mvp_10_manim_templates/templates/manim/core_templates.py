@@ -437,6 +437,7 @@ if SpeechService is not None and OpenAI is not None:
             voice_fallback: str = "alloy",
             response_format: str = "mp3",
             instructions: str = "",
+            language_code: str = "id",
             **kwargs,
         ):
             self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
@@ -446,7 +447,24 @@ if SpeechService is not None and OpenAI is not None:
             self.voice_fallback = voice_fallback
             self.response_format = str(response_format or "wav").lower()
             self.instructions = " ".join(str(instructions or "").split())
+            self.language_code = str(language_code or "id").strip().lower()
             super().__init__(**kwargs)
+
+        def _build_effective_instructions(self) -> str:
+            locale_hints = {
+                "id": (
+                    "Speak in natural Bahasa Indonesia. "
+                    "Use clear Indonesian pronunciation and intonation."
+                ),
+                "en": "Speak in natural English with clear pronunciation.",
+                "vi": "Speak naturally in Vietnamese with clear pronunciation.",
+                "ms": "Speak naturally in Malay with clear pronunciation.",
+                "ja": "Speak naturally in Japanese with clear pronunciation.",
+            }
+            base_hint = locale_hints.get(self.language_code, "")
+            if base_hint and self.instructions:
+                return f"{base_hint} {self.instructions}".strip()
+            return base_hint or self.instructions
 
         def _request_tts(self, *, model: str, voice: str, input_text: str, output_path: Path):
             payload = {
@@ -455,8 +473,9 @@ if SpeechService is not None and OpenAI is not None:
                 "input": input_text,
                 "response_format": self.response_format,
             }
-            if self.instructions and model.startswith("gpt-4o-mini-tts"):
-                payload["instructions"] = self.instructions
+            effective_instructions = self._build_effective_instructions()
+            if effective_instructions and model.startswith("gpt-4o-mini-tts"):
+                payload["instructions"] = effective_instructions
             with self.client.audio.speech.with_streaming_response.create(**payload) as response:
                 response.stream_to_file(output_path)
 
@@ -473,6 +492,7 @@ if SpeechService is not None and OpenAI is not None:
                     "voice_primary": self.voice_primary,
                     "voice_fallback": self.voice_fallback,
                     "response_format": self.response_format,
+                    "language_code": self.language_code,
                     "speed": speed,
                 },
             }
@@ -553,6 +573,7 @@ class WicaraTemplateScene(VoiceoverScene):
         self._openai_fallback_voice = "alloy"
         self._openai_response_format = "mp3"
         self._openai_instructions = ""
+        self._openai_language = "id"
         self._openai_fallback_attempted = False
 
     # --------------------------------------------------------
@@ -782,6 +803,7 @@ class WicaraTemplateScene(VoiceoverScene):
         return normalized
 
     def _resolve_openai_voiceover_config(self, spec):
+        self._openai_language = self.resolve_language(spec)
         self._openai_primary_model = str(
             spec.get("tts_model_primary")
             or spec.get("tts_model")
@@ -833,6 +855,7 @@ class WicaraTemplateScene(VoiceoverScene):
                 voice_fallback=self._openai_fallback_voice,
                 response_format=self._openai_response_format,
                 instructions=self._openai_instructions,
+                language_code=self._openai_language,
             )
         )
         self._voiceover_provider = "openai_voiceover"
@@ -917,6 +940,7 @@ class WicaraTemplateScene(VoiceoverScene):
                             voice_primary=self._openai_fallback_voice,
                             voice_fallback=self._openai_fallback_voice,
                             response_format=self._openai_response_format,
+                            language_code=self._openai_language,
                         )
                     )
                     return self._play_with_voiceover_segment(segment, *args, **kwargs)

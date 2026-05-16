@@ -4,6 +4,7 @@
   "template_id": "manim.geometry_area_volume.v1",
   "phase": "B",
   "audience_level": "sd",
+  "language": "id",
   "title": "Luas Persegi Panjang",
   "subtitle": "Luas dapat dihitung dari panjang dan lebar.",
   "shape_type": "rectangle",
@@ -61,3 +62,5 @@
     }
   ]
 }
+
+
