@@ -34,13 +34,37 @@
   "steps": [
     {
       "title": "Dua gaya berlawanan",
-      "body": "Gaya kanan lebih besar daripada gaya kiri."
+      "body": "Gaya kanan lebih besar daripada gaya kiri.",
+      "narration": "Dua gaya berlawanan. Gaya kanan lebih besar daripada gaya kiri."
     },
     {
       "title": "Cari selisih",
-      "body": "Resultan gaya adalah 6 N ke kanan."
+      "body": "Resultan gaya adalah 6 N ke kanan.",
+      "narration": "Cari selisih. Resultan gaya adalah 6 N ke kanan."
     }
   ],
   "summary": "Arah resultan gaya menentukan kecenderungan gerak benda.",
-  "voiceover_script": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan."
+  "voiceover_script": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan.",
+  "intro_narration": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan.",
+  "summary_narration": "Arah resultan gaya menentukan kecenderungan gerak benda.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Dua gaya berlawanan. Gaya kanan lebih besar daripada gaya kiri."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Cari selisih. Resultan gaya adalah 6 N ke kanan."
+    },
+    {
+      "slot": "summary",
+      "text": "Arah resultan gaya menentukan kecenderungan gerak benda."
+    }
+  ]
 }

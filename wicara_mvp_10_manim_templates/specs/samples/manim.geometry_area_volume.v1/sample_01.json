@@ -27,13 +27,37 @@
   "steps": [
     {
       "title": "Ukur dua sisi",
-      "body": "Persegi panjang punya panjang dan lebar."
+      "body": "Persegi panjang punya panjang dan lebar.",
+      "narration": "Ukur dua sisi. Persegi panjang punya panjang dan lebar."
     },
     {
       "title": "Kalikan",
-      "body": "Luas diperoleh dari panjang dikali lebar."
+      "body": "Luas diperoleh dari panjang dikali lebar.",
+      "narration": "Kalikan. Luas diperoleh dari panjang dikali lebar."
     }
   ],
   "summary": "Luas persegi panjang adalah panjang dikali lebar.",
-  "voiceover_script": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya."
+  "voiceover_script": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya.",
+  "intro_narration": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya.",
+  "summary_narration": "Luas persegi panjang adalah panjang dikali lebar.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Ukur dua sisi. Persegi panjang punya panjang dan lebar."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Kalikan. Luas diperoleh dari panjang dikali lebar."
+    },
+    {
+      "slot": "summary",
+      "text": "Luas persegi panjang adalah panjang dikali lebar."
+    }
+  ]
 }

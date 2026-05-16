@@ -29,13 +29,37 @@
   "steps": [
     {
       "title": "Jaga seimbang",
-      "body": "Setiap operasi harus dilakukan pada kedua ruas."
+      "body": "Setiap operasi harus dilakukan pada kedua ruas.",
+      "narration": "Jaga seimbang. Setiap operasi harus dilakukan pada kedua ruas."
     },
     {
       "title": "Isolasi x",
-      "body": "Tujuannya membuat x berdiri sendiri."
+      "body": "Tujuannya membuat x berdiri sendiri.",
+      "narration": "Isolasi x. Tujuannya membuat x berdiri sendiri."
     }
   ],
   "summary": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara.",
-  "voiceover_script": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah."
+  "voiceover_script": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah.",
+  "intro_narration": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah.",
+  "summary_narration": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Bayangkan persamaan seperti timbangan. Jika satu sisi diubah, sisi lainnya juga harus diubah."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Jaga seimbang. Setiap operasi harus dilakukan pada kedua ruas."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Isolasi x. Tujuannya membuat x berdiri sendiri."
+    },
+    {
+      "slot": "summary",
+      "text": "Nilai x ditemukan dengan menjaga kedua ruas tetap setara."
+    }
+  ]
 }

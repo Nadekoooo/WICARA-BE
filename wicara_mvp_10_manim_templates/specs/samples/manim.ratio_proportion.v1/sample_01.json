@@ -36,13 +36,37 @@
   "steps": [
     {
       "title": "Rasio awal",
-      "body": "Gula dan air dibandingkan 2 banding 5."
+      "body": "Gula dan air dibandingkan 2 banding 5.",
+      "narration": "Rasio awal. Gula dan air dibandingkan 2 banding 5."
     },
     {
       "title": "Skalakan bersama",
-      "body": "Jika gula dikali 2, air juga dikali 2."
+      "body": "Jika gula dikali 2, air juga dikali 2.",
+      "narration": "Skalakan bersama. Jika gula dikali 2, air juga dikali 2."
     }
   ],
   "summary": "Proporsi terjaga jika kedua kuantitas dikalikan faktor yang sama.",
-  "voiceover_script": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air."
+  "voiceover_script": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air.",
+  "intro_narration": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air.",
+  "summary_narration": "Proporsi terjaga jika kedua kuantitas dikalikan faktor yang sama.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Rasio awal. Gula dan air dibandingkan 2 banding 5."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Skalakan bersama. Jika gula dikali 2, air juga dikali 2."
+    },
+    {
+      "slot": "summary",
+      "text": "Proporsi terjaga jika kedua kuantitas dikalikan faktor yang sama."
+    }
+  ]
 }

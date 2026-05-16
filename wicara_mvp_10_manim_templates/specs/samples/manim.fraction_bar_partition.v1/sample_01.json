@@ -35,13 +35,37 @@
   "steps": [
     {
       "title": "Lihat bagian berwarna",
-      "body": "Setengah bar berwarna pada kedua gambar."
+      "body": "Setengah bar berwarna pada kedua gambar.",
+      "narration": "Lihat bagian berwarna. Setengah bar berwarna pada kedua gambar."
     },
     {
       "title": "Nilainya sama",
-      "body": "1/2 dan 2/4 menunjukkan bagian yang sama besar."
+      "body": "1/2 dan 2/4 menunjukkan bagian yang sama besar.",
+      "narration": "Nilainya sama. 1/2 dan 2/4 menunjukkan bagian yang sama besar."
     }
   ],
   "summary": "Pecahan senilai punya nilai sama walau tulisannya berbeda.",
-  "voiceover_script": "Satu per dua dan dua per empat terlihat berbeda, tetapi bagian yang diwarnai sama besar."
+  "voiceover_script": "Satu per dua dan dua per empat terlihat berbeda, tetapi bagian yang diwarnai sama besar.",
+  "intro_narration": "Satu per dua dan dua per empat terlihat berbeda, tetapi bagian yang diwarnai sama besar.",
+  "summary_narration": "Pecahan senilai punya nilai sama walau tulisannya berbeda.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Satu per dua dan dua per empat terlihat berbeda, tetapi bagian yang diwarnai sama besar."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Lihat bagian berwarna. Setengah bar berwarna pada kedua gambar."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Nilainya sama. 1/2 dan 2/4 menunjukkan bagian yang sama besar."
+    },
+    {
+      "slot": "summary",
+      "text": "Pecahan senilai punya nilai sama walau tulisannya berbeda."
+    }
+  ]
 }

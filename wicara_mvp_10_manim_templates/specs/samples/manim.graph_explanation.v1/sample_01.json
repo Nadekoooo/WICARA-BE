@@ -44,13 +44,37 @@
   "steps": [
     {
       "title": "Bentuk parabola",
-      "body": "Grafik fungsi kuadrat berbentuk parabola."
+      "body": "Grafik fungsi kuadrat berbentuk parabola.",
+      "narration": "Bentuk parabola. Grafik fungsi kuadrat berbentuk parabola."
     },
     {
       "title": "Nilai berubah",
-      "body": "Saat x berubah, nilai f(x) berubah mengikuti kurva."
+      "body": "Saat x berubah, nilai f(x) berubah mengikuti kurva.",
+      "narration": "Nilai berubah. Saat x berubah, nilai f(x) berubah mengikuti kurva."
     }
   ],
   "summary": "Grafik membantu melihat sifat fungsi secara visual.",
-  "voiceover_script": "Fungsi kuadrat membentuk parabola. Kita bisa membaca nilai fungsi dari titik pada grafik."
+  "voiceover_script": "Fungsi kuadrat membentuk parabola. Kita bisa membaca nilai fungsi dari titik pada grafik.",
+  "intro_narration": "Fungsi kuadrat membentuk parabola. Kita bisa membaca nilai fungsi dari titik pada grafik.",
+  "summary_narration": "Grafik membantu melihat sifat fungsi secara visual.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Fungsi kuadrat membentuk parabola. Kita bisa membaca nilai fungsi dari titik pada grafik."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Bentuk parabola. Grafik fungsi kuadrat berbentuk parabola."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Nilai berubah. Saat x berubah, nilai f(x) berubah mengikuti kurva."
+    },
+    {
+      "slot": "summary",
+      "text": "Grafik membantu melihat sifat fungsi secara visual."
+    }
+  ]
 }

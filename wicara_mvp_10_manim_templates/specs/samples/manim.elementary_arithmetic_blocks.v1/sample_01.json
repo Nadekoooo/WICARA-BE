@@ -24,13 +24,37 @@
   "steps": [
     {
       "title": "Ada dua kelompok",
-      "body": "Kelompok pertama berisi 12, kelompok kedua berisi 8."
+      "body": "Kelompok pertama berisi 12, kelompok kedua berisi 8.",
+      "narration": "Ada dua kelompok. Kelompok pertama berisi 12, kelompok kedua berisi 8."
     },
     {
       "title": "Gabungkan",
-      "body": "Setelah digabung, jumlahnya menjadi 20."
+      "body": "Setelah digabung, jumlahnya menjadi 20.",
+      "narration": "Gabungkan. Setelah digabung, jumlahnya menjadi 20."
     }
   ],
   "summary": "Penjumlahan berarti menggabungkan dua kelompok.",
-  "voiceover_script": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama."
+  "voiceover_script": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama.",
+  "intro_narration": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama.",
+  "summary_narration": "Penjumlahan berarti menggabungkan dua kelompok.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Ada dua kelompok. Kelompok pertama berisi 12, kelompok kedua berisi 8."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Gabungkan. Setelah digabung, jumlahnya menjadi 20."
+    },
+    {
+      "slot": "summary",
+      "text": "Penjumlahan berarti menggabungkan dua kelompok."
+    }
+  ]
 }

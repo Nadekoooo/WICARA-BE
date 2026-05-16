@@ -49,6 +49,14 @@ class TemplateValidationError(ValueError):
 class StepSpec(BaseModel):
     title: str = Field(..., min_length=1, max_length=140)
     body: str = Field(..., min_length=1, max_length=800)
+    narration: str = Field(default="", max_length=1200)
+    model_config = ConfigDict(extra="allow")
+
+
+class NarrationSegmentSpec(BaseModel):
+    slot: str = Field(default="intro", min_length=1, max_length=32)
+    step_index: int | None = Field(default=None, ge=1, le=50)
+    text: str = Field(..., min_length=1, max_length=1200)
     model_config = ConfigDict(extra="allow")
 
 
@@ -60,6 +68,9 @@ class BaseTemplateSpec(BaseModel):
     steps: list[StepSpec] = Field(..., min_length=1, max_length=12)
     summary: str = Field(..., min_length=1, max_length=1200)
     voiceover_script: str = Field(default="", max_length=6000)
+    intro_narration: str = Field(default="", max_length=1200)
+    summary_narration: str = Field(default="", max_length=1200)
+    narration_segments: list[NarrationSegmentSpec] = Field(default_factory=list, max_length=64)
     model_config = ConfigDict(extra="allow")
 
 

@@ -34,13 +34,37 @@
   "steps": [
     {
       "title": "Lihat posisi angka",
-      "body": "-3 berada di kiri, sedangkan 2 berada di kanan."
+      "body": "-3 berada di kiri, sedangkan 2 berada di kanan.",
+      "narration": "Lihat posisi angka. -3 berada di kiri, sedangkan 2 berada di kanan."
     },
     {
       "title": "Bandingkan nilainya",
-      "body": "Angka yang lebih kanan di garis bilangan bernilai lebih besar."
+      "body": "Angka yang lebih kanan di garis bilangan bernilai lebih besar.",
+      "narration": "Bandingkan nilainya. Angka yang lebih kanan di garis bilangan bernilai lebih besar."
     }
   ],
   "summary": "Pada garis bilangan, angka di kanan bernilai lebih besar.",
-  "voiceover_script": "Perhatikan garis bilangan ini. Angka minus tiga berada di kiri, sedangkan angka dua berada di kanan."
+  "voiceover_script": "Perhatikan garis bilangan ini. Angka minus tiga berada di kiri, sedangkan angka dua berada di kanan.",
+  "intro_narration": "Perhatikan garis bilangan ini. Angka minus tiga berada di kiri, sedangkan angka dua berada di kanan.",
+  "summary_narration": "Pada garis bilangan, angka di kanan bernilai lebih besar.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Perhatikan garis bilangan ini. Angka minus tiga berada di kiri, sedangkan angka dua berada di kanan."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Lihat posisi angka. -3 berada di kiri, sedangkan 2 berada di kanan."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Bandingkan nilainya. Angka yang lebih kanan di garis bilangan bernilai lebih besar."
+    },
+    {
+      "slot": "summary",
+      "text": "Pada garis bilangan, angka di kanan bernilai lebih besar."
+    }
+  ]
 }

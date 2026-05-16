@@ -538,8 +538,13 @@ class WicaraTemplateScene(VoiceoverScene):
         self._resolved_language = "id"
         self._voiceover_initialized = False
         self._voiceover_enabled = False
+        self._voiceover_mode = "auto"
         self._voiceover_segments: list[str] = []
         self._voiceover_index = 0
+        self._segmented_intro_queue: list[str] = []
+        self._segmented_summary_queue: list[str] = []
+        self._segmented_outro_queue: list[str] = []
+        self._segmented_step_queues: dict[int, list[str]] = {}
         self._voiceover_provider = "none"
         self._requested_tts_provider = "gtts_voiceover"
         self._openai_primary_model = "gpt-4o-mini-tts"
@@ -633,6 +638,128 @@ class WicaraTemplateScene(VoiceoverScene):
             return _dedupe_voiceover_segments(explicit_segments)
         return _dedupe_voiceover_segments(structured_segments)
 
+    def _has_segmented_narration(self, spec):
+        raw_segments = spec.get("narration_segments")
+        if isinstance(raw_segments, list) and len(raw_segments) > 0:
+            return True
+
+        steps = spec.get("steps")
+        if isinstance(steps, list):
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                if self._clean_voice_text(step.get("narration") or step.get("voiceover")):
+                    return True
+
+        if self._clean_voice_text(spec.get("intro_narration")):
+            return True
+        if self._clean_voice_text(spec.get("summary_narration")):
+            return True
+        return False
+
+    def _normalize_step_index(self, raw_index):
+        try:
+            idx = int(raw_index)
+        except (TypeError, ValueError):
+            return None
+        if idx >= 1:
+            return idx - 1
+        if idx == 0:
+            return 0
+        return None
+
+    def _append_segmented_step_text(self, step_index, text):
+        normalized = self._clean_voice_text(text)
+        if not normalized:
+            return
+        idx = self._normalize_step_index(step_index)
+        if idx is None:
+            return
+        bucket = self._segmented_step_queues.setdefault(idx, [])
+        bucket.append(normalized)
+
+    def _initialize_segmented_narration(self, spec):
+        self._segmented_intro_queue = []
+        self._segmented_summary_queue = []
+        self._segmented_outro_queue = []
+        self._segmented_step_queues = {}
+
+        intro_text = self._clean_voice_text(spec.get("intro_narration"))
+        if intro_text:
+            self._segmented_intro_queue.extend(_split_voiceover_script(intro_text, max_chars=200))
+
+        summary_text = self._clean_voice_text(spec.get("summary_narration"))
+        if summary_text:
+            self._segmented_summary_queue.extend(_split_voiceover_script(summary_text, max_chars=200))
+
+        raw_segments = spec.get("narration_segments")
+        if isinstance(raw_segments, list):
+            for entry in raw_segments:
+                if isinstance(entry, str):
+                    text = self._clean_voice_text(entry)
+                    if text:
+                        self._segmented_intro_queue.extend(_split_voiceover_script(text, max_chars=180))
+                    continue
+                if not isinstance(entry, dict):
+                    continue
+
+                text = self._clean_voice_text(entry.get("text") or entry.get("narration"))
+                if not text:
+                    continue
+                slot = str(entry.get("slot") or entry.get("type") or "").strip().lower()
+                step_index = entry.get("step_index")
+                if slot in {"step", "steps"} or step_index is not None:
+                    self._append_segmented_step_text(step_index, text)
+                    continue
+                if slot in {"summary", "conclusion"}:
+                    self._segmented_summary_queue.extend(_split_voiceover_script(text, max_chars=200))
+                    continue
+                if slot in {"outro", "closing"}:
+                    self._segmented_outro_queue.extend(_split_voiceover_script(text, max_chars=200))
+                    continue
+                self._segmented_intro_queue.extend(_split_voiceover_script(text, max_chars=180))
+
+        steps = spec.get("steps")
+        if isinstance(steps, list):
+            for step_index, step in enumerate(steps):
+                if not isinstance(step, dict):
+                    continue
+                step_narration = self._clean_voice_text(step.get("narration") or step.get("voiceover"))
+                if not step_narration:
+                    continue
+                bucket = self._segmented_step_queues.setdefault(step_index, [])
+                bucket.append(step_narration)
+
+        self._segmented_intro_queue = _dedupe_voiceover_segments(self._segmented_intro_queue)
+        self._segmented_summary_queue = _dedupe_voiceover_segments(self._segmented_summary_queue)
+        self._segmented_outro_queue = _dedupe_voiceover_segments(self._segmented_outro_queue)
+        for key in list(self._segmented_step_queues.keys()):
+            self._segmented_step_queues[key] = _dedupe_voiceover_segments(
+                self._segmented_step_queues.get(key, [])
+            )
+
+    def _pop_segmented_narration(self, *, slot="intro", step_index=None, fallback_text=""):
+        fallback = self._clean_voice_text(fallback_text)
+        if self._voiceover_mode != "segmented":
+            return fallback
+
+        segment = ""
+        if slot == "step" and step_index is not None:
+            queue = self._segmented_step_queues.get(int(step_index), [])
+            if queue:
+                segment = self._clean_voice_text(queue.pop(0))
+        elif slot == "summary":
+            if self._segmented_summary_queue:
+                segment = self._clean_voice_text(self._segmented_summary_queue.pop(0))
+        elif slot == "outro":
+            if self._segmented_outro_queue:
+                segment = self._clean_voice_text(self._segmented_outro_queue.pop(0))
+        else:
+            if self._segmented_intro_queue:
+                segment = self._clean_voice_text(self._segmented_intro_queue.pop(0))
+
+        return segment or fallback
+
     def _resolve_tts_provider(self, spec):
         requested = (
             spec.get("tts_provider")
@@ -716,11 +843,7 @@ class WicaraTemplateScene(VoiceoverScene):
             return
 
         self._voiceover_initialized = True
-
-        segments = self._build_voiceover_segments(spec)
-        if not segments:
-            self._voiceover_provider = "none"
-            return
+        self._voiceover_mode = "segmented" if self._has_segmented_narration(spec) else "auto"
 
         provider = self._resolve_tts_provider(spec)
         configured = False
@@ -737,10 +860,22 @@ class WicaraTemplateScene(VoiceoverScene):
         if not configured:
             self._voiceover_provider = "none"
             return
+        self._voiceover_enabled = True
+
+        if self._voiceover_mode == "segmented":
+            self._initialize_segmented_narration(spec)
+            self._voiceover_segments = []
+            self._voiceover_index = 0
+            return
+
+        segments = self._build_voiceover_segments(spec)
+        if not segments:
+            self._voiceover_provider = "none"
+            self._voiceover_enabled = False
+            return
 
         self._voiceover_segments = segments
         self._voiceover_index = 0
-        self._voiceover_enabled = True
 
     def _next_voiceover_segment(self):
         if not self._voiceover_enabled:
@@ -790,11 +925,13 @@ class WicaraTemplateScene(VoiceoverScene):
         if not narration:
             return self.play(*args, **kwargs)
         # Keep auto segment cursor aligned to avoid duplicate narration later.
-        if self._voiceover_index < len(self._voiceover_segments):
+        if self._voiceover_mode != "segmented" and self._voiceover_index < len(self._voiceover_segments):
             self._voiceover_index += 1
         return self._play_with_voiceover_segment(narration, *args, **kwargs)
 
     def play(self, *args, **kwargs):
+        if self._voiceover_mode == "segmented":
+            return super().play(*args, **kwargs)
         segment = self._next_voiceover_segment()
         if not segment:
             return super().play(*args, **kwargs)
@@ -942,6 +1079,9 @@ class WicaraTemplateScene(VoiceoverScene):
         elif zone == "bottom":
             self.place_summary_card(next_card)
 
+        if narration_text is None and previous_card is None:
+            narration_text = self._pop_segmented_narration(slot="intro")
+
         if previous_card is None:
             self.play_with_voiceover(
                 narration_text,
@@ -977,7 +1117,15 @@ class WicaraTemplateScene(VoiceoverScene):
             body_width=64,
         )
         summary_card.center()
-        self.play(FadeIn(summary_card, shift=UP * 0.12), run_time=0.55)
+        summary_narration = self._pop_segmented_narration(
+            slot="summary",
+            fallback_text=require(spec, "summary"),
+        )
+        self.play_with_voiceover(
+            summary_narration,
+            FadeIn(summary_card, shift=UP * 0.12),
+            run_time=0.55,
+        )
         self.wait(2.0)
         return summary_card
 
@@ -995,7 +1143,21 @@ class WicaraTemplateScene(VoiceoverScene):
                 step_body,
                 color=step.get("color", TEAL),
             )
-            active_card = self.replace_card(active_card, card)
+            default_step_narration = self._clean_voice_text(step.get("narration") or step.get("voiceover"))
+            if not default_step_narration:
+                default_step_narration = self._clean_voice_text(
+                    f"{step_title}. {step_body}" if step_title and step_body else step_title or step_body
+                )
+            step_narration = self._pop_segmented_narration(
+                slot="step",
+                step_index=i,
+                fallback_text=default_step_narration,
+            )
+            active_card = self.replace_card(
+                active_card,
+                card,
+                narration_text=step_narration,
+            )
             self.wait(float(step.get("wait", 0.9)))
 
         return active_card
