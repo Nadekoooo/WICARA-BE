@@ -12,6 +12,27 @@ class Settings(BaseSettings):
         default="postgresql+psycopg://wicara:wicara@localhost:5432/wicara",
         validation_alias=AliasChoices("WICARA_DATABASE_URL", "DATABASE_URL"),
     )
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        validation_alias=AliasChoices("WICARA_REDIS_URL", "REDIS_URL"),
+    )
+    media_job_queue_backend: str = Field(
+        default="redis",
+        validation_alias=AliasChoices("WICARA_MEDIA_JOB_QUEUE_BACKEND", "MEDIA_JOB_QUEUE_BACKEND"),
+    )
+    media_jobs_queue_key: str = Field(
+        default="wicara:media:jobs",
+        validation_alias=AliasChoices("WICARA_MEDIA_JOBS_QUEUE_KEY", "MEDIA_JOBS_QUEUE_KEY"),
+    )
+    media_job_dequeue_timeout_seconds: int = Field(
+        default=5,
+        ge=1,
+        le=60,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_JOB_DEQUEUE_TIMEOUT_SECONDS",
+            "MEDIA_JOB_DEQUEUE_TIMEOUT_SECONDS",
+        ),
+    )
     supabase_project_url: str = Field(
         default="https://gwbqhirtkgkghnpahtgt.supabase.co",
         validation_alias=AliasChoices("WICARA_SUPABASE_PROJECT_URL", "SUPABASE_PROJECT_URL"),
@@ -50,6 +71,14 @@ class Settings(BaseSettings):
         text = _quote_database_credentials(text)
         if text.startswith("postgresql://"):
             text = text.replace("postgresql://", "postgresql+psycopg://", 1)
+        return text
+
+    @field_validator("media_job_queue_backend", mode="before")
+    @classmethod
+    def normalize_media_job_queue_backend(cls, value: str) -> str:
+        text = str(value).strip().lower()
+        if text not in {"redis", "noop"}:
+            raise ValueError("MEDIA_JOB_QUEUE_BACKEND must be either 'redis' or 'noop'.")
         return text
 
 

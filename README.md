@@ -26,6 +26,12 @@ Run the FastAPI development server:
 uvicorn app.main:app --reload
 ```
 
+Run media worker process for animation jobs:
+
+```powershell
+python -m app.workers.media_worker
+```
+
 Run tests:
 
 ```powershell
@@ -64,6 +70,8 @@ Current implemented API surface:
 - `GET /api/v1/media-artifacts`
 - `GET /api/v1/media-artifacts/{artifact_id}`
 - `GET /api/v1/media-artifacts/{artifact_id}/status`
+- `POST /api/v1/animation/queue`
+- `GET /api/v1/animation/status/{job_id}`
 - `GET /api/v1/reports/weekly/latest`
 
 ## 1. Executive Summary

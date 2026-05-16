@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -11,6 +12,7 @@ from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
+from app.modules.learning.job_queue import build_media_job_queue_adapter
 from app.modules.learning.models import (
     AssessmentAttempt,
     AssessmentOption,
@@ -66,6 +68,8 @@ from app.modules.learning.schemas import (
     ProgressRead,
 )
 from app.modules.workspaces.models import WorkspaceSession
+
+logger = logging.getLogger(__name__)
 
 
 PRETEST_TEMPLATES: list[dict[str, Any]] = [
@@ -153,6 +157,12 @@ DAILY_REVIEW_TEMPLATES: list[dict[str, Any]] = [
             ("D", "Add a short review question before the next module"),
         ],
     },
+]
+
+MEDIA_JOB_PROGRESS_STAGES: list[tuple[int, str]] = [
+    (20, "Validating render payload."),
+    (45, "Preparing template rendering inputs."),
+    (75, "Executing render pipeline placeholder."),
 ]
 
 
@@ -548,6 +558,10 @@ def queue_animation_job(
     session.add(job)
     session.commit()
     session.refresh(job)
+    published = _publish_media_job_to_queue(job_id=job.id)
+    if not published:
+        job.message = "Job queued in database. Waiting for worker polling fallback."
+        session.commit()
     return AnimationQueueResponse(
         job_id=job.id,
         artifact_id=artifact.id,
@@ -584,6 +598,48 @@ def get_animation_job_status(
         thumbnail_url=artifact.thumbnail_url,
         error=job.error,
     )
+
+
+def pick_next_queued_animation_job_id(session: Session) -> UUID | None:
+    return session.scalar(
+        select(MediaJob.id).where(MediaJob.status == "queued").order_by(MediaJob.created_at).limit(1)
+    )
+
+
+def process_animation_job_for_worker(
+    session: Session,
+    *,
+    job_id: UUID,
+) -> bool:
+    row = _load_job_with_artifact(session, job_id=job_id)
+    if row is None:
+        logger.warning("Media worker received unknown job id %s.", job_id)
+        return False
+    job, artifact = row
+    if job.status in {"ready", "failed"}:
+        return True
+
+    try:
+        _mark_job_processing(session, job=job, artifact=artifact)
+        _validate_job_payload(job=job, artifact=artifact)
+        for progress, message in MEDIA_JOB_PROGRESS_STAGES:
+            _update_job_progress(
+                session,
+                job=job,
+                artifact=artifact,
+                progress=progress,
+                message=message,
+            )
+        _mark_job_ready(session, job=job, artifact=artifact)
+        return True
+    except Exception as exc:
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=str(exc),
+        )
+        return False
 
 
 def list_media_artifacts(session: Session, *, user: UserAccount) -> MediaArtifactListResponse:
@@ -1784,6 +1840,141 @@ def _find_concept_by_hints(
         if concept is not None:
             return concept
     return session.scalar(select(KnowledgeConcept).order_by(KnowledgeConcept.display_order))
+
+
+def _publish_media_job_to_queue(*, job_id: UUID) -> bool:
+    try:
+        adapter = build_media_job_queue_adapter()
+        adapter.enqueue(job_id=job_id)
+        return True
+    except Exception:
+        logger.exception("Failed to enqueue media job %s to queue backend.", job_id)
+        return False
+
+
+def _load_job_with_artifact(
+    session: Session,
+    *,
+    job_id: UUID,
+) -> tuple[MediaJob, MediaArtifact] | None:
+    return session.execute(
+        select(MediaJob, MediaArtifact)
+        .join(MediaArtifact, MediaArtifact.id == MediaJob.artifact_id)
+        .where(MediaJob.id == job_id)
+    ).first()
+
+
+def _mark_job_processing(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+) -> None:
+    if job.status == "processing":
+        return
+    if job.status != "queued":
+        raise ValueError(f"Job {job.id} is not claimable from status '{job.status}'.")
+    job.status = "processing"
+    job.progress = max(5, int(job.progress or 0))
+    job.message = "Worker claimed job and started processing."
+    job.error = None
+    job.attempt = int(job.attempt or 0) + 1
+    if job.started_at is None:
+        job.started_at = datetime.now(UTC)
+    artifact.status = "processing"
+    _sync_artifact_job_state(artifact=artifact, job=job, error_message=None)
+    session.commit()
+
+
+def _update_job_progress(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    progress: int,
+    message: str,
+) -> None:
+    job.status = "processing"
+    job.progress = max(0, min(100, int(progress)))
+    job.message = message
+    artifact.status = "processing"
+    _sync_artifact_job_state(artifact=artifact, job=job, error_message=None)
+    session.commit()
+
+
+def _mark_job_ready(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+) -> None:
+    job.status = "ready"
+    job.progress = 100
+    job.message = "Render lifecycle finished. Artifact is ready."
+    job.error = None
+    job.finished_at = datetime.now(UTC)
+    artifact.status = "ready"
+    _sync_artifact_job_state(artifact=artifact, job=job, error_message=None)
+    session.commit()
+
+
+def _mark_job_failed(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    error_message: str,
+) -> None:
+    cleaned_error = (error_message or "Unknown media worker error.").strip()[:2000]
+    job.status = "failed"
+    job.message = "Render lifecycle failed."
+    job.error = cleaned_error
+    job.finished_at = datetime.now(UTC)
+    artifact.status = "failed"
+    _sync_artifact_job_state(artifact=artifact, job=job, error_message=cleaned_error)
+    session.commit()
+
+
+def _validate_job_payload(*, job: MediaJob, artifact: MediaArtifact) -> None:
+    if not artifact.template_id.strip():
+        raise ValueError(f"Job {job.id} has empty template_id.")
+    if not isinstance(artifact.spec_json, dict):
+        raise ValueError(f"Job {job.id} has invalid spec_json payload.")
+
+
+def _sync_artifact_job_state(
+    *,
+    artifact: MediaArtifact,
+    job: MediaJob,
+    error_message: str | None,
+) -> None:
+    metadata = dict(artifact.metadata_json or {})
+    metadata.update(
+        {
+            "progress": max(0, min(100, int(job.progress or 0))),
+            "job_state": job.status,
+            "job_id": str(job.id),
+        }
+    )
+    if error_message:
+        metadata["error"] = error_message
+    else:
+        metadata.pop("error", None)
+    artifact.metadata_json = metadata
+
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "last_job_message": job.message,
+            "attempt": int(job.attempt or 0),
+            "worker_status": job.status,
+        }
+    )
+    if error_message:
+        render_meta["error"] = error_message
+    else:
+        render_meta.pop("error", None)
+    artifact.render_meta_json = render_meta
 
 
 def _resolve_owned_workspace(
