@@ -39,7 +39,7 @@ async def sign_in_with_password(
     settings: Settings,
     email_or_phone: str,
     password: str,
-) -> str:
+) -> tuple[str, str]:
     if not settings.supabase_anon_key:
         raise SupabaseTokenError("SUPABASE_ANON_KEY is missing on backend.")
     payload = {"password": password}
@@ -60,7 +60,7 @@ async def register_with_password(
     email: str,
     password: str,
     display_name: str,
-) -> str:
+) -> tuple[str, str]:
     if not settings.supabase_anon_key:
         raise SupabaseTokenError("SUPABASE_ANON_KEY is missing on backend.")
     signup_url = f"{settings.supabase_project_url.rstrip('/')}/auth/v1/signup"
@@ -80,11 +80,12 @@ async def register_with_password(
             raise SupabaseTokenError(_supabase_error_message(response))
         data = response.json()
         access_token = str(data.get("access_token") or "").strip()
+        refresh_token = str(data.get("refresh_token") or "").strip()
         if not access_token:
             raise SupabaseTokenError(
                 "Registration succeeded, but email confirmation is required before login."
             )
-        return access_token
+        return access_token, refresh_token
     except httpx.HTTPError as exc:
         raise SupabaseTokenError(f"Supabase auth request failed: {exc}") from exc
 
@@ -95,7 +96,7 @@ async def sign_in_with_google_id_token(
     id_token: str,
     access_token: str | None = None,
     nonce: str | None = None,
-) -> str:
+) -> tuple[str, str]:
     if not settings.supabase_anon_key:
         raise SupabaseTokenError("SUPABASE_ANON_KEY is missing on backend.")
     payload: dict[str, str] = {
@@ -113,12 +114,26 @@ async def sign_in_with_google_id_token(
     )
 
 
+async def refresh_access_token(
+    *,
+    settings: Settings,
+    refresh_token: str,
+) -> tuple[str, str]:
+    """Exchange a Supabase refresh_token for a new (access_token, refresh_token) pair."""
+    return await _token_exchange(
+        settings=settings,
+        grant_type="refresh_token",
+        payload={"refresh_token": refresh_token},
+    )
+
+
 async def _token_exchange(
     *,
     settings: Settings,
     grant_type: str,
     payload: dict[str, str],
-) -> str:
+) -> tuple[str, str]:
+    """Returns (access_token, refresh_token)."""
     token_url = f"{settings.supabase_project_url.rstrip('/')}/auth/v1/token"
     headers = {
         "apikey": settings.supabase_anon_key,
@@ -132,9 +147,10 @@ async def _token_exchange(
             raise SupabaseTokenError(_supabase_error_message(response))
         data = response.json()
         access_token = str(data.get("access_token") or "").strip()
+        refresh_token = str(data.get("refresh_token") or "").strip()
         if not access_token:
             raise SupabaseTokenError("Supabase auth response has no access_token.")
-        return access_token
+        return access_token, refresh_token
     except httpx.HTTPError as exc:
         raise SupabaseTokenError(f"Supabase auth request failed: {exc}") from exc
 

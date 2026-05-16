@@ -1,0 +1,505 @@
+{
+  "version": "2026-05-16",
+  "source": "wicara_question_bank_seed_v1",
+  "language": "en",
+  "subject_code": "mathematics",
+  "education_level": "elementary",
+  "grade_band": "elementary",
+  "items": [
+    {
+      "id": "math_el_eqgrp_pre_1",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "pretest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "understand",
+      "prompt": "Which picture story matches 3 x 2?",
+      "helper_text": "Think about how many groups there are and how many are in each group.",
+      "options": [
+        {
+          "label": "A",
+          "text": "3 groups of 2"
+        },
+        {
+          "label": "B",
+          "text": "2 groups of 3"
+        },
+        {
+          "label": "C",
+          "text": "5 groups of 1"
+        },
+        {
+          "label": "D",
+          "text": "1 group of 5"
+        }
+      ],
+      "answer_key": "A",
+      "explanation": "3 x 2 means 3 equal groups with 2 items in each group.",
+      "rubric": {
+        "correct": "Learner identifies multiplication as a set of equal groups.",
+        "common_misconceptions": [
+          "Reverses the factors and chooses 2 groups of 3.",
+          "Adds the numbers and thinks 3 x 2 means 5 objects total."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "concept_check",
+        "pretest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_pre_2",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "pretest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "medium",
+      "cognitive_level": "apply",
+      "prompt": "Mila has 4 boxes. Each box has 3 crayons. How many crayons does she have in all?",
+      "helper_text": "Use equal groups to find the total.",
+      "options": [
+        {
+          "label": "A",
+          "text": "7"
+        },
+        {
+          "label": "B",
+          "text": "12"
+        },
+        {
+          "label": "C",
+          "text": "14"
+        },
+        {
+          "label": "D",
+          "text": "16"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "There are 4 equal groups of 3 crayons, so 4 x 3 = 12.",
+      "rubric": {
+        "correct": "Learner uses equal groups to find the total in a simple story problem.",
+        "common_misconceptions": [
+          "Adds 4 + 3 instead of finding 4 groups of 3.",
+          "Counts one group correctly but does not combine all groups."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "story_problem",
+        "pretest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_daily_1",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "daily_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "remember",
+      "prompt": "What is 2 groups of 4?",
+      "helper_text": "Count 4, then another 4.",
+      "options": [
+        {
+          "label": "A",
+          "text": "6"
+        },
+        {
+          "label": "B",
+          "text": "8"
+        },
+        {
+          "label": "C",
+          "text": "10"
+        },
+        {
+          "label": "D",
+          "text": "12"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "2 groups of 4 is 4 + 4 = 8.",
+      "rubric": {
+        "correct": "Learner recalls the total for a small equal-groups fact.",
+        "common_misconceptions": [
+          "Adds 2 + 4 instead of combining equal groups.",
+          "Counts by ones and stops too early."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "retrieval",
+        "daily_quiz"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_daily_2",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "daily_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "understand",
+      "prompt": "Which multiplication sentence means 5 groups of 2?",
+      "helper_text": "The first number tells how many groups.",
+      "options": [
+        {
+          "label": "A",
+          "text": "2 x 5"
+        },
+        {
+          "label": "B",
+          "text": "5 x 2"
+        },
+        {
+          "label": "C",
+          "text": "5 + 2"
+        },
+        {
+          "label": "D",
+          "text": "2 + 5"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "5 x 2 means 5 groups with 2 in each group.",
+      "rubric": {
+        "correct": "Learner matches equal-group language to a multiplication sentence.",
+        "common_misconceptions": [
+          "Chooses 2 x 5 because the total is the same.",
+          "Confuses addition and multiplication symbols."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "sentence_match",
+        "daily_quiz"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_daily_3",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "daily_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "medium",
+      "cognitive_level": "apply",
+      "prompt": "There are 3 plates. Each plate has 5 cookies. How many cookies are there altogether?",
+      "helper_text": "Find the total in 3 equal groups of 5.",
+      "options": [
+        {
+          "label": "A",
+          "text": "8"
+        },
+        {
+          "label": "B",
+          "text": "10"
+        },
+        {
+          "label": "C",
+          "text": "15"
+        },
+        {
+          "label": "D",
+          "text": "18"
+        }
+      ],
+      "answer_key": "C",
+      "explanation": "3 plates with 5 cookies each makes 3 x 5 = 15 cookies.",
+      "rubric": {
+        "correct": "Learner applies equal groups in a familiar real-life context.",
+        "common_misconceptions": [
+          "Adds 3 + 5 instead of multiplying.",
+          "Skips one group when counting by fives."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "story_problem",
+        "daily_quiz"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_post_1",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "posttest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "medium",
+      "cognitive_level": "apply",
+      "prompt": "A class makes 6 rows of 2 paper flowers. How many paper flowers are there?",
+      "helper_text": "Use rows as equal groups.",
+      "options": [
+        {
+          "label": "A",
+          "text": "8"
+        },
+        {
+          "label": "B",
+          "text": "10"
+        },
+        {
+          "label": "C",
+          "text": "12"
+        },
+        {
+          "label": "D",
+          "text": "14"
+        }
+      ],
+      "answer_key": "C",
+      "explanation": "6 equal groups of 2 gives 6 x 2 = 12 paper flowers.",
+      "rubric": {
+        "correct": "Learner transfers the equal-groups idea to an array-like context.",
+        "common_misconceptions": [
+          "Adds 6 + 2 instead of multiplying.",
+          "Counts rows but forgets flowers in each row."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "rows",
+        "posttest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_post_2",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "posttest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "hard",
+      "cognitive_level": "analyze",
+      "prompt": "Which situation can be solved by 4 x 4?",
+      "helper_text": "Look for 4 equal groups with 4 in each group.",
+      "options": [
+        {
+          "label": "A",
+          "text": "4 bags with 4 stickers in each bag"
+        },
+        {
+          "label": "B",
+          "text": "4 red stickers and 4 blue stickers"
+        },
+        {
+          "label": "C",
+          "text": "4 stickers, then 4 more, then 1 more"
+        },
+        {
+          "label": "D",
+          "text": "A bag with 8 stickers"
+        }
+      ],
+      "answer_key": "A",
+      "explanation": "4 x 4 represents 4 equal groups of 4, which matches 4 bags with 4 stickers each.",
+      "rubric": {
+        "correct": "Learner distinguishes equal-group multiplication from other addition situations.",
+        "common_misconceptions": [
+          "Chooses any situation with the numbers 4 and 4 even if groups are not equal.",
+          "Treats repeated addition with an extra item as the same as 4 x 4."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "analyze",
+        "posttest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_post_3",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "posttest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "hard",
+      "cognitive_level": "apply",
+      "prompt": "Nora puts 3 beads on each bracelet. She makes 5 bracelets. How many beads does she use?",
+      "helper_text": "Think of 5 equal groups of 3 beads.",
+      "options": [
+        {
+          "label": "A",
+          "text": "12"
+        },
+        {
+          "label": "B",
+          "text": "15"
+        },
+        {
+          "label": "C",
+          "text": "18"
+        },
+        {
+          "label": "D",
+          "text": "20"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "5 bracelets with 3 beads each means 5 x 3 = 15 beads.",
+      "rubric": {
+        "correct": "Learner solves a transfer problem using equal groups and multiplication.",
+        "common_misconceptions": [
+          "Adds 5 + 3 instead of multiplying.",
+          "Counts by threes incorrectly and lands on 18."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "story_problem",
+        "posttest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    },
+    {
+      "id": "math_el_eqgrp_workspace_1",
+      "subject_code": "mathematics",
+      "concept_code": "multiplication_equal_groups",
+      "concept_title": "Multiplication as equal groups",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "en",
+      "assessment_types": [
+        "workspace_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "remember",
+      "prompt": "3 groups of 4 equals?",
+      "helper_text": "Add 4 three times.",
+      "options": [
+        {
+          "label": "A",
+          "text": "7"
+        },
+        {
+          "label": "B",
+          "text": "10"
+        },
+        {
+          "label": "C",
+          "text": "12"
+        },
+        {
+          "label": "D",
+          "text": "16"
+        }
+      ],
+      "answer_key": "C",
+      "explanation": "3 groups of 4 is 4 + 4 + 4 = 12.",
+      "rubric": {
+        "correct": "Learner quickly finds the total for equal groups.",
+        "common_misconceptions": [
+          "Adds 3 + 4 instead of using groups.",
+          "Counts only two groups of 4."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "workspace_quiz",
+        "quick_check"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45
+      }
+    }
+  ]
+}
