@@ -20,6 +20,18 @@ Run database migrations when PostgreSQL is available:
 alembic upgrade head
 ```
 
+Seed or refresh the curriculum and question bank data used by Daily Evaluation V2:
+
+```powershell
+python -m app.modules.question_bank.seed
+```
+
+Preview the import without committing database changes:
+
+```powershell
+python -m app.modules.question_bank.seed --dry-run --strict
+```
+
 Run the FastAPI development server:
 
 ```powershell

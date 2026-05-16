@@ -5,3 +5,4 @@ __pycache__/
 *.egg-info/
 .env
 bank_soal/scripts/
+app/modules/question_bank/seed.py
