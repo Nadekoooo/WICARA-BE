@@ -40,6 +40,7 @@ Jika pakai OpenAI TTS, tambahkan:
 3. `MEDIA_OPENAI_TTS_MODEL_FALLBACK=tts-1`
 4. `MEDIA_OPENAI_TTS_VOICE_PRIMARY=marin`
 5. `MEDIA_OPENAI_TTS_VOICE_FALLBACK=alloy`
+6. `MEDIA_OPENAI_TTS_RESPONSE_FORMAT=mp3`
 
 Untuk Supabase pooler, gunakan connection string pooler dari dashboard (host `*.pooler.supabase.com`).
 

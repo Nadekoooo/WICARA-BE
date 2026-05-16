@@ -435,7 +435,7 @@ if SpeechService is not None and OpenAI is not None:
             model_fallback: str = "tts-1",
             voice_primary: str = "marin",
             voice_fallback: str = "alloy",
-            response_format: str = "wav",
+            response_format: str = "mp3",
             instructions: str = "",
             **kwargs,
         ):
@@ -546,7 +546,7 @@ class WicaraTemplateScene(VoiceoverScene):
         self._openai_fallback_model = "tts-1"
         self._openai_primary_voice = "marin"
         self._openai_fallback_voice = "alloy"
-        self._openai_response_format = "wav"
+        self._openai_response_format = "mp3"
         self._openai_instructions = ""
         self._openai_fallback_attempted = False
 
@@ -670,7 +670,7 @@ class WicaraTemplateScene(VoiceoverScene):
         self._openai_response_format = str(
             spec.get("tts_response_format")
             or os.getenv("MEDIA_OPENAI_TTS_RESPONSE_FORMAT")
-            or "wav"
+            or "mp3"
         ).strip().lower()
         self._openai_instructions = " ".join(
             str(
@@ -1643,19 +1643,68 @@ class EquationBalanceTemplate(WicaraTemplateScene):
     }
 
     def make_balance(self):
-        beam = Line(LEFT * 2.75, RIGHT * 2.75, color=GRAY_B)
-        pivot = Triangle(color=GRAY_B, fill_opacity=0.75).scale(0.34)
-        pivot.next_to(beam, DOWN, buff=0)
+        beam = Line(
+            LEFT * 2.75,
+            RIGHT * 2.75,
+            color=GRAY_B,
+            stroke_width=7,
+        )
+        pivot = Triangle(color=GRAY_B, fill_opacity=0.80).scale(0.36)
+        pivot.next_to(beam, DOWN, buff=0.02)
 
-        left_plate = Line(LEFT * 2.85, LEFT * 1.05, color=BLUE).shift(DOWN * 0.70)
-        right_plate = Line(RIGHT * 1.05, RIGHT * 2.85, color=GREEN).shift(DOWN * 0.70)
+        left_anchor = Dot(LEFT * 2.00, radius=0.01, color=GRAY_B)
+        right_anchor = Dot(RIGHT * 2.00, radius=0.01, color=GRAY_B)
 
-        left_rope = Line(LEFT * 2.00, LEFT * 2.00 + DOWN * 0.70, color=GRAY_B)
-        right_rope = Line(RIGHT * 2.00, RIGHT * 2.00 + DOWN * 0.70, color=GRAY_B)
+        left_rope = Line(
+            left_anchor.get_center(),
+            left_anchor.get_center() + DOWN * 0.70,
+            color=GRAY_B,
+            stroke_width=3,
+        )
+        right_rope = Line(
+            right_anchor.get_center(),
+            right_anchor.get_center() + DOWN * 0.70,
+            color=GRAY_B,
+            stroke_width=3,
+        )
 
-        balance = VGroup(beam, pivot, left_plate, right_plate, left_rope, right_rope)
+        left_plate = RoundedRectangle(
+            corner_radius=0.04,
+            width=1.70,
+            height=0.15,
+            stroke_color=BLUE,
+            stroke_width=3,
+            fill_color=BLUE_E,
+            fill_opacity=0.45,
+        ).move_to(left_rope.get_end())
+        right_plate = RoundedRectangle(
+            corner_radius=0.04,
+            width=1.70,
+            height=0.15,
+            stroke_color=GREEN,
+            stroke_width=3,
+            fill_color=GREEN_E,
+            fill_opacity=0.45,
+        ).move_to(right_rope.get_end())
+
+        balance = VGroup(
+            beam,
+            pivot,
+            left_anchor,
+            right_anchor,
+            left_rope,
+            right_rope,
+            left_plate,
+            right_plate,
+        )
         balance.move_to(self.visual_center())
-        return balance, left_plate, right_plate
+        return balance, pivot, left_plate, right_plate
+
+    def make_plate_text(self, value, plate, color):
+        text_mob = Text(str(value), font_size=31, color=color, weight=BOLD)
+        text_mob.next_to(plate, UP, buff=0.23)
+        text_mob.add_updater(lambda m, target=plate: m.next_to(target, UP, buff=0.23))
+        return text_mob
 
     def construct(self):
         spec = self.SPEC
@@ -1667,9 +1716,19 @@ class EquationBalanceTemplate(WicaraTemplateScene):
         title_block = self.make_title_block(spec)
         self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
 
+        balance, pivot, left_plate, right_plate = self.make_balance()
+        self.play(Create(balance), run_time=0.85)
+
         equation_mob = Text(equation, font_size=34, weight=BOLD, color=YELLOW)
-        equation_mob.next_to(title_block, DOWN, buff=0.22)
-        self.play(Write(equation_mob), run_time=0.6)
+        equation_bg = BackgroundRectangle(
+            equation_mob,
+            color=BLACK,
+            fill_opacity=0.78,
+            buff=0.12,
+        )
+        equation_group = VGroup(equation_bg, equation_mob)
+        equation_group.next_to(balance, UP, buff=0.46)
+        self.play(FadeIn(equation_group, shift=DOWN * 0.05), run_time=0.6)
 
         intro_card = self.make_card(
             "Persamaan = seimbang",
@@ -1678,18 +1737,30 @@ class EquationBalanceTemplate(WicaraTemplateScene):
         )
         active_card = self.replace_card(None, intro_card)
 
-        balance, left_plate, right_plate = self.make_balance()
-        self.play(Create(balance), run_time=0.85)
-
-        left = Text(spec.get("left_expression", ""), font_size=31, color=BLUE)
-        right = Text(spec.get("right_expression", ""), font_size=31, color=GREEN)
-
-        left.next_to(left_plate, UP, buff=0.25)
-        right.next_to(right_plate, UP, buff=0.25)
+        left = self.make_plate_text(spec.get("left_expression", ""), left_plate, BLUE)
+        right = self.make_plate_text(spec.get("right_expression", ""), right_plate, GREEN)
 
         self.play(FadeIn(left), FadeIn(right), run_time=0.55)
 
-        for step in solution_steps[:4]:
+        current_tilt = 0.0
+
+        def tilt_to(target, run_time=0.35):
+            nonlocal current_tilt
+            delta = float(target) - float(current_tilt)
+            if abs(delta) < 1e-4:
+                return
+            self.play(
+                Rotate(balance, angle=delta, about_point=pivot.get_center()),
+                run_time=run_time,
+            )
+            current_tilt = float(target)
+
+        # Show that this is a dynamic balance, not a static drawing.
+        tilt_to(-0.08, run_time=0.28)
+        tilt_to(0.05, run_time=0.32)
+        tilt_to(0.0, run_time=0.30)
+
+        for step_index, step in enumerate(solution_steps[:4]):
             card = self.make_card(
                 step.get("operation", "Operasi"),
                 step.get("explanation", ""),
@@ -1697,17 +1768,23 @@ class EquationBalanceTemplate(WicaraTemplateScene):
             )
             active_card = self.replace_card(active_card, card)
 
-            new_left = Text(step.get("left_result", ""), font_size=31, color=BLUE).move_to(left)
-            new_right = Text(step.get("right_result", ""), font_size=31, color=GREEN).move_to(right)
+            lead_tilt = -0.06 if step_index % 2 == 0 else 0.06
+            tilt_to(lead_tilt, run_time=0.30)
+
+            new_left = self.make_plate_text(step.get("left_result", ""), left_plate, BLUE)
+            new_right = self.make_plate_text(step.get("right_result", ""), right_plate, GREEN)
+            new_left.move_to(left)
+            new_right.move_to(right)
 
             self.play(
                 ReplacementTransform(left, new_left),
                 ReplacementTransform(right, new_right),
                 run_time=0.6,
             )
-
             left = new_left
             right = new_right
+            tilt_to(0.0, run_time=0.35)
+
             self.wait(0.45)
 
         final = Text(final_solution, font_size=40, color=YELLOW, weight=BOLD)
