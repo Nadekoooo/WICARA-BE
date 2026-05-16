@@ -32,7 +32,8 @@ Task:
 Hard requirements:
 - Return JSON only, no markdown, no explanation.
 - Keep `template_id` exactly as requested.
-- Use `language` exactly as requested.
+- Use `language` exactly as requested in `requested_language`.
+- Keep all textual fields (title, subtitle, steps, narration) in that same language.
 - Include narration fields so voiceover can be generated cleanly.
 - Keep values realistic and classroom-safe.
 """.strip()
@@ -68,12 +69,12 @@ def generate_spec_from_workspace_context(
 
     template_id = resolved.entry.template_id
     node_id = str(metadata.get("active_node_id") or "").strip()
-    normalized_language = _normalize_language(language)
+    requested_language = _normalize_language(language) or "id"
     sample_spec = _load_sample_spec(template_id)
     context_snapshot = _build_context_snapshot(
         workspace=workspace,
         metadata=metadata,
-        language=normalized_language,
+        requested_language=requested_language,
     )
 
     last_error: str | None = None
@@ -84,7 +85,7 @@ def generate_spec_from_workspace_context(
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         user_instruction = _build_user_instruction(
             template_id=template_id,
-            language=normalized_language,
+            requested_language=requested_language,
             workspace_id=str(workspace.id),
             context_snapshot=context_snapshot,
             sample_spec=sample_spec,
@@ -96,7 +97,7 @@ def generate_spec_from_workspace_context(
         final_ai_response = ai_response
         candidate_payload = _parse_candidate_spec(ai_response.text)
         candidate_payload["template_id"] = template_id
-        candidate_payload["language"] = normalized_language
+        candidate_payload["language"] = requested_language
         candidate_payload.setdefault("id", f"context_auto_{workspace.id}")
         if node_id:
             candidate_payload.setdefault("node_id", node_id)
@@ -124,7 +125,8 @@ def generate_spec_from_workspace_context(
             "resolved_concept_type": metadata.get("active_concept_type"),
             "resolved_prerequisites": metadata.get("active_prerequisites"),
             "context_source": metadata.get("context_source"),
-            "language": normalized_language,
+            "language": requested_language,
+            "requested_language": requested_language,
             "attempt": attempt,
             "ai_source": ai_response.provider,
             "ai_model": ai_response.model,
@@ -147,7 +149,7 @@ def generate_spec_from_workspace_context(
 def _normalize_language(language: str) -> str:
     normalized = str(language or "").strip().lower()
     if not normalized:
-        return "id"
+        return ""
     aliases = {
         "indonesian": "id",
         "bahasa": "id",
@@ -160,7 +162,7 @@ def _normalize_language(language: str) -> str:
         base = normalized.split("-", 1)[0]
         if base:
             normalized = base
-    return normalized[:16] or "id"
+    return normalized[:16] or ""
 
 
 def _load_sample_spec(template_id: str) -> dict[str, Any]:
@@ -186,7 +188,7 @@ def _build_context_snapshot(
     *,
     workspace: WorkspaceSession,
     metadata: dict[str, Any],
-    language: str,
+    requested_language: str,
 ) -> dict[str, Any]:
     recent_turns = _recent_turns(workspace.events or [], max_turns=8)
     latest_learner_text = ""
@@ -198,7 +200,7 @@ def _build_context_snapshot(
     return {
         "workspace_id": str(workspace.id),
         "current_topic": (workspace.current_topic or "").strip(),
-        "language": language,
+        "requested_language": requested_language,
         "active_node_id": _jsonable(metadata.get("active_node_id")),
         "active_concept_type": _jsonable(metadata.get("active_concept_type")),
         "active_template_id": _jsonable(metadata.get("active_template_id")),
@@ -224,7 +226,7 @@ def _recent_turns(events: list[WorkspaceEvent], *, max_turns: int) -> list[dict[
 def _build_user_instruction(
     *,
     template_id: str,
-    language: str,
+    requested_language: str,
     workspace_id: str,
     context_snapshot: dict[str, Any],
     sample_spec: dict[str, Any],
@@ -235,11 +237,19 @@ def _build_user_instruction(
     base_payload: dict[str, Any] = {
         "task": "generate_template_spec_json",
         "template_id": template_id,
-        "language": language,
+        "requested_language": requested_language or "id",
+        "output_contract": {
+            "must_return_json_object": True,
+            "must_include_language_field": True,
+            "must_match_text_language_with_language_field": True,
+            "must_use_requested_language_exactly": True,
+        },
         "workspace_id": workspace_id,
         "instructions": [
             "Use the sample spec structure as reference.",
             "Adapt the content to the context conversation.",
+            "Use requested_language exactly for all user-facing text.",
+            "Do not switch language, mix languages, or auto-detect another language.",
             "Keep required fields complete.",
             "Keep narration fields coherent with steps.",
             "Do not return markdown.",
