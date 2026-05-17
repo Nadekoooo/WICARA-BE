@@ -764,7 +764,7 @@ def _latest_posttest_pass_by_concept(
         answered = payload["answered"]
         if answered <= 0:
             continue
-        scaled = (payload["correct"] / max(1, answered)) * 10
+        scaled = round((payload["correct"] / max(1, answered)) * 10)
         result[concept_id] = scaled >= 7.0 and answered >= 3
     return result
 
