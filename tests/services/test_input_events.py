@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import pytest
 from sqlalchemy import select
 
 from app.modules.accounts.models import UserAccount
@@ -12,7 +13,8 @@ ACCOUNT_ID = UUID("55555555-5555-4555-8555-555555555555")
 IMAGE_ASSET_ID = UUID("66666666-6666-4666-8666-666666666666")
 
 
-def test_workspace_event_creates_canonical_input_event(db_session):
+@pytest.mark.asyncio
+async def test_workspace_event_creates_canonical_input_event(db_session):
     account = UserAccount(
         id=ACCOUNT_ID,
         supabase_user_id="supabase-user-input",
@@ -40,7 +42,7 @@ def test_workspace_event_creates_canonical_input_event(db_session):
         content_mode="canvas",
     )
 
-    response = workspace_service.append_workspace_event(
+    response = await workspace_service.append_workspace_event(
         db_session,
         user=account,
         workspace_id=workspace.id,
