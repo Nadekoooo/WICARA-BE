@@ -12,6 +12,8 @@ class WorkspaceCreateRequest(BaseModel):
     track_id: UUID
     module_id: UUID
     content_mode: str = Field(default="chat", min_length=2, max_length=32)
+    workspace_session_id: UUID | None = None
+    start_new_session: bool = False
 
 
 class WorkspaceEventCreateRequest(BaseModel):
@@ -77,6 +79,21 @@ class WorkspaceRead(BaseModel):
     events: list[WorkspaceEventRead] = Field(default_factory=list)
     last_image_asset_id: UUID | None = None
     latest_media: MediaArtifactRead | None = None
+
+
+class WorkspaceSessionSummaryRead(BaseModel):
+    id: UUID
+    track_id: UUID
+    module_id: UUID
+    title: str
+    preview: str
+    message_count: int
+    created_at: str
+    updated_at: str
+
+
+class WorkspaceSessionHistoryRead(BaseModel):
+    sessions: list[WorkspaceSessionSummaryRead] = Field(default_factory=list)
 
 
 class TutorResponseRead(BaseModel):

@@ -65,7 +65,10 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
     assert text_payload["event"]["metadata"] == {"client_event_id": "local-1"}
     assert text_payload["tutor_response"]["intent"] in {"ask_followup", "spark_curiosity"}
     assert text_payload["tutor_response"]["text"]
-    assert len(text_payload["workspace"]["events"]) == 1
+    assert len(text_payload["workspace"]["events"]) == 2
+    assert text_payload["workspace"]["events"][1]["actor_type"] == "tutor"
+    assert text_payload["workspace"]["events"][1]["event_type"] == "text"
+    assert text_payload["workspace"]["events"][1]["text_payload"]
 
     image_asset_id = "44444444-4444-4444-8444-444444444444"
     image_response = client.post(
@@ -80,7 +83,7 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
 
     assert image_response.status_code == 200
     image_payload = image_response.json()
-    assert image_payload["event"]["event_index"] == 2
+    assert image_payload["event"]["event_index"] == 3
     assert image_payload["event"]["input_event_id"]
     assert image_payload["event"]["image_asset_id"] == image_asset_id
     assert image_payload["workspace"]["last_image_asset_id"] == image_asset_id
@@ -88,7 +91,18 @@ def test_workspace_events_are_persisted_in_module_timeline(client):
     load_response = client.get(f"/api/v1/workspaces/{workspace['id']}")
     assert load_response.status_code == 200
     loaded = load_response.json()
-    assert [event["event_type"] for event in loaded["events"]] == ["text", "canvas_sent"]
+    assert [event["event_type"] for event in loaded["events"]] == [
+        "text",
+        "text",
+        "canvas_sent",
+        "text",
+    ]
+    assert [event["actor_type"] for event in loaded["events"]] == [
+        "learner",
+        "tutor",
+        "learner",
+        "tutor",
+    ]
     assert loaded["last_image_asset_id"] == image_asset_id
 
 

@@ -15,7 +15,8 @@ def build_goal_resolution_prompt(*, raw_query: str, candidates: list[ConceptCand
             f"score={candidate.score:.2f}; "
             f"aliases={', '.join(candidate.aliases[:6])}; "
             f"signals={', '.join(candidate.matched_signals[:8])}; "
-            f"description={_compact(candidate.concept.description or '')}"
+            f"description_id={_compact(candidate.concept.id_desc or candidate.concept.description or '')}; "
+            f"description_en={_compact(candidate.concept.en_desc or '')}"
         )
         for candidate in candidates
     )

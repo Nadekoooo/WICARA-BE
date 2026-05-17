@@ -11,6 +11,8 @@ class ConceptCandidateRead(BaseModel):
     concept_code: str
     title: str
     description: str | None = None
+    id_desc: str | None = None
+    en_desc: str | None = None
     subject_code: str
     subject: str
     grade_band: str | None = None

@@ -166,7 +166,9 @@ class ConceptCandidate:
             "concept_id": str(self.concept.id),
             "concept_code": self.concept.code,
             "title": self.concept.title,
-            "description": self.concept.description,
+            "description": self.concept.id_desc or self.concept.description,
+            "id_desc": self.concept.id_desc or self.concept.description,
+            "en_desc": self.concept.en_desc,
             "subject_code": subject.code if subject else "",
             "subject": subject.name if subject else "",
             "grade_band": self.concept.grade_band,
@@ -296,11 +298,15 @@ def _score_concept(
     title = _normalize_text(concept.title)
     code = _normalize_text(concept.code)
     description = _normalize_text(concept.description or "")
+    id_desc = _normalize_text(concept.id_desc or "")
+    en_desc = _normalize_text(concept.en_desc or "")
     metadata = concept.metadata_json or {}
-    haystack = f"{code} {title} {description}".replace("-", " ")
+    metadata_haystack = _metadata_search_text(metadata)
+    haystack = f"{code} {title} {description} {id_desc} {en_desc} {metadata_haystack}".replace("-", " ")
     title_terms = _raw_query_terms(title)
     code_terms = _raw_query_terms(code)
-    description_terms = _raw_query_terms(description)
+    description_terms = _raw_query_terms(f"{description} {id_desc} {en_desc}")
+    metadata_terms = _raw_query_terms(metadata_haystack)
 
     score = 0.0
     signals: list[str] = []
@@ -321,6 +327,7 @@ def _score_concept(
     code_overlap = len(raw_terms & code_terms)
     description_overlap = len(raw_terms & description_terms)
     expanded_overlap = len(all_terms & (title_terms | code_terms | description_terms))
+    metadata_overlap = len(all_terms & metadata_terms)
     if title_overlap:
         score += title_overlap * 4.0
         signals.append(f"token:title:{title_overlap}")
@@ -333,6 +340,13 @@ def _score_concept(
     if expanded_overlap:
         score += expanded_overlap * 1.4
         signals.append(f"token:expanded:{expanded_overlap}")
+    if metadata_overlap:
+        score += metadata_overlap * 1.2
+        signals.append(f"token:semantic_metadata:{metadata_overlap}")
+
+    if normalized_query and normalized_query in metadata_haystack:
+        score += 2.4
+        signals.append("phrase:semantic_metadata")
 
     for group, aliases in ALIASES.items():
         query_matches_group = group in all_terms or _matches_any_phrase(normalized_query, aliases)
@@ -417,6 +431,38 @@ def _fuzzy_score(
 
 def _normalize_text(value: str) -> str:
     return value.lower().replace("-", " ")
+
+
+def _metadata_search_text(metadata: dict[str, object]) -> str:
+    search_fields = [
+        "label_id",
+        "label_en",
+        "description_id",
+        "description_en",
+        "domain",
+        "element",
+        "subject_label",
+        "concept_family",
+        "concept_family_label_id",
+        "concept_type",
+        "concept_type_label_id",
+        "concept_subtype",
+        "concept_subtype_label_id",
+        "concept_visual_pattern",
+        "default_template_id",
+        "media_engine_family",
+        "recommended_visual_engine",
+        "tags",
+    ]
+    parts: list[str] = []
+    for field in search_fields:
+        value = metadata.get(field)
+        if isinstance(value, str):
+            parts.append(value)
+    anchors = metadata.get("real_world_anchor_examples")
+    if isinstance(anchors, list):
+        parts.extend(str(anchor) for anchor in anchors if str(anchor).strip())
+    return _normalize_text(" ".join(parts))
 
 
 def _matches_any_phrase(value: str, phrases: Iterable[str]) -> bool:

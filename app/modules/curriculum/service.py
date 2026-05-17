@@ -469,7 +469,9 @@ def _concept_to_node(
         code=concept.code,
         label=concept.title,
         title=concept.title,
-        description=concept.description,
+        description=concept.id_desc or concept.description,
+        id_desc=concept.id_desc or concept.description,
+        en_desc=concept.en_desc,
         grade_band=concept.grade_band,
         status=status,
         status_label=(

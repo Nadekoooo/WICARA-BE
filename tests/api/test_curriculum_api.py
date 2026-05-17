@@ -49,6 +49,19 @@ def test_get_knowledge_map_returns_mobile_ready_kurikulum_graph(client, seeded_c
     assert nodes_by_id["km_d_matematika_bilangan_bulat"]["status_label"] == "IN PROGRESS"
     assert nodes_by_id["km_d_matematika_bilangan_bulat"]["metadata"]["preview_status_only"] is True
     assert nodes_by_id["km_d_matematika_bilangan_bulat"]["group"] == "Fase D / Bilangan"
+    assert nodes_by_id["km_d_matematika_bilangan_bulat"]["description"] == (
+        nodes_by_id["km_d_matematika_bilangan_bulat"]["id_desc"]
+    )
+    assert nodes_by_id["km_d_matematika_bilangan_bulat"]["id_desc"].startswith(
+        "Memahami dan menerapkan konsep Bilangan bulat"
+    )
+    assert nodes_by_id["km_d_matematika_bilangan_bulat"]["en_desc"].startswith(
+        "Build understanding of Bilangan bulat"
+    )
+    assert (
+        nodes_by_id["km_d_matematika_bilangan_bulat"]["en_desc"]
+        != nodes_by_id["km_d_matematika_bilangan_bulat"]["id_desc"]
+    )
 
     edges = {(edge["from"], edge["to"], edge["edge_type"]) for edge in payload["edges"]}
     assert (

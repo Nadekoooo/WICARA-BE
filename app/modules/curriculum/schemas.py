@@ -39,6 +39,8 @@ class KnowledgeMapNode(BaseModel):
     label: str
     title: str
     description: str | None = None
+    id_desc: str | None = None
+    en_desc: str | None = None
     grade_band: str | None = None
     status: str
     status_label: str

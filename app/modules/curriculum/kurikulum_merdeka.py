@@ -55,6 +55,8 @@ class ConceptSeed:
     code: str
     title: str
     description: str | None
+    id_desc: str | None
+    en_desc: str | None
     grade_band: str | None
     display_order: int
     layout_x: float
@@ -397,6 +399,8 @@ def _concept_seed(
     local_group_order: int,
 ) -> ConceptSeed:
     title = _string(node, "label_id", fallback=_string(node, "label_en"))
+    id_desc = _optional_string(node, "description_id")
+    en_desc = _english_description(node, fallback_title=title)
     metadata = dict(node)
     metadata.update(
         {
@@ -415,7 +419,9 @@ def _concept_seed(
         subject_code=subject_code,
         code=_string(node, "id"),
         title=title,
-        description=_optional_string(node, "description_id"),
+        description=id_desc,
+        id_desc=id_desc,
+        en_desc=en_desc,
         grade_band=_grade_band(node),
         display_order=display_order,
         layout_x=layout_x,
@@ -488,6 +494,32 @@ def _grade_band(node: dict[str, Any]) -> str | None:
     if not phase and not school_level and not grade_range:
         return None
     return f"Fase {phase} ({school_level} {grade_range})".strip()
+
+
+def _english_description(node: dict[str, Any], *, fallback_title: str) -> str | None:
+    explicit = _optional_string(node, "description_en")
+    if explicit:
+        return explicit
+
+    label = _string(node, "label_en", fallback=fallback_title)
+    if not label:
+        return None
+    phase = _string(node, "phase")
+    school_level = _string(node, "school_level")
+    grade_range = _string(node, "grade_range")
+    domain = _string(node, "domain")
+    context_parts = [
+        part
+        for part in (
+            f"Phase {phase}" if phase else "",
+            school_level,
+            f"grades {grade_range}" if grade_range else "",
+        )
+        if part
+    ]
+    context = f" for {' / '.join(context_parts)}" if context_parts else ""
+    domain_suffix = f" within {domain}" if domain else ""
+    return f"Build understanding of {label}{domain_suffix}{context}."
 
 
 def _preview_status(node: dict[str, Any], *, local_group_order: int) -> str:

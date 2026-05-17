@@ -20,6 +20,8 @@ from app.modules.workspaces.schemas import (
     WorkspaceEventRead,
     WorkspaceGenerateVideoResponse,
     WorkspaceRead,
+    WorkspaceSessionHistoryRead,
+    WorkspaceSessionSummaryRead,
 )
 from app.modules.workspaces.tutor import generate_tutor_response
 
@@ -48,6 +50,8 @@ def create_or_resume_workspace(
     track_id: UUID,
     module_id: UUID,
     content_mode: str,
+    workspace_session_id: UUID | None = None,
+    start_new_session: bool = False,
 ) -> WorkspaceRead:
     track, module = _resolve_owned_track_module(
         session,
@@ -55,15 +59,26 @@ def create_or_resume_workspace(
         track_id=track_id,
         module_id=module_id,
     )
-    workspace = session.scalar(
-        select(WorkspaceSession)
-        .where(
-            WorkspaceSession.user_id == user.id,
-            WorkspaceSession.track_id == track.id,
-            WorkspaceSession.module_id == module.id,
+
+    workspace: WorkspaceSession | None = None
+    if workspace_session_id is not None:
+        workspace = _load_workspace(session, user=user, workspace_id=workspace_session_id)
+        if workspace is None:
+            raise LookupError("Workspace session was not found.")
+        if workspace.track_id != track.id or workspace.module_id != module.id:
+            raise LookupError("Workspace session does not belong to the requested module.")
+    elif not start_new_session:
+        workspace = session.scalar(
+            select(WorkspaceSession)
+            .where(
+                WorkspaceSession.user_id == user.id,
+                WorkspaceSession.track_id == track.id,
+                WorkspaceSession.module_id == module.id,
+            )
+            .order_by(WorkspaceSession.updated_at.desc(), WorkspaceSession.created_at.desc())
+            .options(selectinload(WorkspaceSession.events))
         )
-        .options(selectinload(WorkspaceSession.events))
-    )
+
     if workspace is None:
         workspace = WorkspaceSession(
             user_id=user.id,
@@ -98,6 +113,37 @@ def read_workspace(
 ) -> WorkspaceRead | None:
     workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
     return workspace_to_schema(session, workspace) if workspace else None
+
+
+def list_workspace_sessions(
+    session: Session,
+    *,
+    user: UserAccount,
+    track_id: UUID,
+    module_id: UUID,
+) -> WorkspaceSessionHistoryRead:
+    track, module = _resolve_owned_track_module(
+        session,
+        user=user,
+        track_id=track_id,
+        module_id=module_id,
+    )
+    workspaces = session.scalars(
+        select(WorkspaceSession)
+        .where(
+            WorkspaceSession.user_id == user.id,
+            WorkspaceSession.track_id == track.id,
+            WorkspaceSession.module_id == module.id,
+        )
+        .order_by(WorkspaceSession.updated_at.desc(), WorkspaceSession.created_at.desc())
+        .options(selectinload(WorkspaceSession.events))
+    ).all()
+    return WorkspaceSessionHistoryRead(
+        sessions=[
+            _workspace_session_summary(workspace, fallback_title=module.title)
+            for workspace in workspaces
+        ]
+    )
 
 
 async def append_workspace_event(
@@ -186,10 +232,29 @@ async def append_workspace_event(
         input_event_id=input_event.id,
         metadata_json=event_metadata,
     )
+    tutor_event: WorkspaceEvent | None = None
+    if tutor_response is not None and tutor_response.text.strip():
+        tutor_event = WorkspaceEvent(
+            workspace_session_id=workspace.id,
+            event_index=event.event_index + 1,
+            event_type="text",
+            actor_type="tutor",
+            text_payload=tutor_response.text.strip(),
+            image_asset_id=None,
+            media_artifact_id=None,
+            input_event_id=None,
+            metadata_json={
+                "source": "workspace_tutor_response",
+                "intent": tutor_response.intent,
+                "next_actions": list(tutor_response.next_actions),
+            },
+        )
     if normalized_event_type == "quiz_answer" and audit_metadata.get("is_correct") is True:
         _complete_workspace_module(session, user=user, workspace=workspace)
     workspace.updated_at = datetime.now(UTC)
     session.add(event)
+    if tutor_event is not None:
+        session.add(tutor_event)
     session.commit()
     session.refresh(event)
 
@@ -323,6 +388,40 @@ def event_to_schema(event: WorkspaceEvent) -> WorkspaceEventRead:
         input_event_id=event.input_event_id,
         metadata=public_metadata,
         created_at=event.created_at.isoformat() if event.created_at else "",
+    )
+
+
+def _workspace_session_summary(
+    workspace: WorkspaceSession,
+    *,
+    fallback_title: str,
+) -> WorkspaceSessionSummaryRead:
+    events = sorted(workspace.events, key=lambda event: event.event_index)
+    text_events = [
+        event
+        for event in events
+        if event.text_payload.strip() and event.event_type in {"text", "quiz_answer", "note"}
+    ]
+    preview_event = text_events[-1] if text_events else None
+    preview = preview_event.text_payload.strip() if preview_event else "Belum ada pesan."
+    first_learner_event = next(
+        (event for event in text_events if event.actor_type == "learner"),
+        None,
+    )
+    title = first_learner_event.text_payload.strip() if first_learner_event else fallback_title
+    if len(title) > 48:
+        title = f"{title[:45].rstrip()}..."
+    if len(preview) > 96:
+        preview = f"{preview[:93].rstrip()}..."
+    return WorkspaceSessionSummaryRead(
+        id=workspace.id,
+        track_id=workspace.track_id,
+        module_id=workspace.module_id,
+        title=title,
+        preview=preview,
+        message_count=len(text_events),
+        created_at=workspace.created_at.isoformat() if workspace.created_at else "",
+        updated_at=workspace.updated_at.isoformat() if workspace.updated_at else "",
     )
 
 
