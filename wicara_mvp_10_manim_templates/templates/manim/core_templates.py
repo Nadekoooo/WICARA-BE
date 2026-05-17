@@ -4,23 +4,13 @@ import math
 import re
 import textwrap
 import numpy as np
-from pathlib import Path
 
 try:
     from manim_voiceover import VoiceoverScene
-    from manim_voiceover.helper import remove_bookmarks
-    from manim_voiceover.services.base import SpeechService
     from manim_voiceover.services.gtts import GTTSService
-    try:
-        from openai import OpenAI
-    except ImportError:
-        OpenAI = None
 except ImportError:
     VoiceoverScene = Scene
-    SpeechService = None
-    remove_bookmarks = lambda text: text
     GTTSService = None
-    OpenAI = None
 
 LANGUAGE_ALIASES = {
     "id": "id",
@@ -418,122 +408,14 @@ def _normalize_tts_provider(value) -> str:
     mapping = {
         "gtts": "gtts_voiceover",
         "gtts_voiceover": "gtts_voiceover",
-        "openai": "openai_voiceover",
-        "openai_tts": "openai_voiceover",
-        "openai_voiceover": "openai_voiceover",
+        "openai": "gtts_voiceover",
+        "openai_tts": "gtts_voiceover",
+        "openai_voiceover": "gtts_voiceover",
+        "whisper": "gtts_voiceover",
+        "openai_whisper": "gtts_voiceover",
         "none": "none",
     }
     return mapping.get(normalized, "gtts_voiceover")
-
-
-if SpeechService is not None and OpenAI is not None:
-    class OpenAIFallbackVoiceoverService(SpeechService):
-        def __init__(
-            self,
-            *,
-            api_key: str | None = None,
-            model_primary: str = "gpt-4o-mini-tts",
-            model_fallback: str = "tts-1",
-            voice_primary: str = "marin",
-            voice_fallback: str = "alloy",
-            response_format: str = "mp3",
-            instructions: str = "",
-            language_code: str = "id",
-            **kwargs,
-        ):
-            self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
-            self.model_primary = model_primary
-            self.model_fallback = model_fallback
-            self.voice_primary = voice_primary
-            self.voice_fallback = voice_fallback
-            self.response_format = str(response_format or "wav").lower()
-            self.instructions = " ".join(str(instructions or "").split())
-            self.language_code = str(language_code or "id").strip().lower()
-            super().__init__(**kwargs)
-
-        def _build_effective_instructions(self) -> str:
-            locale_hints = {
-                "id": (
-                    "Speak in natural Bahasa Indonesia. "
-                    "Use clear Indonesian pronunciation and intonation."
-                ),
-                "en": "Speak in natural English with clear pronunciation.",
-                "vi": "Speak naturally in Vietnamese with clear pronunciation.",
-                "ms": "Speak naturally in Malay with clear pronunciation.",
-                "ja": "Speak naturally in Japanese with clear pronunciation.",
-            }
-            base_hint = locale_hints.get(self.language_code, "")
-            if base_hint and self.instructions:
-                return f"{base_hint} {self.instructions}".strip()
-            return base_hint or self.instructions
-
-        def _request_tts(self, *, model: str, voice: str, input_text: str, output_path: Path):
-            payload = {
-                "model": model,
-                "voice": voice,
-                "input": input_text,
-                "response_format": self.response_format,
-            }
-            effective_instructions = self._build_effective_instructions()
-            if effective_instructions and model.startswith("gpt-4o-mini-tts"):
-                payload["instructions"] = effective_instructions
-            with self.client.audio.speech.with_streaming_response.create(**payload) as response:
-                response.stream_to_file(output_path)
-
-        def generate_from_text(self, text: str, cache_dir: str = None, path: str = None, **kwargs) -> dict:
-            cache_root = Path(cache_dir) if cache_dir is not None else Path(self.cache_dir)
-            input_text = remove_bookmarks(text)
-            speed = kwargs.get("speed", 1.0)
-            input_data = {
-                "input_text": input_text,
-                "service": "openai_speech_api",
-                "config": {
-                    "model_primary": self.model_primary,
-                    "model_fallback": self.model_fallback,
-                    "voice_primary": self.voice_primary,
-                    "voice_fallback": self.voice_fallback,
-                    "response_format": self.response_format,
-                    "language_code": self.language_code,
-                    "speed": speed,
-                },
-            }
-            cached_result = self.get_cached_result(input_data, cache_root)
-            if cached_result is not None:
-                return cached_result
-
-            extension = self.response_format if self.response_format != "pcm" else "wav"
-            audio_file = path or f"{self.get_audio_basename(input_data)}.{extension}"
-            output_path = cache_root / audio_file
-
-            used_model = self.model_primary
-            used_voice = self.voice_primary
-            try:
-                self._request_tts(
-                    model=self.model_primary,
-                    voice=self.voice_primary,
-                    input_text=input_text,
-                    output_path=output_path,
-                )
-            except Exception:
-                used_model = self.model_fallback
-                used_voice = self.voice_fallback
-                self._request_tts(
-                    model=self.model_fallback,
-                    voice=self.voice_fallback,
-                    input_text=input_text,
-                    output_path=output_path,
-                )
-
-            return {
-                "input_text": text,
-                "input_data": input_data,
-                "original_audio": audio_file,
-                "tts_engine": "openai_speech_api",
-                "model": used_model,
-                "voice": used_voice,
-            }
-else:
-    OpenAIFallbackVoiceoverService = None
 
 
 def _dedupe_voiceover_segments(segments: list[str]) -> list[str]:
@@ -568,14 +450,6 @@ class WicaraTemplateScene(VoiceoverScene):
         self._segmented_step_queues: dict[int, list[str]] = {}
         self._voiceover_provider = "none"
         self._requested_tts_provider = "gtts_voiceover"
-        self._openai_primary_model = "gpt-4o-mini-tts"
-        self._openai_fallback_model = "tts-1"
-        self._openai_primary_voice = "marin"
-        self._openai_fallback_voice = "alloy"
-        self._openai_response_format = "mp3"
-        self._openai_instructions = ""
-        self._openai_language = "id"
-        self._openai_fallback_attempted = False
 
     # --------------------------------------------------------
     # Layout zones
@@ -803,66 +677,6 @@ class WicaraTemplateScene(VoiceoverScene):
         self._requested_tts_provider = normalized
         return normalized
 
-    def _resolve_openai_voiceover_config(self, spec):
-        self._openai_language = self.resolve_language(spec)
-        self._openai_primary_model = str(
-            spec.get("tts_model_primary")
-            or spec.get("tts_model")
-            or os.getenv("MEDIA_OPENAI_TTS_MODEL_PRIMARY")
-            or "gpt-4o-mini-tts"
-        ).strip()
-        self._openai_fallback_model = str(
-            spec.get("tts_model_fallback")
-            or os.getenv("MEDIA_OPENAI_TTS_MODEL_FALLBACK")
-            or "tts-1"
-        ).strip()
-        self._openai_primary_voice = str(
-            spec.get("tts_voice_primary")
-            or spec.get("tts_voice")
-            or os.getenv("MEDIA_OPENAI_TTS_VOICE_PRIMARY")
-            or "marin"
-        ).strip()
-        self._openai_fallback_voice = str(
-            spec.get("tts_voice_fallback")
-            or os.getenv("MEDIA_OPENAI_TTS_VOICE_FALLBACK")
-            or "alloy"
-        ).strip()
-        self._openai_response_format = str(
-            spec.get("tts_response_format")
-            or os.getenv("MEDIA_OPENAI_TTS_RESPONSE_FORMAT")
-            or "mp3"
-        ).strip().lower()
-        self._openai_instructions = " ".join(
-            str(
-                spec.get("tts_instructions")
-                or os.getenv("MEDIA_OPENAI_TTS_INSTRUCTIONS")
-                or ""
-            ).split()
-        )
-
-    def _configure_openai_voiceover(self, spec):
-        self._resolve_openai_voiceover_config(spec)
-        if OpenAIFallbackVoiceoverService is None:
-            return False
-        api_key = str(os.getenv("OPENAI_API_KEY") or "").strip()
-        if not api_key:
-            return False
-        self.set_speech_service(
-            OpenAIFallbackVoiceoverService(
-                api_key=api_key,
-                model_primary=self._openai_primary_model,
-                model_fallback=self._openai_fallback_model,
-                voice_primary=self._openai_primary_voice,
-                voice_fallback=self._openai_fallback_voice,
-                response_format=self._openai_response_format,
-                instructions=self._openai_instructions,
-                language_code=self._openai_language,
-            )
-        )
-        self._voiceover_provider = "openai_voiceover"
-        self._openai_fallback_attempted = False
-        return True
-
     def _configure_gtts_voiceover(self, spec):
         if GTTSService is None:
             return False
@@ -884,10 +698,7 @@ class WicaraTemplateScene(VoiceoverScene):
         if provider == "none":
             self._voiceover_provider = "none"
             return
-        if provider == "openai_voiceover":
-            configured = self._configure_openai_voiceover(spec)
-        else:
-            configured = self._configure_gtts_voiceover(spec)
+        configured = self._configure_gtts_voiceover(spec)
 
         if not configured:
             self._voiceover_provider = "none"
@@ -930,23 +741,6 @@ class WicaraTemplateScene(VoiceoverScene):
                         updated_kwargs["run_time"] = max(float(run_time), float(tracker.duration))
                 return super().play(*args, **updated_kwargs)
         except Exception:
-            if self._voiceover_provider == "openai_voiceover" and not self._openai_fallback_attempted:
-                self._openai_fallback_attempted = True
-                try:
-                    self.set_speech_service(
-                        OpenAIFallbackVoiceoverService(
-                            api_key=os.getenv("OPENAI_API_KEY"),
-                            model_primary=self._openai_fallback_model,
-                            model_fallback=self._openai_fallback_model,
-                            voice_primary=self._openai_fallback_voice,
-                            voice_fallback=self._openai_fallback_voice,
-                            response_format=self._openai_response_format,
-                            language_code=self._openai_language,
-                        )
-                    )
-                    return self._play_with_voiceover_segment(segment, *args, **kwargs)
-                except Exception:
-                    raise
             self._voiceover_enabled = False
             return super().play(*args, **kwargs)
 

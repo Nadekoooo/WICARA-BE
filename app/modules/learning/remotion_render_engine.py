@@ -272,11 +272,8 @@ def _resolve_composition_id(
     )
 
 
-def _build_remotion_env(settings: Settings) -> dict[str, str]:
-    env = dict(os.environ)
-    if settings.openai_api_key:
-        env["OPENAI_API_KEY"] = settings.openai_api_key
-    return env
+def _build_remotion_env(_settings: Settings) -> dict[str, str]:
+    return dict(os.environ)
 
 
 def _resolve_node_binary(configured_binary: str) -> str:

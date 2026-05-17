@@ -270,38 +270,21 @@ def _render_template_scene_manim(
 
 def _inject_runtime_tts_spec(*, spec_payload: dict[str, Any], settings: Settings) -> dict[str, Any]:
     payload = dict(spec_payload)
-    explicit_provider = str(
-        payload.get("tts_provider") or payload.get("voiceover_provider") or ""
-    ).strip()
-    if not explicit_provider:
-        provider_from_settings = str(settings.media_tts_provider or "").strip().lower()
-        if provider_from_settings == "gtts_voiceover" and settings.openai_api_key:
-            payload["tts_provider"] = "openai_voiceover"
-        else:
-            payload["tts_provider"] = settings.media_tts_provider
-
-    provider = str(payload.get("tts_provider") or "").strip().lower()
-    if provider == "openai_voiceover":
-        payload.setdefault("tts_model_primary", settings.media_openai_tts_model_primary)
-        payload.setdefault("tts_model_fallback", settings.media_openai_tts_model_fallback)
-        payload.setdefault("tts_voice_primary", settings.media_openai_tts_voice_primary)
-        payload.setdefault("tts_voice_fallback", settings.media_openai_tts_voice_fallback)
-        payload.setdefault("tts_response_format", settings.media_openai_tts_response_format)
-        payload.setdefault("tts_instructions", settings.media_openai_tts_instructions)
+    explicit_provider = str(payload.get("tts_provider") or payload.get("voiceover_provider") or "").strip()
+    provider = (explicit_provider or str(settings.media_tts_provider or "")).strip().lower()
+    if provider in {"openai", "openai_tts", "openai_voiceover", "whisper", "openai_whisper"}:
+        provider = "gtts_voiceover"
+    if not provider:
+        provider = "gtts_voiceover"
+    if provider not in {"gtts_voiceover", "none"}:
+        provider = "gtts_voiceover"
+    payload["tts_provider"] = provider
     return payload
 
 
 def _build_manim_render_env(settings: Settings) -> dict[str, str]:
     env = dict(os.environ)
     env["MEDIA_TTS_PROVIDER"] = settings.media_tts_provider
-    env["MEDIA_OPENAI_TTS_MODEL_PRIMARY"] = settings.media_openai_tts_model_primary
-    env["MEDIA_OPENAI_TTS_MODEL_FALLBACK"] = settings.media_openai_tts_model_fallback
-    env["MEDIA_OPENAI_TTS_VOICE_PRIMARY"] = settings.media_openai_tts_voice_primary
-    env["MEDIA_OPENAI_TTS_VOICE_FALLBACK"] = settings.media_openai_tts_voice_fallback
-    env["MEDIA_OPENAI_TTS_RESPONSE_FORMAT"] = settings.media_openai_tts_response_format
-    env["MEDIA_OPENAI_TTS_INSTRUCTIONS"] = settings.media_openai_tts_instructions or ""
-    if settings.openai_api_key:
-        env["OPENAI_API_KEY"] = settings.openai_api_key
     return env
 
 

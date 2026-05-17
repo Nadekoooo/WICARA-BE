@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,11 +11,6 @@ try:
     from gtts import gTTS
 except Exception:  # pragma: no cover - optional dependency
     gTTS = None
-
-try:
-    from openai import OpenAI
-except Exception:  # pragma: no cover - optional dependency
-    OpenAI = None
 
 from app.core.config import Settings, get_settings, resolve_project_path
 from app.modules.learning.models import MediaArtifact
@@ -138,8 +131,6 @@ def postprocess_render_output(
                 provider=tts_provider,
                 language=tts_language,
                 output_dir=final_dir,
-                spec_json=artifact.spec_json,
-                settings=resolved_settings,
             )
             tts_meta.update(voiceover_provider_meta)
             voiceover_audio_duration_raw, voiceover_audio_ffprobe_stdout = _probe_media_duration_seconds(
@@ -391,8 +382,6 @@ def _generate_voiceover_audio(
     provider: str,
     language: str,
     output_dir: Path,
-    spec_json: dict[str, Any],
-    settings: Settings,
 ) -> tuple[Path, dict[str, Any]]:
     normalized_provider = _normalize_tts_provider(provider)
     cleaned_script = " ".join(str(script or "").split()).strip()
@@ -402,15 +391,6 @@ def _generate_voiceover_audio(
             message="Voiceover script is empty after normalization.",
         )
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    if normalized_provider == "openai_voiceover":
-        return _generate_openai_voiceover_audio(
-            script=cleaned_script,
-            language=language,
-            output_dir=output_dir,
-            spec_json=spec_json,
-            settings=settings,
-        )
     if normalized_provider == "gtts_voiceover":
         return _generate_gtts_voiceover_audio(
             script=cleaned_script,
@@ -422,111 +402,6 @@ def _generate_voiceover_audio(
         message="Unsupported TTS provider for post-process voiceover generation.",
         details={"provider": provider},
     )
-
-
-def _generate_openai_voiceover_audio(
-    *,
-    script: str,
-    language: str,
-    output_dir: Path,
-    spec_json: dict[str, Any],
-    settings: Settings,
-) -> tuple[Path, dict[str, Any]]:
-    if OpenAI is None:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message="openai package is missing. Install render extras to enable OpenAI TTS.",
-        )
-    api_key = str(settings.openai_api_key or os.getenv("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message="OPENAI_API_KEY is not configured for OpenAI voiceover.",
-        )
-
-    model_primary = str(
-        spec_json.get("tts_model_primary")
-        or settings.media_openai_tts_model_primary
-        or "gpt-4o-mini-tts"
-    ).strip()
-    model_fallback = str(
-        spec_json.get("tts_model_fallback")
-        or settings.media_openai_tts_model_fallback
-        or "tts-1"
-    ).strip()
-    voice_primary = str(
-        spec_json.get("tts_voice_primary")
-        or settings.media_openai_tts_voice_primary
-        or "alloy"
-    ).strip()
-    voice_fallback = str(
-        spec_json.get("tts_voice_fallback")
-        or settings.media_openai_tts_voice_fallback
-        or "alloy"
-    ).strip()
-    response_format = str(
-        spec_json.get("tts_response_format")
-        or settings.media_openai_tts_response_format
-        or "mp3"
-    ).strip().lower()
-    extension = _openai_audio_extension(response_format)
-    output_path = output_dir / f"voiceover_openai.{extension}"
-    instructions = _build_openai_tts_instructions(
-        language=language,
-        extra_instructions=str(
-            spec_json.get("tts_instructions") or settings.media_openai_tts_instructions or ""
-        ),
-    )
-
-    def _request(model: str, voice: str) -> None:
-        payload: dict[str, Any] = {
-            "model": model,
-            "voice": voice,
-            "input": script,
-            "response_format": response_format,
-        }
-        if instructions and model.startswith("gpt-4o-mini-tts"):
-            payload["instructions"] = instructions
-        with OpenAI(api_key=api_key).audio.speech.with_streaming_response.create(**payload) as response:
-            response.stream_to_file(output_path)
-
-    used_model = model_primary
-    used_voice = voice_primary
-    try:
-        _request(model_primary, voice_primary)
-    except Exception as primary_exc:
-        used_model = model_fallback
-        used_voice = voice_fallback
-        try:
-            _request(model_fallback, voice_fallback)
-        except Exception as fallback_exc:
-            raise MediaPostprocessError(
-                code="tts_error",
-                message="OpenAI voiceover generation failed for both primary and fallback models.",
-                details={
-                    "primary_error": repr(primary_exc),
-                    "fallback_error": repr(fallback_exc),
-                    "model_primary": model_primary,
-                    "model_fallback": model_fallback,
-                    "voice_primary": voice_primary,
-                    "voice_fallback": voice_fallback,
-                },
-            ) from fallback_exc
-
-    if not output_path.exists() or output_path.stat().st_size <= 0:
-        raise MediaPostprocessError(
-            code="tts_error",
-            message="OpenAI voiceover generation finished without audio file output.",
-            details={"audio_path": str(output_path)},
-        )
-
-    return output_path, {
-        "provider_used": "openai_voiceover",
-        "model": used_model,
-        "voice": used_voice,
-        "response_format": response_format,
-        "instructions_applied": bool(instructions),
-    }
 
 
 def _generate_gtts_voiceover_audio(
@@ -571,11 +446,7 @@ def _resolve_effective_tts_provider(*, spec_json: dict[str, Any], settings: Sett
         or spec_json.get("voiceover_provider")
         or ""
     )
-    provider = _normalize_tts_provider(explicit_provider or settings.media_tts_provider)
-    if provider == "gtts_voiceover" and settings.openai_api_key:
-        # Prefer OpenAI when available to get more natural multilingual narration.
-        return "openai_voiceover"
-    return provider
+    return _normalize_tts_provider(explicit_provider or settings.media_tts_provider)
 
 
 def _normalize_tts_provider(value: Any) -> str:
@@ -583,9 +454,11 @@ def _normalize_tts_provider(value: Any) -> str:
     mapping = {
         "gtts": "gtts_voiceover",
         "gtts_voiceover": "gtts_voiceover",
-        "openai": "openai_voiceover",
-        "openai_tts": "openai_voiceover",
-        "openai_voiceover": "openai_voiceover",
+        "openai": "gtts_voiceover",
+        "openai_tts": "gtts_voiceover",
+        "openai_voiceover": "gtts_voiceover",
+        "whisper": "gtts_voiceover",
+        "openai_whisper": "gtts_voiceover",
         "none": "none",
     }
     return mapping.get(normalized, "gtts_voiceover")
@@ -617,29 +490,6 @@ def _voiceover_lang_for_gtts(language: str) -> str:
     if normalized in {"id", "en", "vi", "ms", "ja"}:
         return normalized
     return "en"
-
-
-def _build_openai_tts_instructions(*, language: str, extra_instructions: str) -> str:
-    locale_hint = {
-        "id": "Speak in natural Bahasa Indonesia with clear Indonesian pronunciation.",
-        "en": "Speak in natural English with clear pronunciation.",
-        "vi": "Speak in natural Vietnamese with clear pronunciation.",
-        "ms": "Speak in natural Malay with clear pronunciation.",
-        "ja": "Speak in natural Japanese with clear pronunciation.",
-    }.get(_resolve_tts_language(spec_json={"language": language}, fallback_language="id"), "")
-    custom_hint = " ".join(str(extra_instructions or "").split())
-    if locale_hint and custom_hint:
-        return f"{locale_hint} {custom_hint}".strip()
-    return locale_hint or custom_hint
-
-
-def _openai_audio_extension(response_format: str) -> str:
-    normalized = str(response_format or "").strip().lower()
-    if normalized == "pcm":
-        return "wav"
-    if re.fullmatch(r"[a-z0-9]+", normalized):
-        return normalized
-    return "mp3"
 
 
 def _extract_thumbnail_with_ffmpeg(
