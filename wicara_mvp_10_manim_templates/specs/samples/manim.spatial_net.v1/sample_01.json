@@ -1,0 +1,53 @@
+{
+  "id": "sample_spatial_net_99",
+  "node_id": "phase4_spatial_net_model",
+  "template_id": "manim.spatial_net.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Jaring-jaring dan Representasi 3D",
+  "subtitle": "Bangun ruang dapat dibuka menjadi jaring-jaring untuk memahami susunan permukaannya.",
+  "solid": "kubus",
+  "faces": 6,
+  "net_layout": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      1,
+      0
+    ],
+    [
+      1,
+      2
+    ]
+  ],
+  "steps": [
+    {
+      "title": "Kenali sisi bangun",
+      "body": "Kubus memiliki enam sisi berbentuk persegi."
+    },
+    {
+      "title": "Buka permukaan",
+      "body": "Jika beberapa rusuk dipotong, permukaan dapat dibentangkan menjadi jaring-jaring."
+    },
+    {
+      "title": "Lipat kembali",
+      "body": "Jaring-jaring yang benar dapat dilipat kembali menjadi bangun ruang semula."
+    }
+  ],
+  "summary": "Jaring-jaring menghubungkan representasi datar dengan pemahaman bangun ruang 3D."
+}

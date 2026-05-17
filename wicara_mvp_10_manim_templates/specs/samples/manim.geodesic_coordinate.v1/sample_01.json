@@ -1,0 +1,38 @@
+{
+  "id": "sample_geodesic_coordinate_73",
+  "node_id": "phase5_geodesic_coordinate_model",
+  "template_id": "manim.geodesic_coordinate.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Koordinat dan Jarak pada Permukaan Bumi",
+  "subtitle": "Jarak di permukaan Bumi mengikuti lengkungan, bukan garis lurus pada bidang datar.",
+  "points": [
+    {
+      "label": "A",
+      "lat": -6,
+      "lon": 107
+    },
+    {
+      "label": "B",
+      "lat": -8,
+      "lon": 112
+    }
+  ],
+  "arc_label": "jarak lintasan permukaan",
+  "steps": [
+    {
+      "title": "Tandai koordinat",
+      "body": "Lokasi di Bumi dapat dinyatakan dengan lintang dan bujur."
+    },
+    {
+      "title": "Perhatikan kelengkungan",
+      "body": "Permukaan Bumi melengkung sehingga jarak terpendek mengikuti busur."
+    },
+    {
+      "title": "Bandingkan peta dan globe",
+      "body": "Representasi datar dapat mengubah persepsi jarak dan arah."
+    }
+  ],
+  "summary": "Koordinat geografis menghubungkan posisi, arah, dan jarak pada permukaan Bumi yang melengkung."
+}

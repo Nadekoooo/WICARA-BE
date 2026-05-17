@@ -1,73 +1,60 @@
 {
-  "id": "sample_force_resultant",
-  "node_id": "km_d_ipa_gaya_dan_resultan_gaya",
+  "id": "sample_force_newton_diagram_78",
+  "node_id": "phase4_force_newton_diagram",
   "template_id": "manim.force_diagram.v1",
   "phase": "D",
   "audience_level": "smp",
   "language": "id",
-  "title": "Resultan Gaya",
-  "subtitle": "Gaya berlawanan saling mengurangi.",
+  "title": "Gaya dan Hukum Newton",
+  "subtitle": "Diagram gaya bebas membantu melihat resultan gaya dan hubungannya dengan percepatan.",
+  "object_label": "balok",
   "object": {
     "type": "box",
-    "label": "Kotak"
+    "label": "balok"
   },
   "forces": [
     {
-      "label": "F1",
-      "magnitude": 10,
-      "unit": "N",
-      "direction": "right"
+      "label": "N",
+      "direction": "up",
+      "magnitude": 10
     },
     {
-      "label": "F2",
-      "magnitude": 4,
-      "unit": "N",
-      "direction": "left"
+      "label": "W",
+      "direction": "down",
+      "magnitude": 10
+    },
+    {
+      "label": "F",
+      "direction": "right",
+      "magnitude": 6
+    },
+    {
+      "label": "f",
+      "direction": "left",
+      "magnitude": 2
     }
   ],
+  "resultant_label": "ΣF = ma",
   "resultant": {
-    "magnitude": 6,
+    "magnitude": 4,
     "unit": "N",
     "direction": "right"
   },
-  "motion_response": "Benda cenderung bergerak ke kanan.",
-  "force_scale": 0.25,
+  "motion_response": "Balok cenderung dipercepat ke kanan karena resultan gaya ke kanan.",
+  "force_scale": 0.24,
   "steps": [
     {
-      "title": "Dua gaya berlawanan",
-      "body": "Gaya kanan lebih besar daripada gaya kiri.",
-      "narration": "Dua gaya berlawanan. Gaya kanan lebih besar daripada gaya kiri."
+      "title": "Pisahkan benda",
+      "body": "Diagram gaya bebas menggambar satu benda dan semua gaya yang bekerja padanya."
     },
     {
-      "title": "Cari selisih",
-      "body": "Resultan gaya adalah 6 N ke kanan.",
-      "narration": "Cari selisih. Resultan gaya adalah 6 N ke kanan."
+      "title": "Jumlahkan gaya",
+      "body": "Gaya yang berlawanan arah saling mengurangi untuk menghasilkan resultan."
+    },
+    {
+      "title": "Hubungkan dengan gerak",
+      "body": "Jika resultan gaya tidak nol, benda mengalami percepatan."
     }
   ],
-  "summary": "Arah resultan gaya menentukan kecenderungan gerak benda.",
-  "voiceover_script": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan.",
-  "intro_narration": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan.",
-  "summary_narration": "Arah resultan gaya menentukan kecenderungan gerak benda.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Kotak mendapat gaya ke kanan dan ke kiri. Karena gaya kanan lebih besar, resultannya ke kanan."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Dua gaya berlawanan. Gaya kanan lebih besar daripada gaya kiri."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Cari selisih. Resultan gaya adalah 6 N ke kanan."
-    },
-    {
-      "slot": "summary",
-      "text": "Arah resultan gaya menentukan kecenderungan gerak benda."
-    }
-  ]
+  "summary": "Hukum Newton menjadi lebih mudah dipahami melalui diagram gaya dan resultan gaya."
 }
-
-

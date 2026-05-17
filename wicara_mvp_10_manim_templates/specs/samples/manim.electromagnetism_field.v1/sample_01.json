@@ -1,0 +1,31 @@
+{
+  "id": "sample_electromagnetism_field_80",
+  "node_id": "phase5_electromagnetism_field_model",
+  "template_id": "manim.electromagnetism_field.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Medan Listrik, Magnet, dan Elektromagnetisme",
+  "subtitle": "Muatan, arus, dan medan saling berhubungan dalam fenomena elektromagnetik.",
+  "charge_label": "+q",
+  "current_label": "I",
+  "field_labels": [
+    "E",
+    "B"
+  ],
+  "steps": [
+    {
+      "title": "Medan listrik",
+      "body": "Muatan listrik menghasilkan medan listrik di sekitarnya."
+    },
+    {
+      "title": "Medan magnet",
+      "body": "Arus listrik menghasilkan medan magnet melingkar di sekitar kawat."
+    },
+    {
+      "title": "Elektromagnetisme",
+      "body": "Perubahan dan interaksi medan listrik-magnet menjelaskan banyak teknologi listrik."
+    }
+  ],
+  "summary": "Elektromagnetisme menyatukan konsep muatan, arus, medan listrik, dan medan magnet."
+}

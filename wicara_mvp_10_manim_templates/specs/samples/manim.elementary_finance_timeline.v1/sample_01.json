@@ -1,0 +1,40 @@
+{
+  "id": "sample_financial_quantity_91",
+  "node_id": "phase3_financial_quantity_model",
+  "template_id": "manim.elementary_finance_timeline.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Literasi Finansial Dasar",
+  "subtitle": "Uang dapat digunakan, ditabung, dan direncanakan melalui keputusan sederhana sehari-hari.",
+  "timeline": [
+    {
+      "label": "Uang saku",
+      "amount": 20000
+    },
+    {
+      "label": "Jajan",
+      "amount": -8000
+    },
+    {
+      "label": "Tabung",
+      "amount": 12000
+    }
+  ],
+  "goal": "beli buku",
+  "steps": [
+    {
+      "title": "Catat pemasukan",
+      "body": "Uang saku adalah contoh pemasukan sederhana."
+    },
+    {
+      "title": "Bedakan kebutuhan dan keinginan",
+      "body": "Sebagian uang digunakan untuk membeli, sebagian dapat ditabung."
+    },
+    {
+      "title": "Rencanakan tujuan",
+      "body": "Tabungan membantu mencapai tujuan tertentu di masa depan."
+    }
+  ],
+  "summary": "Literasi finansial awal melatih siswa membuat keputusan sederhana tentang penggunaan uang."
+}

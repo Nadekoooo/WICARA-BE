@@ -1,0 +1,36 @@
+{
+  "id": "sample_fluid_pressure_79",
+  "node_id": "phase5_fluid_pressure_model",
+  "template_id": "manim.fluid_pressure.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Fluida dan Tekanan Hidrostatis",
+  "subtitle": "Tekanan fluida bertambah seiring kedalaman karena berat kolom fluida di atas titik tersebut.",
+  "depths": [
+    1,
+    2,
+    3
+  ],
+  "pressure_values": [
+    1,
+    2,
+    3
+  ],
+  "formula_latex": "P = \\rho g h",
+  "steps": [
+    {
+      "title": "Tentukan kedalaman",
+      "body": "Titik yang lebih dalam menanggung kolom fluida yang lebih tinggi."
+    },
+    {
+      "title": "Tekanan meningkat",
+      "body": "Semakin besar h, semakin besar tekanan hidrostatis."
+    },
+    {
+      "title": "Arah tekanan",
+      "body": "Tekanan fluida bekerja ke segala arah pada titik dalam fluida."
+    }
+  ],
+  "summary": "Model tekanan fluida menjelaskan mengapa benda di tempat lebih dalam menerima tekanan lebih besar."
+}

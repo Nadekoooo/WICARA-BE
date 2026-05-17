@@ -1,0 +1,47 @@
+{
+  "id": "sample_coordinate_spatial_106",
+  "node_id": "phase3_coordinate_spatial_model",
+  "template_id": "manim.coordinate_grid_elementary.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Koordinat dan Posisi Ruang",
+  "subtitle": "Posisi dapat dijelaskan dengan pasangan koordinat dan arah gerak pada grid sederhana.",
+  "points": [
+    {
+      "label": "A",
+      "x": 1,
+      "y": 2
+    },
+    {
+      "label": "B",
+      "x": 4,
+      "y": 3
+    },
+    {
+      "label": "C",
+      "x": 2,
+      "y": 5
+    }
+  ],
+  "path": [
+    "A",
+    "B",
+    "C"
+  ],
+  "steps": [
+    {
+      "title": "Baca sumbu",
+      "body": "Sumbu mendatar dan tegak membantu menentukan posisi titik."
+    },
+    {
+      "title": "Tentukan koordinat",
+      "body": "Koordinat ditulis sebagai pasangan nilai x dan y."
+    },
+    {
+      "title": "Ikuti rute",
+      "body": "Urutan titik dapat membentuk jalur atau pergerakan di bidang."
+    }
+  ],
+  "summary": "Grid koordinat membantu siswa menjelaskan posisi dan arah secara presisi."
+}
