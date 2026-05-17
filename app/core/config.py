@@ -270,6 +270,10 @@ class Settings(BaseSettings):
             "SUPABASE_SERVICE_ROLE_KEY",
         ),
     )
+    supabase_jwt_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices("WICARA_SUPABASE_JWT_SECRET", "SUPABASE_JWT_SECRET"),
+    )
     cors_allow_origins: list[str] = [
         "http://localhost",
         "http://localhost:*",
