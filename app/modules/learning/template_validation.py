@@ -399,6 +399,7 @@ _SCHEMA_MODEL_MAP: dict[str, type[BaseModel]] = {
     "manim.graph_explanation.v1": GraphExplanationSpec,
     "manim.motion_kinematics.v1": MotionKinematicsSpec,
     "manim.force_diagram.v1": ForceDiagramSpec,
+    "manim.generic_explanation.v1": BaseTemplateSpec,
 }
 
 

@@ -1,6 +1,118 @@
 {
   "templates": [
     {
+      "template_id": "manim.algebra_expression.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/algebra_expression_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.algebra_expression",
+        "algebra_expression_v1",
+        "algebra_expression"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.bio_evolution_selection.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/bio_evolution_selection_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.bio_evolution_selection",
+        "bio_evolution_selection_v1",
+        "bio_evolution_selection"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.bio_structure_labeling.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/bio_structure_labeling_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.bio_structure_labeling",
+        "bio_structure_labeling_v1",
+        "bio_structure_labeling"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.bio_virus_lifecycle.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/bio_virus_lifecycle_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.bio_virus_lifecycle",
+        "bio_virus_lifecycle_v1",
+        "bio_virus_lifecycle"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.chem_acid_base_safety.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_acid_base_safety_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_acid_base_safety",
+        "chem_acid_base_safety_v1",
+        "chem_acid_base_safety"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.chem_lab_safety.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_lab_safety_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_lab_safety",
+        "chem_lab_safety_v1",
+        "chem_lab_safety"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.chem_organic_structure.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_organic_structure_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_organic_structure",
+        "chem_organic_structure_v1",
+        "chem_organic_structure"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.chem_particle_reaction_rate.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_particle_reaction_rate_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_particle_reaction_rate",
+        "chem_particle_reaction_rate_v1",
+        "chem_particle_reaction_rate"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
       "template_id": "manim.chem_reaction_equation.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_reaction_equation_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -14,6 +126,20 @@
       "family": "equation_family",
       "phase": "phase4_expansion",
       "base_family_template_id": "manim.equation_balance.v1"
+    },
+    {
+      "template_id": "manim.chem_redox_electrochemistry.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_redox_electrochemistry_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_redox_electrochemistry",
+        "chem_redox_electrochemistry_v1",
+        "chem_redox_electrochemistry"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
     },
     {
       "template_id": "manim.data_representation.v1",
@@ -31,6 +157,20 @@
       "base_family_template_id": "manim.graph_explanation.v1"
     },
     {
+      "template_id": "manim.electric_circuit.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/electric_circuit_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.electric_circuit",
+        "electric_circuit_v1",
+        "electric_circuit"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
       "template_id": "manim.electricity_magnetism.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/electricity_magnetism_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -46,6 +186,20 @@
       "base_family_template_id": "manim.force_diagram.v1"
     },
     {
+      "template_id": "manim.electricity_magnetism_circuit.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/electricity_magnetism_circuit_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.electricity_magnetism_circuit",
+        "electricity_magnetism_circuit_v1",
+        "electricity_magnetism_circuit"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
       "template_id": "manim.elementary_arithmetic_blocks.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_arithmetic_blocks_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -56,6 +210,20 @@
         "elementary_arithmetic_blocks_v1",
         "elementary_arithmetic_blocks"
       ]
+    },
+    {
+      "template_id": "manim.elementary_data_chart.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_data_chart_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.elementary_data_chart",
+        "elementary_data_chart_v1",
+        "elementary_data_chart"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
     },
     {
       "template_id": "manim.elementary_number_line_place_value.v1",
@@ -152,6 +320,20 @@
         "fraction_bar_partition_v1",
         "fraction_bar_partition"
       ]
+    },
+    {
+      "template_id": "manim.function_composition_transform.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/function_composition_transform_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.function_composition_transform",
+        "function_composition_transform_v1",
+        "function_composition_transform"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
     },
     {
       "template_id": "manim.function_mapping.v1",
@@ -251,6 +433,48 @@
       "family": "graph_family",
       "phase": "phase4_expansion",
       "base_family_template_id": "manim.graph_explanation.v1"
+    },
+    {
+      "template_id": "manim.heat_transfer_thermo.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/heat_transfer_thermo_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.heat_transfer_thermo",
+        "heat_transfer_thermo_v1",
+        "heat_transfer_thermo"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.inequality_region.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/inequality_region_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.inequality_region",
+        "inequality_region_v1",
+        "inequality_region"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.measurement_uncertainty.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/measurement_uncertainty_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.measurement_uncertainty",
+        "measurement_uncertainty_v1",
+        "measurement_uncertainty"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
     },
     {
       "template_id": "manim.modern_atomic_nuclear.v1",
@@ -364,6 +588,76 @@
       "base_family_template_id": "manim.graph_explanation.v1"
     },
     {
+      "template_id": "manim.sd_body_senses_health.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/sd_body_senses_health_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.sd_body_senses_health",
+        "sd_body_senses_health_v1",
+        "sd_body_senses_health"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.sd_ecosystem_food_chain.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/sd_ecosystem_food_chain_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.sd_ecosystem_food_chain",
+        "sd_ecosystem_food_chain_v1",
+        "sd_ecosystem_food_chain"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.sd_energy_forms.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/sd_energy_forms_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.sd_energy_forms",
+        "sd_energy_forms_v1",
+        "sd_energy_forms"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.sd_force_motion.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/sd_force_motion_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.sd_force_motion",
+        "sd_force_motion_v1",
+        "sd_force_motion"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.sd_life_cycle_classification.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/sd_life_cycle_classification_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.sd_life_cycle_classification",
+        "sd_life_cycle_classification_v1",
+        "sd_life_cycle_classification"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
       "template_id": "manim.sequence_pattern.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/sequence_pattern_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -406,6 +700,20 @@
       "base_family_template_id": "manim.equation_balance.v1"
     },
     {
+      "template_id": "manim.trig_ratio_triangle.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/trig_ratio_triangle_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.trig_ratio_triangle",
+        "trig_ratio_triangle_v1",
+        "trig_ratio_triangle"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
+    },
+    {
       "template_id": "manim.wave_optics.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/wave_optics_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -419,6 +727,20 @@
       "family": "graph_family",
       "phase": "phase4_expansion",
       "base_family_template_id": "manim.graph_explanation.v1"
+    },
+    {
+      "template_id": "manim.wave_sound_light.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/wave_sound_light_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.wave_sound_light",
+        "wave_sound_light_v1",
+        "wave_sound_light"
+      ],
+      "phase": "phase5_expansion",
+      "family": "phase5_distinct_family",
+      "source": "templates_30_60_bundle"
     }
   ]
 }

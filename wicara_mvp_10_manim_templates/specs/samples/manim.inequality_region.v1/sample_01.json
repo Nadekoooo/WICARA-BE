@@ -1,0 +1,37 @@
+{
+  "id": "sample_inequality_region_51",
+  "node_id": "phase5_inequality_region",
+  "template_id": "manim.inequality_region.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Pertidaksamaan dan Daerah Solusi",
+  "subtitle": "Daerah solusi pada bidang koordinat menunjukkan semua pasangan titik yang memenuhi pertidaksamaan.",
+  "inequality_latex": "y \\leq x + 1",
+  "boundary_label": "y = x + 1",
+  "x_range": [
+    -3,
+    4,
+    1
+  ],
+  "y_range": [
+    -2,
+    5,
+    1
+  ],
+  "steps": [
+    {
+      "title": "Gambar garis batas",
+      "body": "Ubah pertidaksamaan menjadi persamaan untuk mendapatkan garis batas."
+    },
+    {
+      "title": "Uji titik",
+      "body": "Gunakan titik uji untuk menentukan sisi daerah yang memenuhi."
+    },
+    {
+      "title": "Arsir solusi",
+      "body": "Semua titik pada daerah diarsir merupakan solusi pertidaksamaan."
+    }
+  ],
+  "summary": "Visualisasi daerah solusi sangat membantu ketika mempelajari pertidaksamaan satu atau dua variabel."
+}

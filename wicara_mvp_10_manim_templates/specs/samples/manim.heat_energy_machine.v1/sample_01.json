@@ -1,105 +1,84 @@
 {
-  "id": "sample_heat_energy_machine",
-  "node_id": "phase4_heat_energy_transfer_model",
+  "id": "sample_heat_energy_machine_distinct",
+  "node_id": "phase5_heat_transfer_model",
   "template_id": "manim.heat_energy_machine.v1",
   "phase": "E",
   "audience_level": "sma",
   "language": "id",
-  "title": "Kalor dan Perpindahan Energi",
-  "subtitle": "Temperatur berubah seiring aliran energi panas.",
-  "function": {
-    "type": "linear",
-    "params": {
-      "m": 1.2,
-      "b": 25
-    }
+  "title": "Kalor dan Perubahan Suhu",
+  "subtitle": "Energi panas yang masuk menaikkan suhu benda.",
+  "system": {
+    "object_label": "Air",
+    "mass_label": "m",
+    "initial_temp": 25,
+    "final_temp": 60,
+    "unit": "°C"
   },
-  "x_range": [
-    0,
-    10,
-    1
-  ],
-  "y_range": [
-    24,
-    40,
-    2
-  ],
-  "graph_features": [
+  "heat_flow": [
     {
-      "type": "vertex",
-      "label": "Titik puncak"
+      "label": "Q masuk",
+      "amount": "mcΔT"
+    }
+  ],
+  "formula_latex": "Q=m c \\Delta T",
+  "timeline": [
+    {
+      "time": 0,
+      "temp": 25
     },
     {
-      "type": "slope",
-      "label": "Kemiringan lokal"
-    }
-  ],
-  "highlight_points": [
+      "time": 5,
+      "temp": 42
+    },
     {
-      "x": 1,
-      "label": "x = 1"
+      "time": 10,
+      "temp": 60
     }
   ],
-  "formula_latex": "T(t)=1.2t+25",
   "steps": [
     {
-      "title": "Baca kondisi awal",
-      "body": "Nilai awal menunjukkan temperatur saat t = 0.",
-      "narration": "Baca kondisi awal. Nilai awal menunjukkan temperatur saat t = 0."
+      "title": "Energi masuk",
+      "body": "Kalor mengalir dari sumber panas ke benda.",
+      "narration": "Energi masuk. Kalor mengalir dari sumber panas ke benda."
     },
     {
-      "title": "Amati laju naik",
-      "body": "Setiap menit, suhu bertambah dengan laju hampir konstan.",
-      "narration": "Amati laju naik. Setiap menit, suhu bertambah dengan laju hampir konstan."
+      "title": "Suhu naik",
+      "body": "Partikel bergerak lebih cepat sehingga suhu meningkat.",
+      "narration": "Suhu naik. Partikel bergerak lebih cepat sehingga suhu meningkat."
     },
     {
-      "title": "Prediksi nilai berikutnya",
-      "body": "Tren linear memudahkan memperkirakan temperatur pada waktu lain.",
-      "narration": "Prediksi nilai berikutnya. Tren linear memudahkan memperkirakan temperatur pada waktu lain."
+      "title": "Hubungkan rumus",
+      "body": "Perubahan suhu terkait dengan massa dan kalor jenis.",
+      "narration": "Hubungkan rumus. Perubahan suhu terkait dengan massa dan kalor jenis."
     }
   ],
-  "summary": "Grafik suhu-waktu membantu menjelaskan perpindahan energi panas.",
-  "voiceover_script": "Saat energi panas masuk ke sistem, temperatur naik dan dapat diamati sebagai tren pada grafik.",
-  "intro_narration": "Saat energi panas masuk ke sistem, temperatur naik dan dapat diamati sebagai tren pada grafik.",
-  "summary_narration": "Grafik suhu-waktu membantu menjelaskan perpindahan energi panas.",
+  "summary": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT.",
+  "intro_narration": "Energi panas yang masuk menaikkan suhu benda.",
+  "summary_narration": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT.",
+  "voiceover_script": "Energi panas yang masuk menaikkan suhu benda.",
   "narration_segments": [
     {
       "slot": "intro",
-      "text": "Saat energi panas masuk ke sistem, temperatur naik dan dapat diamati sebagai tren pada grafik."
+      "text": "Energi panas yang masuk menaikkan suhu benda."
     },
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Baca kondisi awal. Nilai awal menunjukkan temperatur saat t = 0."
+      "text": "Energi masuk. Kalor mengalir dari sumber panas ke benda."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Amati laju naik. Setiap menit, suhu bertambah dengan laju hampir konstan."
+      "text": "Suhu naik. Partikel bergerak lebih cepat sehingga suhu meningkat."
     },
     {
       "slot": "step",
       "step_index": 3,
-      "text": "Prediksi nilai berikutnya. Tren linear memudahkan memperkirakan temperatur pada waktu lain."
+      "text": "Hubungkan rumus. Perubahan suhu terkait dengan massa dan kalor jenis."
     },
     {
       "slot": "summary",
-      "text": "Grafik suhu-waktu membantu menjelaskan perpindahan energi panas."
+      "text": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT."
     }
-  ],
-  "x_label": "menit",
-  "y_label": "suhu",
-  "graph_label": "tren suhu",
-  "moving_label": "temperatur",
-  "x_path": [
-    0,
-    2,
-    4,
-    6,
-    8,
-    10
-  ],
-  "highlight_x": 6,
-  "show_slope": true,
-  "slope_text": "Kemiringan positif menunjukkan suhu meningkat per satuan waktu."
+  ]
 }

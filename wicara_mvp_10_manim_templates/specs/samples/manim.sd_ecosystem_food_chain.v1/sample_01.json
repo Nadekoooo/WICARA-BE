@@ -1,0 +1,35 @@
+{
+  "id": "sample_ecosystem_interdependence_30",
+  "node_id": "phase5_sd_ecosystem_interdependence",
+  "template_id": "manim.sd_ecosystem_food_chain.v1",
+  "phase": "E",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Keterkaitan dalam Ekosistem",
+  "subtitle": "Makhluk hidup saling bergantung melalui habitat, makanan, dan peran masing-masing.",
+  "sun_label": "Matahari",
+  "chain": [
+    "Rumput",
+    "Belalang",
+    "Katak",
+    "Ular",
+    "Elang"
+  ],
+  "habitat_label": "Sawah",
+  "decomposer_label": "Pengurai",
+  "steps": [
+    {
+      "title": "Sumber energi",
+      "body": "Energi awal datang dari matahari lalu ditangkap tumbuhan."
+    },
+    {
+      "title": "Rantai makanan",
+      "body": "Setiap makhluk hidup dapat menjadi sumber makanan bagi makhluk hidup lain."
+    },
+    {
+      "title": "Keseimbangan",
+      "body": "Jika satu bagian terganggu, seluruh ekosistem juga ikut terpengaruh."
+    }
+  ],
+  "summary": "Ekosistem bekerja sebagai jaringan saling ketergantungan antara komponen hidup dan lingkungan."
+}

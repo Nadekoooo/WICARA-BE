@@ -1,107 +1,37 @@
 {
-  "id": "sample_modern_atomic_nuclear",
-  "node_id": "phase4_modern_atomic_nuclear_model",
+  "id": "sample_modern_atomic_nuclear_37",
+  "node_id": "phase5_modern_atomic_nuclear",
   "template_id": "manim.modern_atomic_nuclear.v1",
   "phase": "E",
   "audience_level": "sma",
   "language": "id",
-  "title": "Model Atom Modern dan Peluruhan",
-  "subtitle": "Perubahan jumlah inti dapat dimodelkan secara eksponensial.",
-  "function": {
-    "type": "exponential",
-    "params": {
-      "a": 8,
-      "base": 0.5,
-      "k": 1,
-      "c": 0
-    }
+  "title": "Atom dan Inti Atom",
+  "subtitle": "Model atom modern membantu menjelaskan inti, elektron, dan peluruhan radioaktif sederhana.",
+  "isotope": {
+    "label": "C-14",
+    "proton": 6,
+    "neutron": 8,
+    "electron": 6
   },
-  "x_range": [
-    0,
-    6,
-    1
+  "half_life_bars": [
+    100,
+    50,
+    25,
+    12.5
   ],
-  "y_range": [
-    0,
-    9,
-    1
-  ],
-  "graph_features": [
-    {
-      "type": "vertex",
-      "label": "Titik puncak"
-    },
-    {
-      "type": "slope",
-      "label": "Kemiringan lokal"
-    }
-  ],
-  "highlight_points": [
-    {
-      "x": 1,
-      "label": "x = 1"
-    }
-  ],
-  "formula_latex": "N(t)=8(0.5)^t",
   "steps": [
     {
-      "title": "Nilai awal inti",
-      "body": "Pada awal pengamatan, jumlah inti masih maksimum.",
-      "narration": "Nilai awal inti. Pada awal pengamatan, jumlah inti masih maksimum."
+      "title": "Bagian atom",
+      "body": "Atom memiliki inti berisi proton dan neutron, serta elektron di sekitarnya."
     },
     {
-      "title": "Laju peluruhan",
-      "body": "Jumlah inti berkurang seiring waktu mengikuti pola eksponensial.",
-      "narration": "Laju peluruhan. Jumlah inti berkurang seiring waktu mengikuti pola eksponensial."
+      "title": "Isotop",
+      "body": "Isotop memiliki jumlah proton sama tetapi neutron berbeda."
     },
     {
-      "title": "Interpretasi kurva",
-      "body": "Kurva menurun tajam di awal lalu melandai pada waktu besar.",
-      "narration": "Interpretasi kurva. Kurva menurun tajam di awal lalu melandai pada waktu besar."
+      "title": "Peluruhan",
+      "body": "Jumlah inti radioaktif berkurang secara bertahap menurut waktu paruh."
     }
   ],
-  "summary": "Model eksponensial cocok untuk menggambarkan peluruhan radioaktif.",
-  "voiceover_script": "Pada peluruhan inti, penurunan jumlah partikel biasanya mengikuti kurva eksponensial menurun.",
-  "intro_narration": "Pada peluruhan inti, penurunan jumlah partikel biasanya mengikuti kurva eksponensial menurun.",
-  "summary_narration": "Model eksponensial cocok untuk menggambarkan peluruhan radioaktif.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Pada peluruhan inti, penurunan jumlah partikel biasanya mengikuti kurva eksponensial menurun."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Nilai awal inti. Pada awal pengamatan, jumlah inti masih maksimum."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Laju peluruhan. Jumlah inti berkurang seiring waktu mengikuti pola eksponensial."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Interpretasi kurva. Kurva menurun tajam di awal lalu melandai pada waktu besar."
-    },
-    {
-      "slot": "summary",
-      "text": "Model eksponensial cocok untuk menggambarkan peluruhan radioaktif."
-    }
-  ],
-  "x_label": "waktu",
-  "y_label": "jumlah relatif",
-  "graph_label": "kurva peluruhan",
-  "moving_label": "N",
-  "x_path": [
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6
-  ],
-  "highlight_x": 3,
-  "show_slope": false
+  "summary": "Konsep atom modern menggabungkan struktur atom dan sifat inti yang dapat berubah."
 }

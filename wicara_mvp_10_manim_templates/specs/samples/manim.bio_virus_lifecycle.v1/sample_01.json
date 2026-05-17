@@ -1,0 +1,37 @@
+{
+  "id": "sample_virus_lifecycle_health_38",
+  "node_id": "phase5_bio_virus_lifecycle",
+  "template_id": "manim.bio_virus_lifecycle.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Virus, Siklus, dan Kesehatan",
+  "subtitle": "Virus masuk ke sel inang, memperbanyak diri, lalu dapat memengaruhi kesehatan manusia.",
+  "stages": [
+    "Menempel",
+    "Masuk",
+    "Replikasi",
+    "Perakitan",
+    "Keluar"
+  ],
+  "health_actions": [
+    "Cuci tangan",
+    "Vaksin",
+    "Masker"
+  ],
+  "steps": [
+    {
+      "title": "Kenali virus",
+      "body": "Virus membutuhkan sel inang untuk memperbanyak diri."
+    },
+    {
+      "title": "Ikuti siklus",
+      "body": "Siklus hidup virus terdiri atas tahapan masuk, replikasi, dan pelepasan."
+    },
+    {
+      "title": "Jaga kesehatan",
+      "body": "Pencegahan penyakit dilakukan dengan perilaku hidup sehat dan perlindungan diri."
+    }
+  ],
+  "summary": "Memahami siklus hidup virus membantu menjelaskan cara pencegahan penyakit secara ilmiah."
+}

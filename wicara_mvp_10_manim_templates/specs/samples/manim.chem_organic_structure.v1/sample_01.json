@@ -1,0 +1,42 @@
+{
+  "id": "sample_organic_functional_group_43",
+  "node_id": "phase5_organic_functional_group",
+  "template_id": "manim.chem_organic_structure.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Struktur Organik dan Gugus Fungsi",
+  "subtitle": "Kerangka karbon dan gugus fungsi menentukan sifat senyawa organik.",
+  "molecules": [
+    {
+      "name": "Etanol",
+      "formula": "C2H5OH",
+      "group": "-OH"
+    },
+    {
+      "name": "Asam asetat",
+      "formula": "CH3COOH",
+      "group": "-COOH"
+    },
+    {
+      "name": "Propanon",
+      "formula": "CH3COCH3",
+      "group": "C=O"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Kerangka karbon",
+      "body": "Atom karbon dapat membentuk rantai lurus, bercabang, atau cincin."
+    },
+    {
+      "title": "Gugus fungsi",
+      "body": "Gugus fungsi memberi ciri reaksi dan sifat khas pada senyawa."
+    },
+    {
+      "title": "Bandingkan contoh",
+      "body": "Senyawa dengan kerangka berbeda dapat dibedakan lewat gugus fungsi utamanya."
+    }
+  ],
+  "summary": "Mengenali gugus fungsi membantu menghubungkan struktur organik dengan sifat dan kegunaannya."
+}

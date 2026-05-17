@@ -1,0 +1,31 @@
+{
+  "id": "sample_wave_sound_light_55",
+  "node_id": "phase5_wave_sound_light",
+  "template_id": "manim.wave_sound_light.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Gelombang, Bunyi, dan Cahaya",
+  "subtitle": "Gelombang memiliki panjang gelombang, amplitudo, dan frekuensi yang berkaitan dengan bunyi serta cahaya.",
+  "wave_labels": [
+    "Puncak",
+    "Lembah",
+    "λ",
+    "A"
+  ],
+  "steps": [
+    {
+      "title": "Amati bentuk gelombang",
+      "body": "Gelombang memiliki puncak, lembah, amplitudo, dan panjang gelombang."
+    },
+    {
+      "title": "Hubungkan dengan bunyi",
+      "body": "Bunyi dapat dipahami melalui getaran dan perambatan gelombang."
+    },
+    {
+      "title": "Hubungkan dengan cahaya",
+      "body": "Cahaya juga menunjukkan sifat gelombang seperti pemantulan dan pembiasan sederhana."
+    }
+  ],
+  "summary": "Satu kerangka gelombang dapat dipakai untuk menjelaskan bunyi maupun cahaya dasar."
+}

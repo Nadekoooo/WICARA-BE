@@ -1,80 +1,51 @@
 {
-  "id": "sample_chem_reaction_equation",
-  "node_id": "phase4_reaction_equation_conservation",
+  "id": "sample_reaction_equation_conservation_40",
+  "node_id": "phase5_reaction_equation_conservation",
   "template_id": "manim.chem_reaction_equation.v1",
   "phase": "E",
   "audience_level": "sma",
   "language": "id",
-  "title": "Menyeimbangkan Persamaan Reaksi",
-  "subtitle": "Jumlah atom kiri dan kanan harus sama.",
-  "equation": "Fe + O2 -> Fe2O3",
-  "left_expression": "Fe + O2",
-  "right_expression": "Fe2O3",
-  "solution_steps": [
+  "title": "Persamaan Reaksi dan Kekekalan",
+  "subtitle": "Jumlah atom harus tetap sama di ruas kiri dan kanan persamaan reaksi.",
+  "unbalanced_equation": "H2 + O2 -> H2O",
+  "balanced_equation": "2H2 + O2 -> 2H2O",
+  "reactant_counts": [
     {
-      "operation": "Set koefisien Fe2O3 = 2",
-      "left_result": "Fe + O2",
-      "right_result": "2Fe2O3",
-      "explanation": "Mulai dari produk agar jumlah atom Fe dan O jelas targetnya."
+      "label": "H",
+      "left": 2,
+      "right": 2
     },
     {
-      "operation": "Set koefisien Fe = 4",
-      "left_result": "4Fe + O2",
-      "right_result": "2Fe2O3",
-      "explanation": "Samakan atom Fe di ruas kiri dan kanan."
-    },
-    {
-      "operation": "Set koefisien O2 = 3",
-      "left_result": "4Fe + 3O2",
-      "right_result": "2Fe2O3",
-      "explanation": "Samakan atom O sehingga kedua ruas setara."
+      "label": "O",
+      "left": 2,
+      "right": 1
     }
   ],
-  "final_solution": "4Fe + 3O2 -> 2Fe2O3",
+  "balanced_counts": [
+    {
+      "label": "H",
+      "left": 4,
+      "right": 4
+    },
+    {
+      "label": "O",
+      "left": 2,
+      "right": 2
+    }
+  ],
   "steps": [
     {
-      "title": "Hitung atom tiap unsur",
-      "body": "Catat jumlah atom Fe dan O sebelum menambah koefisien.",
-      "narration": "Hitung atom tiap unsur. Catat jumlah atom Fe dan O sebelum menambah koefisien."
+      "title": "Hitung atom",
+      "body": "Setiap unsur dihitung pada pereaksi dan hasil reaksi."
     },
     {
-      "title": "Ubah koefisien bertahap",
-      "body": "Mulai dari produk, lalu sesuaikan pereaksi sampai jumlah atom sama.",
-      "narration": "Ubah koefisien bertahap. Mulai dari produk, lalu sesuaikan pereaksi sampai jumlah atom sama."
+      "title": "Setarakan koefisien",
+      "body": "Koefisien diubah tanpa mengubah rumus kimia zat."
     },
     {
-      "title": "Verifikasi kesetaraan",
-      "body": "Pastikan atom Fe dan O kiri sama dengan kanan.",
-      "narration": "Verifikasi kesetaraan. Pastikan atom Fe dan O kiri sama dengan kanan."
+      "title": "Cek kekekalan",
+      "body": "Jumlah atom akhir harus sama pada kedua ruas."
     }
   ],
-  "summary": "Persamaan reaksi seimbang jika jumlah atom tiap unsur sama pada kedua ruas.",
-  "voiceover_script": "Menyeimbangkan reaksi berarti menyamakan jumlah atom tiap unsur di kiri dan kanan persamaan.",
-  "intro_narration": "Menyeimbangkan reaksi berarti menyamakan jumlah atom tiap unsur di kiri dan kanan persamaan.",
-  "summary_narration": "Persamaan reaksi seimbang jika jumlah atom tiap unsur sama pada kedua ruas.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Menyeimbangkan reaksi berarti menyamakan jumlah atom tiap unsur di kiri dan kanan persamaan."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Hitung atom tiap unsur. Catat jumlah atom Fe dan O sebelum menambah koefisien."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Ubah koefisien bertahap. Mulai dari produk, lalu sesuaikan pereaksi sampai jumlah atom sama."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Verifikasi kesetaraan. Pastikan atom Fe dan O kiri sama dengan kanan."
-    },
-    {
-      "slot": "summary",
-      "text": "Persamaan reaksi seimbang jika jumlah atom tiap unsur sama pada kedua ruas."
-    }
-  ]
+  "summary": "Penyetaraan persamaan reaksi menegaskan hukum kekekalan massa pada tingkat partikel."
 }

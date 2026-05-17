@@ -1,0 +1,38 @@
+{
+  "id": "sample_life_structure_classification_34",
+  "node_id": "phase5_bio_structure_classification",
+  "template_id": "manim.bio_structure_labeling.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Struktur dan Klasifikasi Makhluk Hidup",
+  "subtitle": "Makhluk hidup dapat dikenali dari ciri tubuh lalu dikelompokkan ke dalam klasifikasi tertentu.",
+  "organism": "Tumbuhan berbunga",
+  "levels": [
+    "Makhluk hidup",
+    "Tumbuhan",
+    "Berbiji",
+    "Angiospermae"
+  ],
+  "parts": [
+    "Akar",
+    "Batang",
+    "Daun",
+    "Bunga"
+  ],
+  "steps": [
+    {
+      "title": "Amati struktur",
+      "body": "Bagian tubuh membantu mengenali fungsi dan identitas organisme."
+    },
+    {
+      "title": "Kelompokkan ciri",
+      "body": "Ciri yang sama dipakai untuk menempatkan organisme ke kelompok tertentu."
+    },
+    {
+      "title": "Hubungkan",
+      "body": "Struktur yang tampak mendukung klasifikasi yang lebih sistematis."
+    }
+  ],
+  "summary": "Struktur organisme dan klasifikasi saling terkait untuk memahami keragaman makhluk hidup."
+}

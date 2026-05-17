@@ -1,0 +1,31 @@
+{
+  "id": "sample_chemistry_inquiry_safety_60",
+  "node_id": "phase5_chemistry_inquiry_safety",
+  "template_id": "manim.chem_lab_safety.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Hakikat Kimia dan Keselamatan Laboratorium",
+  "subtitle": "Belajar kimia dimulai dari observasi zat dan perubahan, namun harus selalu disertai prosedur keselamatan.",
+  "icons": [
+    "Gelas kimia",
+    "Api",
+    "Kacamata",
+    "Label bahaya"
+  ],
+  "steps": [
+    {
+      "title": "Amati materi",
+      "body": "Kimia mempelajari komposisi, sifat, dan perubahan zat."
+    },
+    {
+      "title": "Kerja ilmiah",
+      "body": "Eksperimen dilakukan dengan pengamatan, pencatatan, dan penarikan kesimpulan."
+    },
+    {
+      "title": "Patuhi aturan",
+      "body": "Keselamatan laboratorium harus diutamakan sebelum, saat, dan sesudah eksperimen."
+    }
+  ],
+  "summary": "Pembelajaran kimia yang baik selalu menggabungkan rasa ingin tahu ilmiah dengan budaya keselamatan."
+}

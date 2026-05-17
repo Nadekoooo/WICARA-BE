@@ -1,63 +1,29 @@
 {
-  "id": "sample_arithmetic_addition",
-  "node_id": "km_a_matematika_penjumlahan_dan_pengurangan_bilangan_cacah",
+  "id": "sample_arithmetic_operation_44",
+  "node_id": "phase3_elementary_arithmetic_operation",
   "template_id": "manim.elementary_arithmetic_blocks.v1",
-  "phase": "A",
+  "phase": "C",
   "audience_level": "sd",
   "language": "id",
-  "title": "Menjumlahkan dengan Blok",
-  "subtitle": "Gabungkan dua kelompok benda.",
-  "operation_type": "addition",
-  "operands": [
-    12,
-    8
-  ],
-  "blocks": {
-    "model": "counters"
-  },
-  "grouping_steps": [
-    {
-      "label": "Gabungkan semua blok",
-      "value": 20
-    }
-  ],
-  "result": 20,
+  "title": "Operasi Hitung dengan Blok",
+  "subtitle": "Penjumlahan dan pengurangan dapat dipahami sebagai penggabungan dan pengambilan blok.",
+  "expression": "7 - 3 = 4",
+  "left_count": 7,
+  "remove_count": 3,
+  "result_count": 4,
   "steps": [
     {
-      "title": "Ada dua kelompok",
-      "body": "Kelompok pertama berisi 12 blok, kelompok kedua berisi 8 blok.",
-      "narration": "Amati dua kelompok blok. Kelompok pertama berisi 12 blok dan kelompok kedua berisi 8 blok, jadi kita hitung bersama dengan teliti."
+      "title": "Mulai dari jumlah awal",
+      "body": "Tampilkan banyak benda sesuai bilangan pertama."
     },
     {
-      "title": "Gabungkan",
-      "body": "Setelah digabung, jumlah keseluruhannya menjadi 20 blok.",
-      "narration": "Sekarang gabungkan semua blok menjadi satu kumpulan, lalu hitung satu per satu sampai terlihat totalnya tepat 20 blok."
+      "title": "Ambil sebagian",
+      "body": "Untuk pengurangan, beberapa benda dipisahkan atau diambil."
+    },
+    {
+      "title": "Hitung sisa",
+      "body": "Benda yang tersisa menunjukkan hasil operasi hitung."
     }
   ],
-  "summary": "Penjumlahan berarti menggabungkan dua kelompok.",
-  "voiceover_script": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama.",
-  "intro_narration": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama.",
-  "summary_narration": "Penjumlahan berarti menggabungkan dua kelompok.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Kita punya dua kelompok blok. Saat digabung, semua blok dihitung bersama."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Amati dua kelompok blok. Kelompok pertama berisi 12 blok dan kelompok kedua berisi 8 blok, jadi kita hitung bersama dengan teliti."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Sekarang gabungkan semua blok menjadi satu kumpulan, lalu hitung satu per satu sampai terlihat totalnya tepat 20 blok."
-    },
-    {
-      "slot": "summary",
-      "text": "Penjumlahan berarti menggabungkan dua kelompok."
-    }
-  ]
+  "summary": "Model konkret membantu siswa memahami makna operasi hitung, bukan sekadar hafalan simbol."
 }
-
-

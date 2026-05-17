@@ -1,0 +1,44 @@
+{
+  "id": "sample_acid_base_safety_54",
+  "node_id": "phase5_acid_base_safety",
+  "template_id": "manim.chem_acid_base_safety.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Asam, Basa, dan Keselamatan",
+  "subtitle": "Zat asam dan basa di sekitar kita perlu dikenali sifatnya serta ditangani dengan aman.",
+  "ph_values": [
+    {
+      "label": "Cuka",
+      "value": 3
+    },
+    {
+      "label": "Air",
+      "value": 7
+    },
+    {
+      "label": "Sabun",
+      "value": 10
+    }
+  ],
+  "safety_items": [
+    "Sarung tangan",
+    "Kacamata",
+    "Label bahan"
+  ],
+  "steps": [
+    {
+      "title": "Kenali pH",
+      "body": "Asam memiliki pH di bawah 7, sedangkan basa di atas 7."
+    },
+    {
+      "title": "Temukan contoh",
+      "body": "Banyak bahan rumah tangga dapat dikelompokkan sebagai asam atau basa."
+    },
+    {
+      "title": "Utamakan keselamatan",
+      "body": "Penanganan zat kimia harus memperhatikan alat pelindung dan petunjuk label."
+    }
+  ],
+  "summary": "Konsep asam-basa sebaiknya selalu diajarkan bersama konteks penggunaan aman dalam kehidupan sehari-hari."
+}

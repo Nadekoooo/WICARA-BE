@@ -1,0 +1,25 @@
+{
+  "id": "sample_electricity_magnetism_circuit_35",
+  "node_id": "phase5_electricity_magnetism_circuit",
+  "template_id": "manim.electricity_magnetism_circuit.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Listrik, Magnet, dan Rangkaian",
+  "subtitle": "Arus listrik pada rangkaian dapat menyalakan lampu dan menimbulkan efek magnet pada kumparan.",
+  "steps": [
+    {
+      "title": "Rangkaian tertutup",
+      "body": "Baterai, kabel, sakelar, dan lampu harus terhubung membentuk lintasan tertutup."
+    },
+    {
+      "title": "Arus mengalir",
+      "body": "Saat sakelar ditutup, arus listrik mengalir dan lampu menyala."
+    },
+    {
+      "title": "Efek magnet",
+      "body": "Kumparan berarus dapat menarik benda logam kecil seperti elektromagnet sederhana."
+    }
+  ],
+  "summary": "Listrik dan magnet saling berhubungan dalam banyak alat sederhana di sekitar kita."
+}

@@ -1,71 +1,74 @@
 {
-  "id": "sample_elementary_number_line_place_value",
-  "node_id": "phase4_counting_place_value_number_line",
+  "id": "sample_elementary_place_value_distinct",
+  "node_id": "phase2_place_value_number_line",
   "template_id": "manim.elementary_number_line_place_value.v1",
-  "phase": "C",
+  "phase": "B",
   "audience_level": "sd",
   "language": "id",
   "title": "Nilai Tempat di Garis Bilangan",
-  "subtitle": "Angka lebih besar berada lebih kanan pada garis bilangan.",
+  "subtitle": "Puluhan dan satuan membantu membaca posisi angka.",
+  "number": 47,
+  "place_values": [
+    {
+      "place": "Puluhan",
+      "digit": 4,
+      "value": 40
+    },
+    {
+      "place": "Satuan",
+      "digit": 7,
+      "value": 7
+    }
+  ],
   "number_range": {
     "min": 0,
     "max": 100,
     "step": 10
   },
-  "markers": [
-    {
-      "value": 30,
-      "label": "30"
-    },
-    {
-      "value": 70,
-      "label": "70"
-    }
-  ],
-  "highlight_values": [
-    30,
-    70
-  ],
-  "operation": {
-    "type": "compare",
-    "from": 30,
-    "to": 70,
-    "label": "70 lebih besar dari 30"
-  },
   "steps": [
     {
-      "title": "Tempatkan nilai puluhan",
-      "body": "30 dan 70 ditempatkan sesuai urutan nilainya di garis bilangan.",
-      "narration": "Tempatkan nilai puluhan. 30 dan 70 ditempatkan sesuai urutan nilainya di garis bilangan."
+      "title": "Pisah nilai tempat",
+      "body": "Angka 47 terdiri dari 4 puluhan dan 7 satuan.",
+      "narration": "Pisah nilai tempat. Angka 47 terdiri dari 4 puluhan dan 7 satuan."
     },
     {
-      "title": "Bandingkan posisi",
-      "body": "Bilangan di posisi lebih kanan bernilai lebih besar.",
-      "narration": "Bandingkan posisi. Bilangan di posisi lebih kanan bernilai lebih besar."
+      "title": "Bangun nilainya",
+      "body": "Empat puluhan bernilai 40, lalu ditambah 7 satuan.",
+      "narration": "Bangun nilainya. Empat puluhan bernilai 40, lalu ditambah 7 satuan."
+    },
+    {
+      "title": "Letakkan di garis",
+      "body": "Angka 47 berada setelah 40 dan sebelum 50.",
+      "narration": "Letakkan di garis. Angka 47 berada setelah 40 dan sebelum 50."
     }
   ],
-  "summary": "Nilai tempat membantu membaca urutan dan besar bilangan.",
-  "voiceover_script": "Pada garis bilangan puluhan, posisi angka membuat perbandingan nilai jadi lebih mudah dipahami.",
-  "intro_narration": "Pada garis bilangan puluhan, posisi angka membuat perbandingan nilai jadi lebih mudah dipahami.",
-  "summary_narration": "Nilai tempat membantu membaca urutan dan besar bilangan.",
+  "summary": "Nilai tempat membantu membangun angka dan menempatkannya pada garis bilangan.",
+  "intro_narration": "Puluhan dan satuan membantu membaca posisi angka.",
+  "summary_narration": "Nilai tempat membantu membangun angka dan menempatkannya pada garis bilangan.",
+  "voiceover_script": "Puluhan dan satuan membantu membaca posisi angka.",
   "narration_segments": [
     {
       "slot": "intro",
-      "text": "Pada garis bilangan puluhan, posisi angka membuat perbandingan nilai jadi lebih mudah dipahami."
+      "text": "Puluhan dan satuan membantu membaca posisi angka."
     },
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Tempatkan nilai puluhan. 30 dan 70 ditempatkan sesuai urutan nilainya di garis bilangan."
+      "text": "Pisah nilai tempat. Angka 47 terdiri dari 4 puluhan dan 7 satuan."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Bandingkan posisi. Bilangan di posisi lebih kanan bernilai lebih besar."
+      "text": "Bangun nilainya. Empat puluhan bernilai 40, lalu ditambah 7 satuan."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Letakkan di garis. Angka 47 berada setelah 40 dan sebelum 50."
     },
     {
       "slot": "summary",
-      "text": "Nilai tempat membantu membaca urutan dan besar bilangan."
+      "text": "Nilai tempat membantu membangun angka dan menempatkannya pada garis bilangan."
     }
   ]
 }

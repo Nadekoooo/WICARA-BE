@@ -1,104 +1,74 @@
 {
-  "id": "sample_statistics_center_spread",
-  "node_id": "phase4_center_spread_statistics",
+  "id": "sample_statistics_center_spread_distinct",
+  "node_id": "phase4_statistics_center_spread",
   "template_id": "manim.statistics_center_spread.v1",
-  "phase": "E",
-  "audience_level": "sma",
+  "phase": "D",
+  "audience_level": "smp",
   "language": "id",
-  "title": "Pemusatan dan Sebaran",
-  "subtitle": "Amati nilai tengah dan penyebaran data.",
-  "function": {
-    "type": "quadratic",
-    "params": {
-      "a": 0.4,
-      "b": -2,
-      "c": 7
-    }
-  },
-  "x_range": [
-    0,
+  "title": "Pemusatan dan Penyebaran Data",
+  "subtitle": "Nilai tengah dan rentang memberi dua informasi berbeda.",
+  "data_values": [
+    4,
+    5,
+    5,
+    6,
+    7,
     8,
-    1
+    10
   ],
-  "y_range": [
-    0,
-    10,
-    1
-  ],
-  "graph_features": [
-    {
-      "type": "vertex",
-      "label": "Titik puncak"
-    },
-    {
-      "type": "slope",
-      "label": "Kemiringan lokal"
-    }
-  ],
-  "highlight_points": [
-    {
-      "x": 1,
-      "label": "x = 1"
-    }
-  ],
-  "formula_latex": "y = 0.4x^2 - 2x + 7",
+  "center_metrics": {
+    "mean": 6.4,
+    "median": 6
+  },
+  "spread_metrics": {
+    "range": 6,
+    "min": 4,
+    "max": 10
+  },
   "steps": [
     {
+      "title": "Susun data",
+      "body": "Dot plot menempatkan setiap nilai pada garis bilangan.",
+      "narration": "Susun data. Dot plot menempatkan setiap nilai pada garis bilangan."
+    },
+    {
       "title": "Cari pusat",
-      "body": "Nilai tengah memberi gambaran posisi umum data.",
-      "narration": "Cari pusat. Nilai tengah memberi gambaran posisi umum data."
+      "body": "Mean dan median menjelaskan nilai yang mewakili tengah data.",
+      "narration": "Cari pusat. Mean dan median menjelaskan nilai yang mewakili tengah data."
     },
     {
       "title": "Lihat sebaran",
-      "body": "Jarak antar nilai menunjukkan apakah data rapat atau menyebar.",
-      "narration": "Lihat sebaran. Jarak antar nilai menunjukkan apakah data rapat atau menyebar."
-    },
-    {
-      "title": "Bandingkan set data",
-      "body": "Data dengan pusat sama bisa punya sebaran berbeda.",
-      "narration": "Bandingkan set data. Data dengan pusat sama bisa punya sebaran berbeda."
+      "body": "Range menunjukkan jarak dari nilai terkecil sampai terbesar.",
+      "narration": "Lihat sebaran. Range menunjukkan jarak dari nilai terkecil sampai terbesar."
     }
   ],
-  "summary": "Ukuran pemusatan dan penyebaran dipakai bersama untuk membaca karakter data.",
-  "voiceover_script": "Selain mencari nilai tengah, kita juga perlu melihat seberapa jauh data menyebar dari pusatnya.",
-  "intro_narration": "Selain mencari nilai tengah, kita juga perlu melihat seberapa jauh data menyebar dari pusatnya.",
-  "summary_narration": "Ukuran pemusatan dan penyebaran dipakai bersama untuk membaca karakter data.",
+  "summary": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data.",
+  "intro_narration": "Nilai tengah dan rentang memberi dua informasi berbeda.",
+  "summary_narration": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data.",
+  "voiceover_script": "Nilai tengah dan rentang memberi dua informasi berbeda.",
   "narration_segments": [
     {
       "slot": "intro",
-      "text": "Selain mencari nilai tengah, kita juga perlu melihat seberapa jauh data menyebar dari pusatnya."
+      "text": "Nilai tengah dan rentang memberi dua informasi berbeda."
     },
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Cari pusat. Nilai tengah memberi gambaran posisi umum data."
+      "text": "Susun data. Dot plot menempatkan setiap nilai pada garis bilangan."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Lihat sebaran. Jarak antar nilai menunjukkan apakah data rapat atau menyebar."
+      "text": "Cari pusat. Mean dan median menjelaskan nilai yang mewakili tengah data."
     },
     {
       "slot": "step",
       "step_index": 3,
-      "text": "Bandingkan set data. Data dengan pusat sama bisa punya sebaran berbeda."
+      "text": "Lihat sebaran. Range menunjukkan jarak dari nilai terkecil sampai terbesar."
     },
     {
       "slot": "summary",
-      "text": "Ukuran pemusatan dan penyebaran dipakai bersama untuk membaca karakter data."
+      "text": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data."
     }
-  ],
-  "x_label": "indeks data",
-  "y_label": "nilai",
-  "graph_label": "pola data",
-  "moving_label": "nilai",
-  "x_path": [
-    0,
-    2,
-    4,
-    6,
-    8
-  ],
-  "highlight_x": 4,
-  "show_slope": false
+  ]
 }

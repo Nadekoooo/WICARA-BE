@@ -1,76 +1,68 @@
 {
-  "id": "sample_financial_growth",
-  "node_id": "phase4_financial_growth_model",
+  "id": "sample_financial_growth_distinct",
+  "node_id": "phase5_financial_compound_growth",
   "template_id": "manim.financial_growth.v1",
-  "phase": "C",
-  "audience_level": "smp",
+  "phase": "E",
+  "audience_level": "sma",
   "language": "id",
-  "title": "Pertumbuhan Nilai Tabungan",
-  "subtitle": "Nilai tabungan naik secara persentase per periode.",
-  "terms": [
+  "title": "Pertumbuhan Nilai Majemuk",
+  "subtitle": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
+  "initial_amount": 100,
+  "rate_percent": 20,
+  "periods": 5,
+  "values": [
     100,
     120,
     144,
-    173
+    173,
+    207
   ],
-  "visual_pattern_type": "growing_dots",
-  "rule": "Naik 20% setiap periode",
-  "table_values": [
-    {
-      "n": 1,
-      "value": 100
-    },
-    {
-      "n": 2,
-      "value": 120
-    },
-    {
-      "n": 3,
-      "value": 144
-    },
-    {
-      "n": 4,
-      "value": 173
-    }
-  ],
-  "target_term": {
-    "n": 5,
-    "value": 208
-  },
+  "currency": "ribu",
+  "formula_latex": "A_n=A_0(1+r)^n",
   "steps": [
     {
-      "title": "Hitung kenaikan persentase",
-      "body": "Setiap periode, nilai baru = nilai lama x 1,2.",
-      "narration": "Hitung kenaikan persentase. Setiap periode, nilai baru = nilai lama x 1,2."
+      "title": "Nilai awal",
+      "body": "Mulai dari modal atau nilai dasar pada periode pertama.",
+      "narration": "Nilai awal. Mulai dari modal atau nilai dasar pada periode pertama."
     },
     {
-      "title": "Prediksi periode berikutnya",
-      "body": "Setelah 173, nilai perkiraan periode berikutnya sekitar 208.",
-      "narration": "Prediksi periode berikutnya. Setelah 173, nilai perkiraan periode berikutnya sekitar 208."
+      "title": "Persentase tumbuh",
+      "body": "Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja.",
+      "narration": "Persentase tumbuh. Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja."
+    },
+    {
+      "title": "Efek majemuk",
+      "body": "Selisih antar batang makin besar karena basis perhitungannya ikut membesar.",
+      "narration": "Efek majemuk. Selisih antar batang makin besar karena basis perhitungannya ikut membesar."
     }
   ],
-  "summary": "Model pertumbuhan persentase membantu memperkirakan nilai keuangan di masa depan.",
-  "voiceover_script": "Dalam konteks keuangan, pertumbuhan periodik sering dimodelkan sebagai kenaikan persentase dari nilai sebelumnya.",
-  "intro_narration": "Dalam konteks keuangan, pertumbuhan periodik sering dimodelkan sebagai kenaikan persentase dari nilai sebelumnya.",
-  "summary_narration": "Model pertumbuhan persentase membantu memperkirakan nilai keuangan di masa depan.",
+  "summary": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya.",
+  "intro_narration": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
+  "summary_narration": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya.",
+  "voiceover_script": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
   "narration_segments": [
     {
       "slot": "intro",
-      "text": "Dalam konteks keuangan, pertumbuhan periodik sering dimodelkan sebagai kenaikan persentase dari nilai sebelumnya."
+      "text": "Kenaikan persentase dihitung dari nilai periode sebelumnya."
     },
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Hitung kenaikan persentase. Setiap periode, nilai baru = nilai lama x 1,2."
+      "text": "Nilai awal. Mulai dari modal atau nilai dasar pada periode pertama."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Prediksi periode berikutnya. Setelah 173, nilai perkiraan periode berikutnya sekitar 208."
+      "text": "Persentase tumbuh. Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Efek majemuk. Selisih antar batang makin besar karena basis perhitungannya ikut membesar."
     },
     {
       "slot": "summary",
-      "text": "Model pertumbuhan persentase membantu memperkirakan nilai keuangan di masa depan."
+      "text": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya."
     }
   ]
 }
