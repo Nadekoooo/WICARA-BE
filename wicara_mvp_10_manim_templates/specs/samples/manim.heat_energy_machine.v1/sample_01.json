@@ -1,0 +1,84 @@
+{
+  "id": "sample_heat_energy_machine_distinct",
+  "node_id": "phase5_heat_transfer_model",
+  "template_id": "manim.heat_energy_machine.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Kalor dan Perubahan Suhu",
+  "subtitle": "Energi panas yang masuk menaikkan suhu benda.",
+  "system": {
+    "object_label": "Air",
+    "mass_label": "m",
+    "initial_temp": 25,
+    "final_temp": 60,
+    "unit": "°C"
+  },
+  "heat_flow": [
+    {
+      "label": "Q masuk",
+      "amount": "mcΔT"
+    }
+  ],
+  "formula_latex": "Q=m c \\Delta T",
+  "timeline": [
+    {
+      "time": 0,
+      "temp": 25
+    },
+    {
+      "time": 5,
+      "temp": 42
+    },
+    {
+      "time": 10,
+      "temp": 60
+    }
+  ],
+  "steps": [
+    {
+      "title": "Energi masuk",
+      "body": "Kalor mengalir dari sumber panas ke benda.",
+      "narration": "Energi masuk. Kalor mengalir dari sumber panas ke benda."
+    },
+    {
+      "title": "Suhu naik",
+      "body": "Partikel bergerak lebih cepat sehingga suhu meningkat.",
+      "narration": "Suhu naik. Partikel bergerak lebih cepat sehingga suhu meningkat."
+    },
+    {
+      "title": "Hubungkan rumus",
+      "body": "Perubahan suhu terkait dengan massa dan kalor jenis.",
+      "narration": "Hubungkan rumus. Perubahan suhu terkait dengan massa dan kalor jenis."
+    }
+  ],
+  "summary": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT.",
+  "intro_narration": "Energi panas yang masuk menaikkan suhu benda.",
+  "summary_narration": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT.",
+  "voiceover_script": "Energi panas yang masuk menaikkan suhu benda.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Energi panas yang masuk menaikkan suhu benda."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Energi masuk. Kalor mengalir dari sumber panas ke benda."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Suhu naik. Partikel bergerak lebih cepat sehingga suhu meningkat."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Hubungkan rumus. Perubahan suhu terkait dengan massa dan kalor jenis."
+    },
+    {
+      "slot": "summary",
+      "text": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT."
+    }
+  ]
+}

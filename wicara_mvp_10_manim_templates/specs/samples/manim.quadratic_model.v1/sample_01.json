@@ -1,0 +1,52 @@
+{
+  "id": "sample_quadratic_model_32",
+  "node_id": "phase5_quadratic_application",
+  "template_id": "manim.quadratic_model.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Grafik Fungsi Kuadrat",
+  "subtitle": "Parabola memperlihatkan akar, titik puncak, dan arah bukaan fungsi kuadrat.",
+  "function": {
+    "type": "quadratic",
+    "params": {
+      "a": 1,
+      "b": -4,
+      "c": 3
+    }
+  },
+  "x_range": [
+    -1,
+    5,
+    1
+  ],
+  "y_range": [
+    -2,
+    8,
+    1
+  ],
+  "formula_latex": "f(x)=x^2-4x+3",
+  "vertex": {
+    "x": 2,
+    "y": -1
+  },
+  "roots": [
+    1,
+    3
+  ],
+  "steps": [
+    {
+      "title": "Arah bukaan",
+      "body": "Karena koefisien a positif, parabola terbuka ke atas."
+    },
+    {
+      "title": "Titik puncak",
+      "body": "Titik puncak menunjukkan nilai minimum fungsi."
+    },
+    {
+      "title": "Akar fungsi",
+      "body": "Akar dibaca sebagai titik potong grafik dengan sumbu x."
+    }
+  ],
+  "summary": "Representasi grafik memudahkan pembacaan sifat penting dari fungsi kuadrat."
+}

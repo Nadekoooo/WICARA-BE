@@ -1,0 +1,34 @@
+{
+  "id": "sample_heat_temperature_transfer_58",
+  "node_id": "phase5_heat_temperature_transfer",
+  "template_id": "manim.heat_transfer_thermo.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Suhu, Kalor, dan Perpindahan Panas",
+  "subtitle": "Kalor berpindah dari suhu tinggi ke suhu rendah melalui konduksi, konveksi, atau radiasi.",
+  "modes": [
+    "Konduksi",
+    "Konveksi",
+    "Radiasi"
+  ],
+  "temperatures": [
+    80,
+    30
+  ],
+  "steps": [
+    {
+      "title": "Bedakan suhu dan kalor",
+      "body": "Suhu menyatakan derajat panas, sedangkan kalor adalah energi yang berpindah."
+    },
+    {
+      "title": "Arah perpindahan",
+      "body": "Kalor selalu berpindah dari benda bersuhu lebih tinggi ke lebih rendah."
+    },
+    {
+      "title": "Tiga mekanisme",
+      "body": "Perpindahan panas dapat terjadi lewat konduksi, konveksi, dan radiasi."
+    }
+  ],
+  "summary": "Konsep suhu dan kalor menjadi lebih jelas saat dikaitkan dengan arah aliran energi dan mekanismenya."
+}

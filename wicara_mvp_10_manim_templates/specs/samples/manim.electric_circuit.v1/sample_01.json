@@ -1,0 +1,30 @@
+{
+  "id": "sample_electric_circuit_59",
+  "node_id": "phase5_electric_circuit",
+  "template_id": "manim.electric_circuit.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Rangkaian Listrik Sederhana",
+  "subtitle": "Baterai, sakelar, kabel, dan lampu bekerja bersama dalam lintasan arus tertutup.",
+  "components": [
+    "Baterai",
+    "Sakelar",
+    "Lampu"
+  ],
+  "steps": [
+    {
+      "title": "Susun komponen",
+      "body": "Komponen utama rangkaian dihubungkan dengan kabel penghantar."
+    },
+    {
+      "title": "Tutup sakelar",
+      "body": "Arus hanya dapat mengalir saat lintasan tertutup."
+    },
+    {
+      "title": "Bandingkan kondisi",
+      "body": "Saat rangkaian terbuka, arus terputus dan lampu padam."
+    }
+  ],
+  "summary": "Rangkaian listrik sederhana menegaskan bahwa arus membutuhkan jalur tertutup untuk mengalir."
+}

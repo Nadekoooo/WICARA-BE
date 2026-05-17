@@ -1,0 +1,30 @@
+{
+  "id": "sample_force_motion_simple_machine_49",
+  "node_id": "phase3_force_motion_simple_machine",
+  "template_id": "manim.sd_force_motion.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Gaya, Gerak, dan Pesawat Sederhana",
+  "subtitle": "Gaya dapat mengubah gerak benda dan pesawat sederhana membantu meringankan kerja.",
+  "machines": [
+    "Tuas",
+    "Katrol",
+    "Bidang miring"
+  ],
+  "steps": [
+    {
+      "title": "Gaya dorong atau tarik",
+      "body": "Benda dapat bergerak saat diberi gaya dorong atau tarik."
+    },
+    {
+      "title": "Arah gerak",
+      "body": "Gaya dapat mempercepat, memperlambat, atau mengubah arah gerak benda."
+    },
+    {
+      "title": "Bantuan alat",
+      "body": "Pesawat sederhana membantu manusia melakukan kerja dengan lebih mudah."
+    }
+  ],
+  "summary": "Konsep gaya dan gerak menjadi lebih konkret saat dikaitkan dengan alat sederhana di sekitar kita."
+}

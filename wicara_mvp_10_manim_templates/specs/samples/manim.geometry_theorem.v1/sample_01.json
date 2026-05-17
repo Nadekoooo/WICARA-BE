@@ -1,0 +1,71 @@
+{
+  "id": "sample_geometry_theorem_distinct",
+  "node_id": "phase4_angle_sum_triangle",
+  "template_id": "manim.geometry_theorem.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Jumlah Sudut Segitiga",
+  "subtitle": "Tiga sudut dalam segitiga membentuk garis lurus 180°.",
+  "angles": [
+    {
+      "label": "A",
+      "value": 50
+    },
+    {
+      "label": "B",
+      "value": 60
+    },
+    {
+      "label": "C",
+      "value": 70
+    }
+  ],
+  "formula_latex": "\\angle A+\\angle B+\\angle C=180^\\circ",
+  "steps": [
+    {
+      "title": "Tiga sudut",
+      "body": "Setiap titik segitiga memiliki satu sudut dalam.",
+      "narration": "Tiga sudut. Setiap titik segitiga memiliki satu sudut dalam."
+    },
+    {
+      "title": "Pindahkan sudut",
+      "body": "Jika ketiganya disusun berdampingan, bentuknya garis lurus.",
+      "narration": "Pindahkan sudut. Jika ketiganya disusun berdampingan, bentuknya garis lurus."
+    },
+    {
+      "title": "Total 180°",
+      "body": "Garis lurus membuktikan jumlah sudut segitiga adalah 180 derajat.",
+      "narration": "Total 180°. Garis lurus membuktikan jumlah sudut segitiga adalah 180 derajat."
+    }
+  ],
+  "summary": "Jumlah sudut dalam segitiga selalu 180 derajat.",
+  "intro_narration": "Tiga sudut dalam segitiga membentuk garis lurus 180°.",
+  "summary_narration": "Jumlah sudut dalam segitiga selalu 180 derajat.",
+  "voiceover_script": "Tiga sudut dalam segitiga membentuk garis lurus 180°.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Tiga sudut dalam segitiga membentuk garis lurus 180°."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Tiga sudut. Setiap titik segitiga memiliki satu sudut dalam."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Pindahkan sudut. Jika ketiganya disusun berdampingan, bentuknya garis lurus."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Total 180°. Garis lurus membuktikan jumlah sudut segitiga adalah 180 derajat."
+    },
+    {
+      "slot": "summary",
+      "text": "Jumlah sudut dalam segitiga selalu 180 derajat."
+    }
+  ]
+}

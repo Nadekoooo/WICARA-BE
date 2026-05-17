@@ -1,0 +1,32 @@
+{
+  "id": "sample_measurement_uncertainty_56",
+  "node_id": "phase5_measurement_uncertainty",
+  "template_id": "manim.measurement_uncertainty.v1",
+  "phase": "E",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pengukuran dan Ketidakpastian",
+  "subtitle": "Setiap hasil pengukuran memiliki satuan, ketelitian alat, dan ketidakpastian tertentu.",
+  "tool_label": "Penggaris",
+  "readings": [
+    12.2,
+    12.3,
+    12.2
+  ],
+  "reported_value": "12,23 ± 0,05 cm",
+  "steps": [
+    {
+      "title": "Baca skala alat",
+      "body": "Hasil ukur ditentukan dengan memperhatikan satuan dan skala terkecil alat."
+    },
+    {
+      "title": "Ulangi pengukuran",
+      "body": "Pengukuran berulang membantu melihat variasi hasil."
+    },
+    {
+      "title": "Laporkan hasil",
+      "body": "Hasil akhir ditulis bersama satuan dan ketidakpastian pengukuran."
+    }
+  ],
+  "summary": "Belajar mengukur tidak hanya tentang angka, tetapi juga tentang kualitas hasil dan ketelitiannya."
+}

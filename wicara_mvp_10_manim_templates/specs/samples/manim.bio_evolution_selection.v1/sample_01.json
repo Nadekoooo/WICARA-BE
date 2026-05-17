@@ -1,0 +1,31 @@
+{
+  "id": "sample_mutation_evolution_selection_39",
+  "node_id": "phase5_bio_evolution_selection",
+  "template_id": "manim.bio_evolution_selection.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Mutasi, Evolusi, dan Seleksi",
+  "subtitle": "Variasi muncul melalui mutasi dan dapat dipilih oleh lingkungan melalui seleksi alam.",
+  "population_labels": [
+    "Variasi A",
+    "Variasi B",
+    "Variasi C"
+  ],
+  "environment_factor": "Lingkungan kering",
+  "steps": [
+    {
+      "title": "Variasi",
+      "body": "Populasi memiliki perbedaan sifat yang dapat diwariskan."
+    },
+    {
+      "title": "Seleksi",
+      "body": "Lingkungan menyeleksi individu yang lebih sesuai untuk bertahan hidup."
+    },
+    {
+      "title": "Perubahan populasi",
+      "body": "Sifat yang menguntungkan cenderung lebih sering muncul pada generasi berikutnya."
+    }
+  ],
+  "summary": "Evolusi dapat dipahami sebagai perubahan komposisi sifat dalam populasi dari waktu ke waktu."
+}

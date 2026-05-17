@@ -1,0 +1,91 @@
+{
+  "id": "sample_geometry_transform_distinct",
+  "node_id": "phase4_congruence_similarity_transform",
+  "template_id": "manim.geometry_transform.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Transformasi Geometri",
+  "subtitle": "Translasi, rotasi, dan refleksi mengubah posisi atau orientasi bangun.",
+  "shape_points": [
+    [
+      -1.0,
+      -0.6
+    ],
+    [
+      0.9,
+      -0.6
+    ],
+    [
+      -0.2,
+      0.9
+    ]
+  ],
+  "transformations": [
+    {
+      "type": "translate",
+      "vector": [
+        2.0,
+        0.7
+      ],
+      "label": "Translasi"
+    },
+    {
+      "type": "rotate",
+      "angle_degrees": 90,
+      "label": "Rotasi 90°"
+    },
+    {
+      "type": "reflect",
+      "axis": "y",
+      "label": "Refleksi sumbu-y"
+    }
+  ],
+  "invariant_text": "Ukuran dan bentuk tetap, posisi/orientasi berubah.",
+  "steps": [
+    {
+      "title": "Bangun awal",
+      "body": "Amati titik-titik dan sisi bangun sebelum berubah.",
+      "narration": "Bangun awal. Amati titik-titik dan sisi bangun sebelum berubah."
+    },
+    {
+      "title": "Terapkan transformasi",
+      "body": "Setiap transformasi punya aturan posisi yang jelas.",
+      "narration": "Terapkan transformasi. Setiap transformasi punya aturan posisi yang jelas."
+    },
+    {
+      "title": "Cek sifat tetap",
+      "body": "Pada transformasi kaku, bentuk dan ukuran tidak berubah.",
+      "narration": "Cek sifat tetap. Pada transformasi kaku, bentuk dan ukuran tidak berubah."
+    }
+  ],
+  "summary": "Transformasi geometri memindahkan atau mengubah orientasi bangun dengan aturan yang dapat dilacak.",
+  "intro_narration": "Translasi, rotasi, dan refleksi mengubah posisi atau orientasi bangun.",
+  "summary_narration": "Transformasi geometri memindahkan atau mengubah orientasi bangun dengan aturan yang dapat dilacak.",
+  "voiceover_script": "Translasi, rotasi, dan refleksi mengubah posisi atau orientasi bangun.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Translasi, rotasi, dan refleksi mengubah posisi atau orientasi bangun."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Bangun awal. Amati titik-titik dan sisi bangun sebelum berubah."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Terapkan transformasi. Setiap transformasi punya aturan posisi yang jelas."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Cek sifat tetap. Pada transformasi kaku, bentuk dan ukuran tidak berubah."
+    },
+    {
+      "slot": "summary",
+      "text": "Transformasi geometri memindahkan atau mengubah orientasi bangun dengan aturan yang dapat dilacak."
+    }
+  ]
+}

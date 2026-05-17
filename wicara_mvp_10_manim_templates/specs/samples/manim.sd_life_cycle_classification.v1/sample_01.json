@@ -1,0 +1,35 @@
+{
+  "id": "sample_living_things_lifecycle_48",
+  "node_id": "phase3_living_things_lifecycle",
+  "template_id": "manim.sd_life_cycle_classification.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Makhluk Hidup, Klasifikasi, dan Siklus Hidup",
+  "subtitle": "Makhluk hidup memiliki ciri tertentu dan mengalami tahapan pertumbuhan dalam siklus hidupnya.",
+  "categories": [
+    "Hewan",
+    "Tumbuhan"
+  ],
+  "life_cycle": [
+    "Telur",
+    "Larva",
+    "Pupa",
+    "Kupu-kupu"
+  ],
+  "steps": [
+    {
+      "title": "Ciri makhluk hidup",
+      "body": "Makhluk hidup tumbuh, bernapas, membutuhkan makanan, dan berkembang biak."
+    },
+    {
+      "title": "Kelompokkan",
+      "body": "Makhluk hidup dapat dikelompokkan sebagai hewan atau tumbuhan berdasarkan cirinya."
+    },
+    {
+      "title": "Ikuti siklus hidup",
+      "body": "Beberapa hewan mengalami perubahan bentuk bertahap hingga dewasa."
+    }
+  ],
+  "summary": "Klasifikasi dan siklus hidup membantu memahami keragaman serta perubahan pada makhluk hidup."
+}

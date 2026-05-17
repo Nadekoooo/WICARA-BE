@@ -1,0 +1,29 @@
+{
+  "id": "sample_algebra_expression_50",
+  "node_id": "phase4_algebra_expression_transform",
+  "template_id": "manim.algebra_expression.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Transformasi Bentuk Aljabar",
+  "subtitle": "Ekspresi aljabar dapat diperluas, disederhanakan, dan difaktorkan dengan tetap menjaga kesetaraan.",
+  "expression_start": "2(x + 3) + x",
+  "expression_expand": "2x + 6 + x",
+  "expression_simplify": "3x + 6",
+  "expression_factor": "3(x + 2)",
+  "steps": [
+    {
+      "title": "Distribusikan",
+      "body": "Kalikan faktor di luar kurung ke setiap suku di dalam kurung."
+    },
+    {
+      "title": "Gabungkan suku sejenis",
+      "body": "Suku yang memiliki variabel sama dapat dijumlahkan."
+    },
+    {
+      "title": "Faktorkan kembali",
+      "body": "Bentuk sederhana dapat diubah lagi menjadi bentuk faktor yang ekuivalen."
+    }
+  ],
+  "summary": "Transformasi aljabar membantu berpindah antara bentuk ekspresi yang berbeda tetapi setara."
+}

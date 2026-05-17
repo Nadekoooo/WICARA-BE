@@ -1,0 +1,60 @@
+{
+  "id": "sample_wave_optics_distinct",
+  "node_id": "phase5_wave_optics_sinusoidal_model",
+  "template_id": "manim.wave_optics.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Gelombang Sinus",
+  "subtitle": "Amplitudo, panjang gelombang, dan fase dapat dibaca dari bentuk gelombang.",
+  "amplitude": 1.2,
+  "wavelength": 3.0,
+  "phase_shift": 0.0,
+  "formula_latex": "y=A\\sin(kx+\\phi)",
+  "steps": [
+    {
+      "title": "Baca amplitudo",
+      "body": "Amplitudo adalah simpangan maksimum dari garis setimbang.",
+      "narration": "Baca amplitudo. Amplitudo adalah simpangan maksimum dari garis setimbang."
+    },
+    {
+      "title": "Baca panjang gelombang",
+      "body": "Jarak puncak ke puncak berikutnya adalah satu panjang gelombang.",
+      "narration": "Baca panjang gelombang. Jarak puncak ke puncak berikutnya adalah satu panjang gelombang."
+    },
+    {
+      "title": "Fase bergeser",
+      "body": "Perubahan fase menggeser bentuk gelombang ke kiri atau kanan.",
+      "narration": "Fase bergeser. Perubahan fase menggeser bentuk gelombang ke kiri atau kanan."
+    }
+  ],
+  "summary": "Gelombang sinus dapat dijelaskan lewat amplitudo, panjang gelombang, dan fase.",
+  "intro_narration": "Amplitudo, panjang gelombang, dan fase dapat dibaca dari bentuk gelombang.",
+  "summary_narration": "Gelombang sinus dapat dijelaskan lewat amplitudo, panjang gelombang, dan fase.",
+  "voiceover_script": "Amplitudo, panjang gelombang, dan fase dapat dibaca dari bentuk gelombang.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Amplitudo, panjang gelombang, dan fase dapat dibaca dari bentuk gelombang."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Baca amplitudo. Amplitudo adalah simpangan maksimum dari garis setimbang."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Baca panjang gelombang. Jarak puncak ke puncak berikutnya adalah satu panjang gelombang."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Fase bergeser. Perubahan fase menggeser bentuk gelombang ke kiri atau kanan."
+    },
+    {
+      "slot": "summary",
+      "text": "Gelombang sinus dapat dijelaskan lewat amplitudo, panjang gelombang, dan fase."
+    }
+  ]
+}

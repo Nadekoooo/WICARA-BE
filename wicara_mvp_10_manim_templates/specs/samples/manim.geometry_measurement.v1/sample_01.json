@@ -1,0 +1,67 @@
+{
+  "id": "sample_geometry_measurement_distinct",
+  "node_id": "phase4_geometry_measurement_area_perimeter",
+  "template_id": "manim.geometry_measurement.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Mengukur Luas dan Keliling",
+  "subtitle": "Dimensi sisi menentukan perhitungan luas dan keliling.",
+  "shape_type": "rectangle",
+  "dimensions": {
+    "length": 8,
+    "width": 5,
+    "unit": "cm"
+  },
+  "formula_latex": "L=p\\times l,\\quad K=2(p+l)",
+  "results": {
+    "area": 40,
+    "perimeter": 26
+  },
+  "steps": [
+    {
+      "title": "Ukur sisi",
+      "body": "Panjang dan lebar menjadi data awal perhitungan.",
+      "narration": "Ukur sisi. Panjang dan lebar menjadi data awal perhitungan."
+    },
+    {
+      "title": "Isi satuan persegi",
+      "body": "Luas berarti banyaknya persegi satuan yang menutup daerah.",
+      "narration": "Isi satuan persegi. Luas berarti banyaknya persegi satuan yang menutup daerah."
+    },
+    {
+      "title": "Jumlah sisi luar",
+      "body": "Keliling menghitung panjang seluruh batas luar bangun.",
+      "narration": "Jumlah sisi luar. Keliling menghitung panjang seluruh batas luar bangun."
+    }
+  ],
+  "summary": "Luas mengukur daerah tertutup, sedangkan keliling mengukur batas luarnya.",
+  "intro_narration": "Dimensi sisi menentukan perhitungan luas dan keliling.",
+  "summary_narration": "Luas mengukur daerah tertutup, sedangkan keliling mengukur batas luarnya.",
+  "voiceover_script": "Dimensi sisi menentukan perhitungan luas dan keliling.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Dimensi sisi menentukan perhitungan luas dan keliling."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Ukur sisi. Panjang dan lebar menjadi data awal perhitungan."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Isi satuan persegi. Luas berarti banyaknya persegi satuan yang menutup daerah."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Jumlah sisi luar. Keliling menghitung panjang seluruh batas luar bangun."
+    },
+    {
+      "slot": "summary",
+      "text": "Luas mengukur daerah tertutup, sedangkan keliling mengukur batas luarnya."
+    }
+  ]
+}

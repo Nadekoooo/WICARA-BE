@@ -1,0 +1,90 @@
+{
+  "id": "sample_probability_tree_distinct",
+  "node_id": "phase4_probability_compound_event",
+  "template_id": "manim.probability_tree.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pohon Peluang Dua Tahap",
+  "subtitle": "Peluang gabungan dibaca dari cabang yang dilewati.",
+  "root_label": "Mulai",
+  "levels": [
+    {
+      "name": "Koin 1",
+      "branches": [
+        {
+          "label": "A",
+          "probability": 0.5
+        },
+        {
+          "label": "G",
+          "probability": 0.5
+        }
+      ]
+    },
+    {
+      "name": "Koin 2",
+      "branches": [
+        {
+          "label": "A",
+          "probability": 0.5
+        },
+        {
+          "label": "G",
+          "probability": 0.5
+        }
+      ]
+    }
+  ],
+  "highlight_path": [
+    "A",
+    "G"
+  ],
+  "final_probability": 0.25,
+  "steps": [
+    {
+      "title": "Tahap pertama",
+      "body": "Dari titik mulai, kejadian pertama membagi peluang menjadi beberapa cabang.",
+      "narration": "Tahap pertama. Dari titik mulai, kejadian pertama membagi peluang menjadi beberapa cabang."
+    },
+    {
+      "title": "Tahap kedua",
+      "body": "Setiap hasil tahap pertama bercabang lagi untuk kejadian berikutnya.",
+      "narration": "Tahap kedua. Setiap hasil tahap pertama bercabang lagi untuk kejadian berikutnya."
+    },
+    {
+      "title": "Kalikan jalur",
+      "body": "Peluang gabungan diperoleh dengan mengalikan peluang pada cabang jalur itu.",
+      "narration": "Kalikan jalur. Peluang gabungan diperoleh dengan mengalikan peluang pada cabang jalur itu."
+    }
+  ],
+  "summary": "Pohon peluang membantu menghitung peluang gabungan dengan membaca dan mengalikan cabang pada satu jalur.",
+  "intro_narration": "Peluang gabungan dibaca dari cabang yang dilewati.",
+  "summary_narration": "Pohon peluang membantu menghitung peluang gabungan dengan membaca dan mengalikan cabang pada satu jalur.",
+  "voiceover_script": "Peluang gabungan dibaca dari cabang yang dilewati.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Peluang gabungan dibaca dari cabang yang dilewati."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Tahap pertama. Dari titik mulai, kejadian pertama membagi peluang menjadi beberapa cabang."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Tahap kedua. Setiap hasil tahap pertama bercabang lagi untuk kejadian berikutnya."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Kalikan jalur. Peluang gabungan diperoleh dengan mengalikan peluang pada cabang jalur itu."
+    },
+    {
+      "slot": "summary",
+      "text": "Pohon peluang membantu menghitung peluang gabungan dengan membaca dan mengalikan cabang pada satu jalur."
+    }
+  ]
+}

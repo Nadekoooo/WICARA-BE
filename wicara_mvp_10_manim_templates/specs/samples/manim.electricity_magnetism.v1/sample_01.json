@@ -1,0 +1,69 @@
+{
+  "id": "sample_electricity_magnetism_distinct",
+  "node_id": "phase5_physics_electric_magnetic_field",
+  "template_id": "manim.electricity_magnetism.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Medan Listrik dan Magnet",
+  "subtitle": "Muatan bergerak dipengaruhi medan listrik dan medan magnet.",
+  "charge": {
+    "label": "q+",
+    "sign": "+"
+  },
+  "electric_field": {
+    "direction": "right",
+    "label": "E"
+  },
+  "magnetic_field": {
+    "direction": "out",
+    "label": "B"
+  },
+  "trajectory_label": "lintasan membelok",
+  "steps": [
+    {
+      "title": "Medan listrik",
+      "body": "Medan listrik memberi gaya searah medan untuk muatan positif.",
+      "narration": "Medan listrik. Medan listrik memberi gaya searah medan untuk muatan positif."
+    },
+    {
+      "title": "Medan magnet",
+      "body": "Medan magnet memengaruhi muatan yang bergerak.",
+      "narration": "Medan magnet. Medan magnet memengaruhi muatan yang bergerak."
+    },
+    {
+      "title": "Lintasan berubah",
+      "body": "Gabungan gaya dapat mengubah arah gerak partikel.",
+      "narration": "Lintasan berubah. Gabungan gaya dapat mengubah arah gerak partikel."
+    }
+  ],
+  "summary": "Muatan dalam medan listrik dan magnet dapat mengalami gaya yang mengubah geraknya.",
+  "intro_narration": "Muatan bergerak dipengaruhi medan listrik dan medan magnet.",
+  "summary_narration": "Muatan dalam medan listrik dan magnet dapat mengalami gaya yang mengubah geraknya.",
+  "voiceover_script": "Muatan bergerak dipengaruhi medan listrik dan medan magnet.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Muatan bergerak dipengaruhi medan listrik dan medan magnet."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Medan listrik. Medan listrik memberi gaya searah medan untuk muatan positif."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Medan magnet. Medan magnet memengaruhi muatan yang bergerak."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Lintasan berubah. Gabungan gaya dapat mengubah arah gerak partikel."
+    },
+    {
+      "slot": "summary",
+      "text": "Muatan dalam medan listrik dan magnet dapat mengalami gaya yang mengubah geraknya."
+    }
+  ]
+}

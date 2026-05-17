@@ -1,0 +1,43 @@
+{
+  "id": "sample_energy_forms_31",
+  "node_id": "phase5_sd_energy_forms",
+  "template_id": "manim.sd_energy_forms.v1",
+  "phase": "E",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Perubahan Bentuk Energi",
+  "subtitle": "Energi panas, cahaya, bunyi, dan listrik dapat berubah dari satu bentuk ke bentuk lain.",
+  "forms": [
+    {
+      "label": "Listrik",
+      "detail": "setrika"
+    },
+    {
+      "label": "Panas",
+      "detail": "kompor"
+    },
+    {
+      "label": "Cahaya",
+      "detail": "lampu"
+    },
+    {
+      "label": "Bunyi",
+      "detail": "speaker"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Kenali bentuk energi",
+      "body": "Benda di sekitar kita memanfaatkan berbagai bentuk energi."
+    },
+    {
+      "title": "Lihat perubahan",
+      "body": "Energi listrik bisa berubah menjadi cahaya, panas, atau bunyi."
+    },
+    {
+      "title": "Hubungkan dengan contoh",
+      "body": "Setiap alat rumah tangga memberi contoh perubahan energi yang berbeda."
+    }
+  ],
+  "summary": "Energi tidak hilang, tetapi dapat berpindah dan berubah bentuk sesuai proses yang terjadi."
+}

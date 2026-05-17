@@ -88,6 +88,7 @@ def generate_workspace_video(
             session,
             user=account,
             workspace_id=workspace_id,
+            generation_mode=payload.generation_mode,
             template_id=payload.template_id,
             spec_json=payload.spec_json,
             language=payload.language,

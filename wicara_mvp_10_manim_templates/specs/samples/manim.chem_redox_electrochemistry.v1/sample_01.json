@@ -1,0 +1,28 @@
+{
+  "id": "sample_redox_electrochemistry_42",
+  "node_id": "phase5_redox_electrochemistry",
+  "template_id": "manim.chem_redox_electrochemistry.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Redoks dan Elektrokimia",
+  "subtitle": "Elektron berpindah dari anoda ke katoda dalam sel elektrokimia.",
+  "left_half": "Zn -> Zn2+ + 2e-",
+  "right_half": "Cu2+ + 2e- -> Cu",
+  "cell_label": "Sel Volta",
+  "steps": [
+    {
+      "title": "Oksidasi",
+      "body": "Anoda melepaskan elektron sehingga terjadi oksidasi."
+    },
+    {
+      "title": "Reduksi",
+      "body": "Katoda menerima elektron sehingga terjadi reduksi."
+    },
+    {
+      "title": "Arus dan ion",
+      "body": "Aliran elektron di kawat dan perpindahan ion menjaga reaksi tetap berlangsung."
+    }
+  ],
+  "summary": "Konsep redoks terhubung langsung dengan cara kerja sel volta, baterai, dan proses elektrolisis."
+}

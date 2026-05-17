@@ -1,0 +1,58 @@
+{
+  "id": "sample_environment_energy_system_36",
+  "node_id": "phase5_environment_energy_system",
+  "template_id": "manim.energy_environment_system.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Energi, Iklim, dan Lingkungan",
+  "subtitle": "Pilihan sumber energi memengaruhi emisi dan kualitas lingkungan.",
+  "nodes": [
+    {
+      "label": "Sumber",
+      "detail": "fosil/terbarukan"
+    },
+    {
+      "label": "Konversi",
+      "detail": "pembangkit"
+    },
+    {
+      "label": "Pemakaian",
+      "detail": "transportasi/rumah"
+    },
+    {
+      "label": "Dampak",
+      "detail": "emisi"
+    }
+  ],
+  "flows": [
+    "energi primer",
+    "energi listrik",
+    "dampak lingkungan"
+  ],
+  "impact_metrics": [
+    {
+      "label": "Fosil",
+      "value": 8
+    },
+    {
+      "label": "Terbarukan",
+      "value": 3
+    }
+  ],
+  "steps": [
+    {
+      "title": "Lacak sistem",
+      "body": "Energi bergerak dari sumber ke pemakaian melalui tahap konversi."
+    },
+    {
+      "title": "Bandingkan dampak",
+      "body": "Setiap sumber energi memiliki jejak lingkungan yang berbeda."
+    },
+    {
+      "title": "Ambil keputusan",
+      "body": "Pilihan energi perlu mempertimbangkan manfaat dan dampak jangka panjang."
+    }
+  ],
+  "summary": "Analisis sistem energi membantu menjelaskan hubungan antara kebutuhan energi dan perubahan lingkungan."
+}

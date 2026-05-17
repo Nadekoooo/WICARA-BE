@@ -1,0 +1,31 @@
+{
+  "id": "sample_trigonometric_ratio_triangle_52",
+  "node_id": "phase5_trigonometric_ratio_triangle",
+  "template_id": "manim.trig_ratio_triangle.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Perbandingan Trigonometri pada Segitiga",
+  "subtitle": "Sinus, cosinus, dan tangen dibentuk dari hubungan sisi-sisi pada segitiga siku-siku.",
+  "sides": {
+    "depan": 3,
+    "samping": 4,
+    "miring": 5
+  },
+  "theta_label": "θ",
+  "steps": [
+    {
+      "title": "Tentukan sudut acuan",
+      "body": "Pilih sudut yang akan dipakai untuk membaca sisi depan dan sisi samping."
+    },
+    {
+      "title": "Identifikasi sisi",
+      "body": "Setiap sisi memiliki peran berbeda: depan, samping, dan miring."
+    },
+    {
+      "title": "Bangun rasio",
+      "body": "sin θ = depan/miring, cos θ = samping/miring, tan θ = depan/samping."
+    }
+  ],
+  "summary": "Trigonometri dasar berangkat dari hubungan sederhana pada segitiga siku-siku."
+}

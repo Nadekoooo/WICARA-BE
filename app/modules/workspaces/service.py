@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.modules.accounts.models import UserAccount
 from app.modules.inputs.service import create_workspace_input_event
 from app.modules.learning.models import LearningTrack, MediaArtifact, TrackModule
+from app.modules.learning.spec_generator import generate_spec_from_workspace_context
 from app.modules.learning.service import media_artifact_to_schema, queue_animation_job
 from app.modules.workspaces.mastery import WorkspaceMasteryService
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
@@ -32,6 +33,12 @@ VALID_EVENT_TYPES = {
 }
 VALID_ACTOR_TYPES = {"learner", "tutor", "system"}
 _mastery_service = WorkspaceMasteryService()
+
+_PILOT_NODE_ID = "km_d_matematika_bilangan_bulat"
+_PILOT_CONCEPT_TYPE = "number_line_quantity_model"
+_PILOT_TEMPLATE_ID = "manim.number_line_quantity.v1"
+_PILOT_PREREQUISITES = ["km_c_matematika_bilangan_cacah_sampai_1000000"]
+_PILOT_CONTEXT_SOURCE = "hardcoded_number_line_pilot"
 
 
 def create_or_resume_workspace(
@@ -73,6 +80,7 @@ def create_or_resume_workspace(
         workspace.content_mode = _normalize_content_mode(content_mode)
         workspace.status = "active"
         workspace.updated_at = datetime.now(UTC)
+    _apply_workspace_pilot_context(workspace)
     module.status = "active"
     track.status = "active"
 
@@ -189,7 +197,8 @@ def queue_workspace_video_generation(
     *,
     user: UserAccount,
     workspace_id: UUID,
-    template_id: str,
+    generation_mode: str,
+    template_id: str | None,
     spec_json: dict[str, Any],
     language: str,
     quality_profile: str,
@@ -200,44 +209,72 @@ def queue_workspace_video_generation(
     if workspace is None:
         return None
 
+    normalized_generation_mode = _normalize_generation_mode(generation_mode)
+    if normalized_generation_mode == "context_auto":
+        generated = generate_spec_from_workspace_context(
+            workspace=workspace,
+            language=language,
+        )
+        resolved_template_id = generated.template_id
+        resolved_spec_json = generated.spec_json
+        resolved_metadata = generated.debug_meta
+    else:
+        resolved_template_id = (template_id or "").strip().lower()
+        if not resolved_template_id:
+            raise ValueError("template_id must not be empty when generation_mode is 'manual'.")
+        resolved_spec_json = dict(spec_json)
+        resolved_metadata = {
+            "spec_source": "manual_payload",
+            "resolved_template_id": resolved_template_id,
+        }
+
     queue = queue_animation_job(
         session,
         user=user,
         workspace_id=workspace.id,
         concept_id=concept_id,
-        template_id=template_id,
-        spec_json=spec_json,
+        template_id=resolved_template_id,
+        spec_json=resolved_spec_json,
         language=language,
         quality_profile=quality_profile,
     )
     event_metadata = {
         **metadata,
         "source": "workspace_generate_video_api",
-        "template_id": template_id.strip().lower(),
+        "generation_mode": normalized_generation_mode,
+        "template_id": resolved_template_id,
         "job_id": str(queue.job_id),
         "artifact_id": str(queue.artifact_id),
         "queue_status": queue.status,
+        **resolved_metadata,
     }
     if queue.error_details is not None:
         event_metadata["error_details"] = queue.error_details
 
-    event_response = append_workspace_event(
-        session,
-        user=user,
-        workspace_id=workspace.id,
+    event = WorkspaceEvent(
+        workspace_session_id=workspace.id,
+        event_index=_next_event_index(session, workspace_id=workspace.id),
         event_type="media_generated",
         actor_type="system",
         text_payload="",
         image_asset_id=None,
         media_artifact_id=queue.artifact_id,
-        metadata=event_metadata,
+        input_event_id=None,
+        metadata_json=event_metadata,
     )
-    if event_response is None:
+    workspace.updated_at = datetime.now(UTC)
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+
+    workspace = _load_workspace(session, user=user, workspace_id=workspace.id)
+    if workspace is None:
         return None
+
     return WorkspaceGenerateVideoResponse(
         queue=queue,
-        event=event_response.event,
-        workspace=event_response.workspace,
+        event=event_to_schema(event),
+        workspace=workspace_to_schema(session, workspace),
     )
 
 
@@ -356,6 +393,29 @@ def _normalize_actor_type(actor_type: str) -> str:
 def _normalize_content_mode(content_mode: str) -> str:
     normalized = content_mode.strip().lower().replace("-", "_").replace(" ", "_")
     return normalized or "chat"
+
+
+def _normalize_generation_mode(generation_mode: str) -> str:
+    normalized = generation_mode.strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {"auto": "context_auto", "context": "context_auto"}
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in {"manual", "context_auto"}:
+        raise ValueError("generation_mode must be either 'manual' or 'context_auto'.")
+    return normalized
+
+
+def _apply_workspace_pilot_context(workspace: WorkspaceSession) -> None:
+    metadata = dict(workspace.metadata_json or {})
+    metadata.update(
+        {
+            "active_node_id": _PILOT_NODE_ID,
+            "active_concept_type": _PILOT_CONCEPT_TYPE,
+            "active_template_id": _PILOT_TEMPLATE_ID,
+            "active_prerequisites": list(_PILOT_PREREQUISITES),
+            "context_source": _PILOT_CONTEXT_SOURCE,
+        }
+    )
+    workspace.metadata_json = metadata
 
 
 def _complete_workspace_module(

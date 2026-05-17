@@ -1,0 +1,81 @@
+{
+  "id": "sample_stoichiometry_board_distinct",
+  "node_id": "phase5_chemistry_stoichiometry_mole_ratio",
+  "template_id": "manim.stoichiometry_board.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Stoikiometri dari Koefisien Reaksi",
+  "subtitle": "Koefisien persamaan seimbang menjadi rasio mol antar zat.",
+  "balanced_equation": "N₂ + 3H₂ → 2NH₃",
+  "species": [
+    {
+      "formula": "N₂",
+      "coef": 1
+    },
+    {
+      "formula": "H₂",
+      "coef": 3
+    },
+    {
+      "formula": "NH₃",
+      "coef": 2
+    }
+  ],
+  "given": {
+    "species": "N₂",
+    "amount": 2,
+    "unit": "mol"
+  },
+  "target": {
+    "species": "NH₃",
+    "amount": 4,
+    "unit": "mol"
+  },
+  "steps": [
+    {
+      "title": "Baca koefisien",
+      "body": "Koefisien menyatakan perbandingan mol dalam reaksi seimbang.",
+      "narration": "Baca koefisien. Koefisien menyatakan perbandingan mol dalam reaksi seimbang."
+    },
+    {
+      "title": "Buat rasio",
+      "body": "Gunakan rasio zat target terhadap zat yang diketahui.",
+      "narration": "Buat rasio. Gunakan rasio zat target terhadap zat yang diketahui."
+    },
+    {
+      "title": "Hitung target",
+      "body": "Mol target diperoleh dari mol diketahui dikali rasio koefisien.",
+      "narration": "Hitung target. Mol target diperoleh dari mol diketahui dikali rasio koefisien."
+    }
+  ],
+  "summary": "Stoikiometri memakai koefisien reaksi seimbang untuk mengonversi jumlah mol antar zat.",
+  "intro_narration": "Koefisien persamaan seimbang menjadi rasio mol antar zat.",
+  "summary_narration": "Stoikiometri memakai koefisien reaksi seimbang untuk mengonversi jumlah mol antar zat.",
+  "voiceover_script": "Koefisien persamaan seimbang menjadi rasio mol antar zat.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Koefisien persamaan seimbang menjadi rasio mol antar zat."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Baca koefisien. Koefisien menyatakan perbandingan mol dalam reaksi seimbang."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Buat rasio. Gunakan rasio zat target terhadap zat yang diketahui."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Hitung target. Mol target diperoleh dari mol diketahui dikali rasio koefisien."
+    },
+    {
+      "slot": "summary",
+      "text": "Stoikiometri memakai koefisien reaksi seimbang untuk mengonversi jumlah mol antar zat."
+    }
+  ]
+}

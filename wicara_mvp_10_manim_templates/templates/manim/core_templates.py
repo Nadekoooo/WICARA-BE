@@ -3,6 +3,7 @@ import os
 import math
 import re
 import textwrap
+import numpy as np
 from pathlib import Path
 
 try:
@@ -2958,3 +2959,3061 @@ class ForceDiagramTemplate(WicaraTemplateScene):
 
         active_card = self.render_step_cards(spec, active_card=active_card)
         self.clean_summary(spec, active_card=active_card)
+
+
+def _clone_spec(base_spec, patch):
+    spec = dict(base_spec)
+    for key, value in patch.items():
+        spec[key] = value
+    return spec
+
+
+# ============================================================
+# PHASE 4 EXPANDED CORE TEMPLATES (TOP 30 TRACK)
+# ============================================================
+
+
+# ============================================================
+# 11-30. DISTINCT TEMPLATE IMPLEMENTATIONS
+# ============================================================
+# These 20 templates intentionally do not subclass the original MVP
+# visual templates. They keep the same Wicara scene contract, but each
+# template owns a visual metaphor that matches its concept.
+
+
+def _as_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _as_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _fmt_num(value, digits=2):
+    value = _as_float(value, 0)
+    if abs(value - round(value)) < 1e-9:
+        return str(int(round(value)))
+    return f"{value:.{digits}f}".rstrip("0").rstrip(".")
+
+
+def _safe_label(text, max_chars=32):
+    return clamp_text("" if text is None else str(text), max_chars)
+
+
+def _make_table(rows, col_widths=None, font_size=16, header_color=YELLOW):
+    """Small deterministic table that avoids Manim Table version differences."""
+    if not rows:
+        return VGroup()
+    col_count = max(len(row) for row in rows)
+    col_widths = col_widths or [1.15] * col_count
+    row_h = 0.42
+    table = VGroup()
+    for r, row in enumerate(rows):
+        row_group = VGroup()
+        for c in range(col_count):
+            value = row[c] if c < len(row) else ""
+            rect = Rectangle(
+                width=col_widths[c],
+                height=row_h,
+                stroke_width=1,
+                stroke_color=GRAY_B,
+                fill_color=BLACK,
+                fill_opacity=0.30 if r else 0.55,
+            )
+            label = Text(
+                _safe_label(value, 24),
+                font_size=font_size,
+                color=header_color if r == 0 else WHITE,
+                weight=BOLD if r == 0 else NORMAL,
+            ).move_to(rect)
+            row_group.add(VGroup(rect, label))
+        row_group.arrange(RIGHT, buff=0)
+        table.add(row_group)
+    table.arrange(DOWN, buff=0)
+    return table
+
+
+def _math_or_text(expr, font_size=30, color=YELLOW):
+    expr = str(expr or "").strip()
+    if not expr:
+        return Text("", font_size=font_size)
+    try:
+        return MathTex(expr, font_size=font_size, color=color)
+    except Exception:
+        return Text(clamp_text(expr, 72), font_size=min(font_size, 26), color=color)
+
+
+def _build_axes_from_ranges(x_range, y_range, *, x_length=4.8, y_length=2.8, font_size=13):
+    xr = list(x_range or [0, 10, 1])
+    yr = list(y_range or [0, 10, 1])
+    if len(xr) < 3:
+        xr = [xr[0] if xr else 0, xr[1] if len(xr) > 1 else 10, 1]
+    if len(yr) < 3:
+        yr = [yr[0] if yr else 0, yr[1] if len(yr) > 1 else 10, 1]
+    if xr[1] <= xr[0]:
+        xr[1] = xr[0] + 1
+    if yr[1] <= yr[0]:
+        yr[1] = yr[0] + 1
+    if xr[2] <= 0:
+        xr[2] = max(1, (xr[1] - xr[0]) / 5)
+    if yr[2] <= 0:
+        yr[2] = max(1, (yr[1] - yr[0]) / 5)
+    return Axes(
+        x_range=xr,
+        y_range=yr,
+        x_length=x_length,
+        y_length=y_length,
+        tips=False,
+        axis_config={"include_numbers": True, "font_size": font_size},
+    )
+
+
+class ProbabilityTreeTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_probability_tree_distinct",
+        "node_id": "phase4_probability_compound_event",
+        "template_id": "manim.probability_tree.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Pohon Peluang Dua Tahap",
+        "subtitle": "Peluang gabungan dibaca dari cabang yang dilewati.",
+        "root_label": "Mulai",
+        "levels": [
+            {
+                "name": "Koin 1",
+                "branches": [
+                    {"label": "A", "probability": 0.5},
+                    {"label": "G", "probability": 0.5},
+                ],
+            },
+            {
+                "name": "Koin 2",
+                "branches": [
+                    {"label": "A", "probability": 0.5},
+                    {"label": "G", "probability": 0.5},
+                ],
+            },
+        ],
+        "highlight_path": ["A", "G"],
+        "final_probability": 0.25,
+        "steps": [
+            {"title": "Tahap pertama", "body": "Dari titik mulai, kejadian pertama membagi peluang menjadi beberapa cabang."},
+            {"title": "Tahap kedua", "body": "Setiap hasil tahap pertama bercabang lagi untuk kejadian berikutnya."},
+            {"title": "Kalikan jalur", "body": "Peluang gabungan diperoleh dengan mengalikan peluang pada cabang jalur itu."},
+        ],
+        "summary": "Pohon peluang membantu menghitung peluang gabungan dengan membaca dan mengalikan cabang pada satu jalur.",
+    }
+
+    def _level_branches(self, spec):
+        levels = spec.get("levels") or []
+        if len(levels) >= 2:
+            return levels[:2]
+        return [
+            {"name": "Tahap 1", "branches": [{"label": "A", "probability": 0.5}, {"label": "B", "probability": 0.5}]},
+            {"name": "Tahap 2", "branches": [{"label": "C", "probability": 0.5}, {"label": "D", "probability": 0.5}]},
+        ]
+
+    def construct(self):
+        spec = self.SPEC
+        levels = self._level_branches(spec)
+        first = levels[0].get("branches", [])[:3]
+        second = levels[1].get("branches", [])[:3]
+        highlight_path = [str(x) for x in spec.get("highlight_path", [])]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(
+            None,
+            self.make_card("Struktur cabang", "Setiap cabang mewakili hasil yang mungkin terjadi beserta peluangnya.", color=BLUE),
+        )
+
+        root = Dot(radius=0.09, color=YELLOW).move_to(LEFT * 5.05 + DOWN * 0.05)
+        root_label = Text(_safe_label(spec.get("root_label", "Mulai"), 18), font_size=17, color=YELLOW).next_to(root, LEFT, buff=0.10)
+        tree = VGroup(root, root_label)
+        level1_nodes = []
+        level2_nodes = []
+        edges = VGroup()
+
+        y_positions_1 = [1.35, 0.05, -1.25][: max(1, len(first))]
+        for i, branch in enumerate(first):
+            node = Dot(radius=0.08, color=TEAL).move_to(LEFT * 3.0 + UP * y_positions_1[i])
+            label = Text(_safe_label(branch.get("label", f"B{i+1}"), 12), font_size=16, color=TEAL).next_to(node, RIGHT, buff=0.08)
+            line = Line(root.get_center(), node.get_center(), color=GRAY_B)
+            prob_label = Text(_fmt_num(branch.get("probability", 0)), font_size=14, color=GRAY_A).move_to(line.point_from_proportion(0.52) + UP * 0.12)
+            group = VGroup(node, label)
+            level1_nodes.append((branch, node, group))
+            edges.add(VGroup(line, prob_label))
+            tree.add(group)
+
+        if not first:
+            first = [{"label": "A", "probability": 1}]
+        if not second:
+            second = [{"label": "B", "probability": 1}]
+
+        for i, (b1, node1, _) in enumerate(level1_nodes):
+            local_y = [0.45, -0.35, -1.05][: max(1, len(second))]
+            for j, branch in enumerate(second):
+                y = node1.get_y() + (local_y[j] if len(second) > 1 else 0)
+                node = Dot(radius=0.07, color=GREEN).move_to(LEFT * 0.85 + UP * y)
+                combined = f"{b1.get('label','')}→{branch.get('label','')}"
+                label = Text(_safe_label(combined, 14), font_size=14, color=GREEN).next_to(node, RIGHT, buff=0.06)
+                line = Line(node1.get_center(), node.get_center(), color=GRAY_B)
+                prob_label = Text(_fmt_num(branch.get("probability", 0)), font_size=13, color=GRAY_A).move_to(line.point_from_proportion(0.52) + UP * 0.10)
+                level2_nodes.append((b1, branch, node, VGroup(node, label)))
+                edges.add(VGroup(line, prob_label))
+                tree.add(VGroup(node, label))
+
+        level_names = VGroup(
+            Text(_safe_label(levels[0].get("name", "Tahap 1"), 18), font_size=16, color=GRAY_A).move_to(LEFT * 3.0 + UP * 2.05),
+            Text(_safe_label(levels[1].get("name", "Tahap 2"), 18), font_size=16, color=GRAY_A).move_to(LEFT * 0.85 + UP * 2.05),
+        )
+        tree.add(edges, level_names)
+        self.play(Create(edges), FadeIn(VGroup(root, root_label)), LaggedStart(*[FadeIn(g[2]) for g in level1_nodes], lag_ratio=0.12), run_time=1.0)
+
+        active_card = self.replace_card(active_card, self.make_card("Semua kemungkinan", "Cabang tahap kedua menunjukkan pasangan hasil dari dua kejadian.", color=TEAL))
+        self.play(LaggedStart(*[FadeIn(item[3]) for item in level2_nodes], lag_ratio=0.08), FadeIn(level_names), run_time=1.0)
+
+        selected = []
+        if len(highlight_path) >= 2:
+            for b1, b2, node, node_group in level2_nodes:
+                if str(b1.get("label")) == highlight_path[0] and str(b2.get("label")) == highlight_path[1]:
+                    selected.append((b1, b2, node, node_group))
+                    break
+        if selected:
+            b1, b2, node, node_group = selected[0]
+            path1 = Line(root.get_center(), np.array([-3.0, node_group.get_y(), 0.0]), color=YELLOW, stroke_width=6)
+            # Use actual first-level node closest to selected branch.
+            for cand_b, cand_node, _ in level1_nodes:
+                if str(cand_b.get("label")) == str(b1.get("label")):
+                    path1 = Line(root.get_center(), cand_node.get_center(), color=YELLOW, stroke_width=6)
+                    path2 = Line(cand_node.get_center(), node.get_center(), color=YELLOW, stroke_width=6)
+                    break
+            else:
+                path2 = Line(root.get_center(), node.get_center(), color=YELLOW, stroke_width=6)
+            result = spec.get("final_probability")
+            if result is None:
+                result = _as_float(b1.get("probability", 1), 1) * _as_float(b2.get("probability", 1), 1)
+            formula = Text(
+                f"P({highlight_path[0]} lalu {highlight_path[1]}) = {_fmt_num(b1.get('probability'))} × {_fmt_num(b2.get('probability'))} = {_fmt_num(result)}",
+                font_size=20,
+                color=YELLOW,
+            ).move_to(LEFT * 2.7 + DOWN * 2.45)
+            active_card = self.replace_card(active_card, self.make_card("Jalur terpilih", "Peluang gabungan pada satu jalur dihitung dengan perkalian.", color=YELLOW))
+            self.play(Create(path1), Create(path2), FadeIn(formula), run_time=0.9)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ScientificInquiryDataTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_scientific_inquiry_distinct",
+        "node_id": "phase4_science_inquiry_data",
+        "template_id": "manim.scientific_inquiry_data.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Inkuiri Ilmiah dari Data",
+        "subtitle": "Pertanyaan, variabel, data, lalu kesimpulan.",
+        "research_question": "Apakah durasi cahaya memengaruhi tinggi tanaman?",
+        "hypothesis": "Semakin lama terkena cahaya, tanaman tumbuh lebih tinggi.",
+        "variables": {
+            "independent": "Durasi cahaya",
+            "dependent": "Tinggi tanaman",
+            "controlled": ["Jenis tanaman", "Air", "Media tanam"],
+        },
+        "observations": [
+            {"x": 2, "y": 4.0, "label": "2 jam"},
+            {"x": 4, "y": 6.1, "label": "4 jam"},
+            {"x": 6, "y": 8.2, "label": "6 jam"},
+            {"x": 8, "y": 9.0, "label": "8 jam"},
+        ],
+        "x_label": "cahaya",
+        "y_label": "tinggi",
+        "conclusion": "Data mendukung hipotesis karena tinggi tanaman cenderung naik saat durasi cahaya bertambah.",
+        "steps": [
+            {"title": "Mulai dari pertanyaan", "body": "Pertanyaan menentukan data apa yang perlu dikumpulkan."},
+            {"title": "Pisahkan variabel", "body": "Variabel bebas diubah, variabel terikat diamati, variabel kontrol dijaga tetap."},
+            {"title": "Tarik kesimpulan", "body": "Kesimpulan harus kembali ke pola data, bukan hanya tebakan."},
+        ],
+        "summary": "Inkuiri ilmiah yang baik menghubungkan pertanyaan, variabel, data, dan kesimpulan secara konsisten.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        observations = spec.get("observations", []) or []
+        if not observations:
+            observations = [{"x": 1, "y": 1}, {"x": 2, "y": 2}]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(
+            None,
+            self.make_card("Pertanyaan penelitian", spec.get("research_question", "Pertanyaan menentukan arah eksperimen."), color=BLUE),
+        )
+
+        question_box = RoundedRectangle(width=5.4, height=0.8, corner_radius=0.15, color=BLUE, fill_opacity=0.30)
+        question_text = Text(safe_text(spec.get("research_question", "Pertanyaan"), 80, 42), font_size=17, line_spacing=0.82).move_to(question_box)
+        question_group = VGroup(question_box, question_text).move_to(LEFT * 2.65 + UP * 1.65)
+
+        variables = spec.get("variables", {}) or {}
+        variable_rows = [
+            ["Variabel", "Isi"],
+            ["Bebas", variables.get("independent", "-")],
+            ["Terikat", variables.get("dependent", "-")],
+            ["Kontrol", ", ".join(variables.get("controlled", [])[:3]) or "-"],
+        ]
+        variable_table = _make_table(variable_rows, col_widths=[1.05, 2.9], font_size=13)
+        variable_table.next_to(question_group, DOWN, buff=0.28)
+
+        self.play(FadeIn(question_group), run_time=0.55)
+        active_card = self.replace_card(active_card, self.make_card("Variabel eksperimen", "Pisahkan hal yang diubah, diukur, dan dijaga tetap.", color=TEAL))
+        self.play(FadeIn(variable_table), run_time=0.65)
+
+        xs = [_as_float(o.get("x"), i + 1) for i, o in enumerate(observations)]
+        ys = [_as_float(o.get("y"), 0) for o in observations]
+        xmin, xmax = min(xs), max(xs)
+        ymin, ymax = min(0, min(ys)), max(ys) + max(1, (max(ys) - min(ys)) * 0.15)
+        axes = _build_axes_from_ranges([xmin, xmax, max(1, (xmax - xmin) / 4)], [ymin, ymax, max(1, ymax / 4)], x_length=4.8, y_length=2.45)
+        axes.move_to(LEFT * 2.55 + DOWN * 1.30)
+        dots = VGroup(*[Dot(axes.c2p(x, y), radius=0.055, color=YELLOW) for x, y in zip(xs, ys)])
+        if len(xs) > 1:
+            line = VMobject(color=GREEN, stroke_width=3)
+            line.set_points_as_corners([axes.c2p(x, y) for x, y in zip(xs, ys)])
+        else:
+            line = VGroup()
+        graph_label = Text("data pengamatan", font_size=17, color=GREEN).next_to(axes, UP, buff=0.08)
+
+        active_card = self.replace_card(active_card, self.make_card("Data diamati", "Titik data membantu melihat pola, bukan hanya membaca angka satu per satu.", color=GREEN))
+        self.play(Create(axes), FadeIn(graph_label), LaggedStart(*[FadeIn(dot) for dot in dots], lag_ratio=0.12), run_time=0.9)
+        if len(xs) > 1:
+            self.play(Create(line), run_time=0.55)
+
+        conclusion = Text(safe_text(spec.get("conclusion", spec.get("summary", "")), 105, 48), font_size=16, color=YELLOW, line_spacing=0.82)
+        conclusion.next_to(axes, DOWN, buff=0.18)
+        active_card = self.replace_card(active_card, self.make_card("Kesimpulan berbasis data", "Kesimpulan harus sesuai dengan pola yang terlihat pada hasil pengamatan.", color=YELLOW))
+        self.play(FadeIn(conclusion), run_time=0.55)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class FinancialGrowthTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_financial_growth_distinct",
+        "node_id": "phase5_financial_compound_growth",
+        "template_id": "manim.financial_growth.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Pertumbuhan Nilai Majemuk",
+        "subtitle": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
+        "initial_amount": 100,
+        "rate_percent": 20,
+        "periods": 5,
+        "values": [100, 120, 144, 173, 207],
+        "currency": "ribu",
+        "formula_latex": "A_n=A_0(1+r)^n",
+        "steps": [
+            {"title": "Nilai awal", "body": "Mulai dari modal atau nilai dasar pada periode pertama."},
+            {"title": "Persentase tumbuh", "body": "Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja."},
+            {"title": "Efek majemuk", "body": "Selisih antar batang makin besar karena basis perhitungannya ikut membesar."},
+        ],
+        "summary": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        values = spec.get("values") or []
+        if not values:
+            amount = _as_float(spec.get("initial_amount", 100), 100)
+            rate = _as_float(spec.get("rate_percent", 10), 10) / 100
+            periods = max(2, _as_int(spec.get("periods", 5), 5))
+            values = [round(amount * ((1 + rate) ** i), 2) for i in range(periods)]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Nilai bertumbuh", "Batang menunjukkan nilai dari periode ke periode.", color=BLUE))
+
+        max_v = max(values) if values else 1
+        base_y = -2.10
+        left_x = -5.0
+        bar_w = min(0.48, 3.85 / max(1, len(values)))
+        bars = VGroup()
+        labels = VGroup()
+        for i, value in enumerate(values[:8]):
+            h = max(0.20, 2.55 * _as_float(value, 0) / max_v)
+            bar = Rectangle(width=bar_w, height=h, stroke_color=BLUE, fill_color=BLUE, fill_opacity=0.78)
+            bar.move_to(RIGHT * (left_x + i * (bar_w + 0.20)) + UP * (base_y + h / 2))
+            val_label = Text(_fmt_num(value), font_size=13, color=YELLOW).next_to(bar, UP, buff=0.07)
+            period_label = Text(f"P{i}", font_size=13, color=GRAY_A).next_to(bar, DOWN, buff=0.07)
+            bars.add(bar)
+            labels.add(val_label, period_label)
+        axis = Line(LEFT * 5.35 + UP * base_y, LEFT * 0.85 + UP * base_y, color=GRAY_B)
+        formula = _math_or_text(spec.get("formula_latex", "A_n=A_0(1+r)^n"), font_size=29, color=YELLOW).move_to(LEFT * 2.95 + UP * 1.65)
+        rate_text = Text(f"r = {_fmt_num(spec.get('rate_percent', 0))}% per periode", font_size=19, color=GRAY_A).next_to(formula, DOWN, buff=0.10)
+
+        self.play(Create(axis), FadeIn(formula), FadeIn(rate_text), run_time=0.65)
+        active_card = self.replace_card(active_card, self.make_card("Rumus majemuk", "Faktor 1+r dikalikan berulang untuk setiap periode.", color=TEAL))
+        self.play(LaggedStart(*[GrowFromEdge(bar, DOWN) for bar in bars], lag_ratio=0.10), FadeIn(labels), run_time=1.0)
+
+        arrows = VGroup()
+        for i in range(min(len(bars) - 1, 5)):
+            arrow = CurvedArrow(bars[i].get_top() + UP * 0.08, bars[i + 1].get_top() + UP * 0.08, angle=-TAU / 8, color=GREEN, stroke_width=3)
+            arrows.add(arrow)
+        if arrows:
+            active_card = self.replace_card(active_card, self.make_card("Efek berantai", "Kenaikan berikutnya memakai nilai yang sudah bertambah.", color=GREEN))
+            self.play(LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.12), run_time=0.8)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class DataRepresentationTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_data_representation_distinct",
+        "node_id": "phase4_statistics_data_display",
+        "template_id": "manim.data_representation.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Representasi Data Kategori",
+        "subtitle": "Diagram batang membuat perbandingan kategori lebih cepat terlihat.",
+        "categories": [
+            {"label": "A", "value": 12},
+            {"label": "B", "value": 19},
+            {"label": "C", "value": 7},
+            {"label": "D", "value": 15},
+        ],
+        "unit": "siswa",
+        "highlight_category": "B",
+        "steps": [
+            {"title": "Ubah tabel jadi visual", "body": "Setiap kategori diberi batang dengan tinggi sesuai nilainya."},
+            {"title": "Bandingkan tinggi", "body": "Batang yang lebih tinggi menunjukkan nilai yang lebih besar."},
+            {"title": "Ambil informasi penting", "body": "Kita dapat cepat melihat kategori terbesar dan terkecil."},
+        ],
+        "summary": "Diagram batang cocok untuk membandingkan nilai antar kategori secara visual.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        categories = spec.get("categories") or []
+        if not categories:
+            categories = [{"label": "A", "value": 1}, {"label": "B", "value": 2}]
+        categories = categories[:7]
+        values = [_as_float(c.get("value"), 0) for c in categories]
+        max_v = max(values) if values else 1
+        highlight = str(spec.get("highlight_category", ""))
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Dari data ke diagram", "Angka dalam tabel diterjemahkan menjadi tinggi batang.", color=BLUE))
+
+        rows = [["Kategori", "Nilai"]] + [[c.get("label", ""), _fmt_num(c.get("value", 0))] for c in categories]
+        table = _make_table(rows, col_widths=[1.12, 1.0], font_size=13).move_to(LEFT * 4.55 + UP * 0.15)
+        self.play(FadeIn(table), run_time=0.65)
+
+        base_y = -2.10
+        bars = VGroup()
+        labels = VGroup()
+        for i, cat in enumerate(categories):
+            value = _as_float(cat.get("value"), 0)
+            h = max(0.16, 2.55 * value / max_v)
+            label_text = str(cat.get("label", f"K{i+1}"))
+            color = YELLOW if label_text == highlight else TEAL
+            bar = Rectangle(width=0.46, height=h, stroke_color=color, fill_color=color, fill_opacity=0.76)
+            bar.move_to(LEFT * 2.9 + RIGHT * (i * 0.62) + UP * (base_y + h / 2))
+            val = Text(_fmt_num(value), font_size=13, color=color).next_to(bar, UP, buff=0.06)
+            lab = Text(_safe_label(label_text, 8), font_size=13, color=GRAY_A).next_to(bar, DOWN, buff=0.06)
+            bars.add(bar)
+            labels.add(val, lab)
+        axis = Line(LEFT * 3.25 + UP * base_y, RIGHT * 1.35 + UP * base_y, color=GRAY_B)
+        unit = Text(spec.get("unit", "jumlah"), font_size=16, color=GRAY_A).next_to(axis, DOWN, buff=0.32)
+        chart_title = Text("diagram batang", font_size=19, color=TEAL).move_to(LEFT * 0.9 + UP * 1.55)
+
+        active_card = self.replace_card(active_card, self.make_card("Diagram batang", "Panjang batang sebanding dengan nilai kategorinya.", color=TEAL))
+        self.play(Create(axis), FadeIn(chart_title), FadeIn(unit), LaggedStart(*[GrowFromEdge(b, DOWN) for b in bars], lag_ratio=0.10), FadeIn(labels), run_time=1.0)
+
+        if highlight:
+            selected = [bars[i] for i, cat in enumerate(categories) if str(cat.get("label")) == highlight]
+            if selected:
+                surround = SurroundingRectangle(selected[0], color=YELLOW, buff=0.06)
+                active_card = self.replace_card(active_card, self.make_card("Sorot kategori", f"Kategori {highlight} menjadi fokus karena nilainya ingin dibandingkan.", color=YELLOW))
+                self.play(Create(surround), run_time=0.45)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class StatisticsCenterSpreadTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_statistics_center_spread_distinct",
+        "node_id": "phase4_statistics_center_spread",
+        "template_id": "manim.statistics_center_spread.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Pemusatan dan Penyebaran Data",
+        "subtitle": "Nilai tengah dan rentang memberi dua informasi berbeda.",
+        "data_values": [4, 5, 5, 6, 7, 8, 10],
+        "center_metrics": {"mean": 6.4, "median": 6},
+        "spread_metrics": {"range": 6, "min": 4, "max": 10},
+        "steps": [
+            {"title": "Susun data", "body": "Dot plot menempatkan setiap nilai pada garis bilangan."},
+            {"title": "Cari pusat", "body": "Mean dan median menjelaskan nilai yang mewakili tengah data."},
+            {"title": "Lihat sebaran", "body": "Range menunjukkan jarak dari nilai terkecil sampai terbesar."},
+        ],
+        "summary": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        data = sorted([_as_float(x, 0) for x in (spec.get("data_values") or [1, 2, 3])])
+        min_v = min(data)
+        max_v = max(data)
+        if max_v <= min_v:
+            max_v = min_v + 1
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Dot plot", "Setiap titik mewakili satu data pada garis nilai.", color=BLUE))
+
+        line = NumberLine(x_range=[min_v, max_v, max(1, (max_v - min_v) / 6)], length=5.6, include_numbers=True, font_size=14)
+        line.move_to(LEFT * 2.65 + DOWN * 0.95)
+        stacks = {}
+        dots = VGroup()
+        for value in data:
+            key = round(value, 6)
+            stacks[key] = stacks.get(key, 0) + 1
+            dot = Dot(line.n2p(value) + UP * (0.18 * stacks[key]), radius=0.055, color=YELLOW)
+            dots.add(dot)
+        self.play(Create(line), LaggedStart(*[FadeIn(d) for d in dots], lag_ratio=0.08), run_time=0.9)
+
+        center = spec.get("center_metrics", {}) or {}
+        mean = _as_float(center.get("mean"), sum(data) / len(data))
+        median = _as_float(center.get("median"), data[len(data) // 2])
+        mean_line = Line(line.n2p(mean) + DOWN * 0.25, line.n2p(mean) + UP * 1.0, color=GREEN, stroke_width=4)
+        median_line = DashedLine(line.n2p(median) + DOWN * 0.25, line.n2p(median) + UP * 1.0, color=TEAL, stroke_width=3)
+        mean_label = Text(f"mean {_fmt_num(mean)}", font_size=15, color=GREEN).next_to(mean_line, UP, buff=0.07)
+        median_label = Text(f"median {_fmt_num(median)}", font_size=15, color=TEAL).next_to(median_line, DOWN, buff=0.10)
+        active_card = self.replace_card(active_card, self.make_card("Ukuran pusat", "Mean memakai semua nilai, median melihat posisi tengah setelah data diurutkan.", color=GREEN))
+        self.play(Create(mean_line), FadeIn(mean_label), Create(median_line), FadeIn(median_label), run_time=0.75)
+
+        spread = spec.get("spread_metrics", {}) or {}
+        smin = _as_float(spread.get("min"), min(data))
+        smax = _as_float(spread.get("max"), max(data))
+        range_val = _as_float(spread.get("range"), smax - smin)
+        brace = BraceBetweenPoints(line.n2p(smin) + DOWN * 0.50, line.n2p(smax) + DOWN * 0.50, DOWN, color=PURPLE)
+        range_label = Text(f"range = {_fmt_num(range_val)}", font_size=17, color=PURPLE).next_to(brace, DOWN, buff=0.08)
+        metric_rows = [["Pusat", "Nilai"], ["Mean", _fmt_num(mean)], ["Median", _fmt_num(median)], ["Range", _fmt_num(range_val)]]
+        table = _make_table(metric_rows, col_widths=[1.25, 1.05], font_size=14).move_to(LEFT * 4.75 + UP * 1.18)
+        active_card = self.replace_card(active_card, self.make_card("Ukuran sebaran", "Range menunjukkan lebar persebaran dari minimum ke maksimum.", color=PURPLE))
+        self.play(Create(brace), FadeIn(range_label), FadeIn(table), run_time=0.75)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class GeometryTransformTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_geometry_transform_distinct",
+        "node_id": "phase4_congruence_similarity_transform",
+        "template_id": "manim.geometry_transform.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Transformasi Geometri",
+        "subtitle": "Translasi, rotasi, dan refleksi mengubah posisi atau orientasi bangun.",
+        "shape_points": [[-1.0, -0.6], [0.9, -0.6], [-0.2, 0.9]],
+        "transformations": [
+            {"type": "translate", "vector": [2.0, 0.7], "label": "Translasi"},
+            {"type": "rotate", "angle_degrees": 90, "label": "Rotasi 90°"},
+            {"type": "reflect", "axis": "y", "label": "Refleksi sumbu-y"},
+        ],
+        "invariant_text": "Ukuran dan bentuk tetap, posisi/orientasi berubah.",
+        "steps": [
+            {"title": "Bangun awal", "body": "Amati titik-titik dan sisi bangun sebelum berubah."},
+            {"title": "Terapkan transformasi", "body": "Setiap transformasi punya aturan posisi yang jelas."},
+            {"title": "Cek sifat tetap", "body": "Pada transformasi kaku, bentuk dan ukuran tidak berubah."},
+        ],
+        "summary": "Transformasi geometri memindahkan atau mengubah orientasi bangun dengan aturan yang dapat dilacak.",
+    }
+
+    def _polygon_from_points(self, points, color=BLUE):
+        pts = [LEFT * 2.9 + RIGHT * _as_float(p[0], 0) + UP * _as_float(p[1], 0) for p in points]
+        return Polygon(*pts, color=color, fill_color=color, fill_opacity=0.28, stroke_width=3)
+
+    def construct(self):
+        spec = self.SPEC
+        points = spec.get("shape_points") or [[-1, -0.6], [1, -0.6], [0, 0.8]]
+        transformations = spec.get("transformations") or []
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Bangun awal", "Kita mulai dari satu bangun dengan titik dan sisi yang jelas.", color=BLUE))
+
+        original = self._polygon_from_points(points, color=BLUE)
+        original_label = Text("awal", font_size=17, color=BLUE).next_to(original, DOWN, buff=0.10)
+        self.play(FadeIn(original), FadeIn(original_label), run_time=0.65)
+
+        current = original.copy()
+        labels = VGroup(original_label)
+        colors = [TEAL, GREEN, YELLOW]
+        for i, tr in enumerate(transformations[:3]):
+            new_shape = current.copy().set_color(colors[i]).set_fill(colors[i], opacity=0.24)
+            typ = str(tr.get("type", "translate")).lower()
+            if typ == "translate":
+                v = tr.get("vector", [1.3, 0.4])
+                new_shape.shift(RIGHT * _as_float(v[0], 1.3) + UP * _as_float(v[1], 0.4))
+            elif typ == "rotate":
+                new_shape.rotate(_as_float(tr.get("angle_degrees", 90), 90) * DEGREES, about_point=current.get_center())
+                new_shape.shift(RIGHT * 2.0 + DOWN * 0.25)
+            elif typ == "reflect":
+                axis = str(tr.get("axis", "y")).lower()
+                new_shape = current.copy().set_color(colors[i]).set_fill(colors[i], opacity=0.24)
+                if axis == "x":
+                    new_shape.apply_function(lambda p: np.array([p[0], -p[1] - 0.45, p[2]]))
+                else:
+                    new_shape.apply_function(lambda p: np.array([-p[0] - 1.05, p[1], p[2]]))
+            else:
+                new_shape.shift(RIGHT * 1.3)
+            label = Text(_safe_label(tr.get("label", typ), 18), font_size=16, color=colors[i]).next_to(new_shape, DOWN, buff=0.10)
+            arrow = Arrow(current.get_right() + RIGHT * 0.10, new_shape.get_left() + LEFT * 0.10, buff=0.05, color=GRAY_B, stroke_width=3)
+            active_card = self.replace_card(active_card, self.make_card(_safe_label(tr.get("label", typ), 24), "Bangun baru dibuat dari aturan transformasi, bukan digambar sembarang.", color=colors[i]))
+            self.play(Create(arrow), TransformFromCopy(current, new_shape), FadeIn(label), run_time=0.85)
+            current = new_shape
+            labels.add(label, arrow)
+
+        invariant = Text(safe_text(spec.get("invariant_text", "Bentuk dan ukuran tetap."), 80, 42), font_size=18, color=YELLOW, line_spacing=0.82).move_to(LEFT * 2.7 + DOWN * 2.35)
+        active_card = self.replace_card(active_card, self.make_card("Sifat yang tetap", "Bandingkan sisi dan bentuk: transformasi kaku tidak mengubah ukuran.", color=YELLOW))
+        self.play(FadeIn(invariant), run_time=0.55)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ExponentialGrowthTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_exponential_growth_distinct",
+        "node_id": "phase5_exponential_growth_model",
+        "template_id": "manim.exponential_growth.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Pertumbuhan Eksponensial",
+        "subtitle": "Nilai bertambah dengan faktor kali tetap.",
+        "initial": 1,
+        "growth_factor": 2,
+        "periods": 5,
+        "values": [1, 2, 4, 8, 16],
+        "formula_latex": "a_n=a_0\\cdot r^n",
+        "steps": [
+            {"title": "Faktor tetap", "body": "Setiap periode dikalikan faktor yang sama."},
+            {"title": "Pertumbuhan makin cepat", "body": "Tambahan absolut makin besar walaupun faktornya tetap."},
+            {"title": "Model prediksi", "body": "Rumus eksponensial membantu memperkirakan periode berikutnya."},
+        ],
+        "summary": "Pertumbuhan eksponensial terjadi ketika nilai berulang kali dikalikan faktor tetap.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        values = spec.get("values") or []
+        if not values:
+            initial = _as_float(spec.get("initial", 1), 1)
+            factor = _as_float(spec.get("growth_factor", 2), 2)
+            periods = max(2, _as_int(spec.get("periods", 5), 5))
+            values = [initial * (factor ** i) for i in range(periods)]
+        values = values[:6]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Duplikasi berulang", "Pada tiap periode, setiap unit menghasilkan beberapa unit baru.", color=BLUE))
+
+        levels = VGroup()
+        max_v = max(values)
+        for i, value in enumerate(values):
+            count = min(32, max(1, int(round(_as_float(value, 1)))))
+            dots = VGroup()
+            cols = min(8, max(1, math.ceil(math.sqrt(count))))
+            for j in range(count):
+                dot = Dot(radius=0.035, color=YELLOW)
+                dot.move_to(RIGHT * ((j % cols) * 0.14) + DOWN * ((j // cols) * 0.14))
+                dots.add(dot)
+            dots.center()
+            dots.move_to(LEFT * 5.0 + RIGHT * (i * 0.82) + UP * (0.65 - min(0.5, count / 60)))
+            label = Text(_fmt_num(value), font_size=14, color=YELLOW).next_to(dots, DOWN, buff=0.08)
+            period = Text(f"n={i}", font_size=12, color=GRAY_A).next_to(label, DOWN, buff=0.04)
+            levels.add(VGroup(dots, label, period))
+        arrows = VGroup(*[Arrow(levels[i].get_right(), levels[i+1].get_left(), buff=0.05, color=GRAY_B, stroke_width=3) for i in range(len(levels)-1)])
+        formula = _math_or_text(spec.get("formula_latex", "a_n=a_0 r^n"), font_size=30, color=GREEN).move_to(LEFT * 2.75 + DOWN * 1.55)
+        factor_text = Text(f"faktor kali = {_fmt_num(spec.get('growth_factor', 2))}", font_size=18, color=GREEN).next_to(formula, DOWN, buff=0.10)
+
+        self.play(LaggedStart(*[FadeIn(g) for g in levels], lag_ratio=0.12), run_time=0.95)
+        active_card = self.replace_card(active_card, self.make_card("Faktor kali", "Panah menunjukkan perpindahan dari satu periode ke periode berikutnya.", color=TEAL))
+        self.play(LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.10), FadeIn(formula), FadeIn(factor_text), run_time=0.8)
+
+        max_h = 2.0
+        bars = VGroup()
+        for i, value in enumerate(values):
+            h = max(0.12, max_h * _as_float(value, 0) / max_v)
+            bar = Rectangle(width=0.32, height=h, color=PURPLE, fill_opacity=0.65).move_to(LEFT * 4.55 + RIGHT * (i * 0.48) + DOWN * (2.2 - h / 2))
+            bars.add(bar)
+        active_card = self.replace_card(active_card, self.make_card("Kurva makin curam", "Jika dibuat grafik, kenaikan absolut terlihat makin besar.", color=PURPLE))
+        self.play(LaggedStart(*[GrowFromEdge(b, DOWN) for b in bars], lag_ratio=0.08), run_time=0.75)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class FunctionMappingTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_function_mapping_distinct",
+        "node_id": "phase4_function_mapping_rule",
+        "template_id": "manim.function_mapping.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Fungsi sebagai Mesin Pemetaan",
+        "subtitle": "Setiap input diproses oleh aturan dan menghasilkan tepat satu output.",
+        "rule_text": "kalikan 2 lalu tambah 1",
+        "formula_latex": "f(x)=2x+1",
+        "pairs": [{"input": -1, "output": -1}, {"input": 0, "output": 1}, {"input": 1, "output": 3}, {"input": 2, "output": 5}],
+        "steps": [
+            {"title": "Masukkan input", "body": "Nilai x masuk ke mesin fungsi satu per satu."},
+            {"title": "Gunakan aturan", "body": "Aturan yang sama diterapkan pada semua input."},
+            {"title": "Hasil unik", "body": "Untuk setiap input, fungsi memberi tepat satu output."},
+        ],
+        "summary": "Fungsi adalah aturan yang memasangkan setiap input dengan tepat satu output.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        pairs = spec.get("pairs") or []
+        if not pairs:
+            pairs = [{"input": 0, "output": 0}]
+        pairs = pairs[:5]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Input ke output", "Fungsi bisa dipahami seperti mesin yang menerapkan aturan tertentu.", color=BLUE))
+
+        input_nodes = VGroup()
+        output_nodes = VGroup()
+        for i, pair in enumerate(pairs):
+            y = 1.35 - i * 0.58
+            in_circle = Circle(radius=0.22, color=BLUE, fill_opacity=0.35).move_to(LEFT * 5.0 + UP * y)
+            in_label = Text(_fmt_num(pair.get("input", 0)), font_size=15, color=BLUE).move_to(in_circle)
+            out_circle = Circle(radius=0.22, color=GREEN, fill_opacity=0.35).move_to(LEFT * 0.55 + UP * y)
+            out_label = Text(_fmt_num(pair.get("output", 0)), font_size=15, color=GREEN).move_to(out_circle)
+            input_nodes.add(VGroup(in_circle, in_label))
+            output_nodes.add(VGroup(out_circle, out_label))
+
+        machine = RoundedRectangle(width=1.65, height=1.15, corner_radius=0.18, color=YELLOW, fill_opacity=0.22).move_to(LEFT * 2.75 + UP * 0.25)
+        machine_label = Text(safe_text(spec.get("rule_text", "aturan"), 36, 16), font_size=15, color=YELLOW, line_spacing=0.82).move_to(machine)
+        formula = _math_or_text(spec.get("formula_latex", "f(x)"), font_size=29, color=YELLOW).next_to(machine, DOWN, buff=0.20)
+        arrows = VGroup()
+        for i in range(len(pairs)):
+            arrows.add(Arrow(input_nodes[i].get_right(), machine.get_left(), buff=0.05, color=GRAY_B, stroke_width=2.6))
+            arrows.add(Arrow(machine.get_right(), output_nodes[i].get_left(), buff=0.05, color=GRAY_B, stroke_width=2.6))
+
+        self.play(FadeIn(input_nodes), run_time=0.55)
+        active_card = self.replace_card(active_card, self.make_card("Aturan fungsi", "Aturan yang sama digunakan untuk semua nilai input.", color=YELLOW))
+        self.play(FadeIn(machine), FadeIn(machine_label), FadeIn(formula), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.05), run_time=0.9)
+        active_card = self.replace_card(active_card, self.make_card("Output tunggal", "Setiap input di kiri memiliki satu pasangan output di kanan.", color=GREEN))
+        self.play(FadeIn(output_nodes), run_time=0.55)
+
+        rows = [["x", "f(x)"]] + [[_fmt_num(p.get("input", 0)), _fmt_num(p.get("output", 0))] for p in pairs]
+        table = _make_table(rows, col_widths=[0.8, 0.9], font_size=14).move_to(LEFT * 4.85 + DOWN * 2.05)
+        self.play(FadeIn(table), run_time=0.55)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class GeometryMeasurementTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_geometry_measurement_distinct",
+        "node_id": "phase4_geometry_measurement_area_perimeter",
+        "template_id": "manim.geometry_measurement.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Mengukur Luas dan Keliling",
+        "subtitle": "Dimensi sisi menentukan perhitungan luas dan keliling.",
+        "shape_type": "rectangle",
+        "dimensions": {"length": 8, "width": 5, "unit": "cm"},
+        "formula_latex": "L=p\\times l,\\quad K=2(p+l)",
+        "results": {"area": 40, "perimeter": 26},
+        "steps": [
+            {"title": "Ukur sisi", "body": "Panjang dan lebar menjadi data awal perhitungan."},
+            {"title": "Isi satuan persegi", "body": "Luas berarti banyaknya persegi satuan yang menutup daerah."},
+            {"title": "Jumlah sisi luar", "body": "Keliling menghitung panjang seluruh batas luar bangun."},
+        ],
+        "summary": "Luas mengukur daerah tertutup, sedangkan keliling mengukur batas luarnya.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        dims = spec.get("dimensions", {}) or {}
+        length = _as_float(dims.get("length", 8), 8)
+        width = _as_float(dims.get("width", 5), 5)
+        unit = dims.get("unit", "satuan")
+        area = spec.get("results", {}).get("area", length * width)
+        perimeter = spec.get("results", {}).get("perimeter", 2 * (length + width))
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Bangun terukur", "Kita ukur sisi utama sebelum menghitung besaran geometri.", color=BLUE))
+
+        scale = min(0.46, 3.2 / max(1, length), 2.0 / max(1, width))
+        rect = Rectangle(width=length * scale, height=width * scale, color=BLUE, fill_opacity=0.18, stroke_width=3).move_to(LEFT * 2.85 + DOWN * 0.1)
+        length_arrow = DoubleArrow(rect.get_bottom() + LEFT * rect.width / 2, rect.get_bottom() + RIGHT * rect.width / 2, buff=0, color=YELLOW).next_to(rect, DOWN, buff=0.15)
+        length_label = Text(f"p = {_fmt_num(length)} {unit}", font_size=16, color=YELLOW).next_to(length_arrow, DOWN, buff=0.05)
+        width_arrow = DoubleArrow(rect.get_left() + DOWN * rect.height / 2, rect.get_left() + UP * rect.height / 2, buff=0, color=GREEN).next_to(rect, LEFT, buff=0.15)
+        width_label = Text(f"l = {_fmt_num(width)} {unit}", font_size=16, color=GREEN).next_to(width_arrow, LEFT, buff=0.05).rotate(PI/2)
+        self.play(Create(rect), FadeIn(length_arrow), FadeIn(length_label), FadeIn(width_arrow), FadeIn(width_label), run_time=0.85)
+
+        grid = VGroup()
+        cols = min(int(round(length)), 10)
+        rows = min(int(round(width)), 7)
+        cell_w = rect.width / max(1, cols)
+        cell_h = rect.height / max(1, rows)
+        for c in range(cols):
+            for r in range(rows):
+                sq = Rectangle(width=cell_w, height=cell_h, stroke_width=0.6, stroke_color=GRAY_B, fill_opacity=0)
+                sq.move_to(rect.get_left() + RIGHT * (cell_w * (c + 0.5)) + DOWN * rect.height / 2 + UP * (cell_h * (r + 0.5)))
+                grid.add(sq)
+        active_card = self.replace_card(active_card, self.make_card("Luas", "Daerah di dalam bangun dapat ditutup oleh satuan persegi.", color=TEAL))
+        self.play(Create(grid), run_time=0.65)
+
+        formula = _math_or_text(spec.get("formula_latex", "L=p\\times l"), font_size=30, color=YELLOW).move_to(LEFT * 2.85 + DOWN * 2.15)
+        result_text = Text(f"L = {_fmt_num(area)} {unit}²     K = {_fmt_num(perimeter)} {unit}", font_size=18, color=WHITE).next_to(formula, DOWN, buff=0.13)
+        active_card = self.replace_card(active_card, self.make_card("Keliling", "Batas luar dihitung dengan menjumlahkan seluruh sisi.", color=GREEN))
+        self.play(FadeIn(formula), FadeIn(result_text), Circumscribe(rect, color=GREEN), run_time=0.85)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class GeometryTheoremTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_geometry_theorem_distinct",
+        "node_id": "phase4_angle_sum_triangle",
+        "template_id": "manim.geometry_theorem.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Jumlah Sudut Segitiga",
+        "subtitle": "Tiga sudut dalam segitiga membentuk garis lurus 180°.",
+        "angles": [{"label": "A", "value": 50}, {"label": "B", "value": 60}, {"label": "C", "value": 70}],
+        "formula_latex": "\\angle A+\\angle B+\\angle C=180^\\circ",
+        "steps": [
+            {"title": "Tiga sudut", "body": "Setiap titik segitiga memiliki satu sudut dalam."},
+            {"title": "Pindahkan sudut", "body": "Jika ketiganya disusun berdampingan, bentuknya garis lurus."},
+            {"title": "Total 180°", "body": "Garis lurus membuktikan jumlah sudut segitiga adalah 180 derajat."},
+        ],
+        "summary": "Jumlah sudut dalam segitiga selalu 180 derajat.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        angles = spec.get("angles") or [{"label": "A", "value": 60}, {"label": "B", "value": 60}, {"label": "C", "value": 60}]
+        colors = [BLUE, TEAL, YELLOW]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Tiga sudut dalam", "Segitiga punya tiga sudut yang totalnya selalu sama.", color=BLUE))
+
+        A = LEFT * 4.4 + DOWN * 1.05
+        B = LEFT * 1.1 + DOWN * 1.05
+        C = LEFT * 2.75 + UP * 1.30
+        tri = Polygon(A, B, C, color=WHITE, fill_color=BLUE, fill_opacity=0.12, stroke_width=3)
+        labels = VGroup(
+            Text("A", font_size=16, color=BLUE).next_to(A, DOWN, buff=0.10),
+            Text("B", font_size=16, color=TEAL).next_to(B, DOWN, buff=0.10),
+            Text("C", font_size=16, color=YELLOW).next_to(C, UP, buff=0.10),
+        )
+        arcs = VGroup(
+            Arc(radius=0.36, start_angle=0, angle=52 * DEGREES, color=BLUE).move_arc_center_to(A),
+            Arc(radius=0.36, start_angle=128 * DEGREES, angle=52 * DEGREES, color=TEAL).move_arc_center_to(B),
+            Arc(radius=0.36, start_angle=230 * DEGREES, angle=78 * DEGREES, color=YELLOW).move_arc_center_to(C),
+        )
+        angle_labels = VGroup()
+        for i, angle in enumerate(angles[:3]):
+            value = _fmt_num(angle.get("value", 60))
+            angle_labels.add(Text(f"{angle.get('label', chr(65+i))}={value}°", font_size=15, color=colors[i]).move_to(LEFT * 4.55 + RIGHT * i * 1.2 + UP * 1.95))
+        self.play(Create(tri), FadeIn(labels), Create(arcs), FadeIn(angle_labels), run_time=0.9)
+
+        line = Line(LEFT * 4.7 + DOWN * 2.20, LEFT * 0.85 + DOWN * 2.20, color=GRAY_B, stroke_width=4)
+        pieces = VGroup()
+        x0 = -4.35
+        for i, angle in enumerate(angles[:3]):
+            piece = Sector(outer_radius=0.42, angle=max(20, _as_float(angle.get("value", 60), 60)) * DEGREES, color=colors[i], fill_opacity=0.45, stroke_color=colors[i])
+            piece.move_to(RIGHT * (x0 + i * 1.05) + DOWN * 2.20)
+            pieces.add(piece)
+        formula = _math_or_text(spec.get("formula_latex", "A+B+C=180^\\circ"), font_size=30, color=YELLOW).move_to(LEFT * 2.75 + UP * 2.35)
+        active_card = self.replace_card(active_card, self.make_card("Susun menjadi garis lurus", "Ketika sudut-sudut disusun berdampingan, totalnya menjadi 180°.", color=YELLOW))
+        self.play(Create(line), TransformFromCopy(arcs, pieces), FadeIn(formula), run_time=0.85)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class HeatEnergyMachineTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_heat_energy_machine_distinct",
+        "node_id": "phase5_heat_transfer_model",
+        "template_id": "manim.heat_energy_machine.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Kalor dan Perubahan Suhu",
+        "subtitle": "Energi panas yang masuk menaikkan suhu benda.",
+        "system": {"object_label": "Air", "mass_label": "m", "initial_temp": 25, "final_temp": 60, "unit": "°C"},
+        "heat_flow": [{"label": "Q masuk", "amount": "mcΔT"}],
+        "formula_latex": "Q=m c \\Delta T",
+        "timeline": [{"time": 0, "temp": 25}, {"time": 5, "temp": 42}, {"time": 10, "temp": 60}],
+        "steps": [
+            {"title": "Energi masuk", "body": "Kalor mengalir dari sumber panas ke benda."},
+            {"title": "Suhu naik", "body": "Partikel bergerak lebih cepat sehingga suhu meningkat."},
+            {"title": "Hubungkan rumus", "body": "Perubahan suhu terkait dengan massa dan kalor jenis."},
+        ],
+        "summary": "Kalor yang diterima sistem dapat mengubah suhu sesuai hubungan Q = mcΔT.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        system = spec.get("system", {}) or {}
+        initial = _as_float(system.get("initial_temp", 25), 25)
+        final = _as_float(system.get("final_temp", 60), 60)
+        unit = system.get("unit", "°C")
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Sistem panas", "Kita amati benda yang menerima energi panas dari sumber.", color=BLUE))
+
+        flame = VGroup()
+        for i, color in enumerate([RED, ORANGE, YELLOW]):
+            flame.add(Triangle(color=color, fill_color=color, fill_opacity=0.75).scale(0.42 - i*0.08).move_to(LEFT * 4.55 + DOWN * (0.10 - i*0.10)))
+        beaker = RoundedRectangle(width=1.25, height=1.55, corner_radius=0.12, color=BLUE, fill_opacity=0.12).move_to(LEFT * 2.65 + DOWN * 0.1)
+        liquid = Rectangle(width=1.10, height=0.80, color=TEAL, fill_color=TEAL, fill_opacity=0.45, stroke_opacity=0).align_to(beaker, DOWN).shift(UP * 0.08)
+        obj_label = Text(system.get("object_label", "Benda"), font_size=18, color=TEAL).next_to(beaker, UP, buff=0.10)
+        heat_arrow = Arrow(flame.get_right() + RIGHT * 0.15, beaker.get_left() + LEFT * 0.10, buff=0.05, color=YELLOW, stroke_width=5)
+        heat_label = Text(spec.get("heat_flow", [{}])[0].get("label", "Q"), font_size=18, color=YELLOW).next_to(heat_arrow, UP, buff=0.08)
+        thermometer = RoundedRectangle(width=0.18, height=1.75, corner_radius=0.08, color=WHITE).next_to(beaker, RIGHT, buff=0.35)
+        bulb = Circle(radius=0.18, color=RED, fill_color=RED, fill_opacity=0.85).next_to(thermometer, DOWN, buff=-0.04)
+        level = Rectangle(width=0.10, height=0.45, color=RED, fill_color=RED, fill_opacity=0.85).align_to(thermometer, DOWN).shift(UP * 0.10)
+        temp_label = Text(f"{_fmt_num(initial)}{unit}", font_size=16, color=GRAY_A).next_to(thermometer, RIGHT, buff=0.10)
+        system_group = VGroup(flame, beaker, liquid, obj_label, heat_arrow, heat_label, thermometer, bulb, level, temp_label)
+        self.play(FadeIn(flame), FadeIn(beaker), FadeIn(liquid), FadeIn(obj_label), run_time=0.65)
+        active_card = self.replace_card(active_card, self.make_card("Kalor mengalir", "Panah menunjukkan energi panas masuk ke sistem.", color=YELLOW))
+        self.play(Create(heat_arrow), FadeIn(heat_label), FadeIn(thermometer), FadeIn(bulb), FadeIn(level), FadeIn(temp_label), run_time=0.75)
+
+        new_level = Rectangle(width=0.10, height=1.15, color=RED, fill_color=RED, fill_opacity=0.85).align_to(thermometer, DOWN).shift(UP * 0.10)
+        new_temp_label = Text(f"{_fmt_num(final)}{unit}", font_size=16, color=RED).next_to(thermometer, RIGHT, buff=0.10)
+        formula = _math_or_text(spec.get("formula_latex", "Q=mc\\Delta T"), font_size=32, color=YELLOW).move_to(LEFT * 2.65 + DOWN * 2.05)
+        active_card = self.replace_card(active_card, self.make_card("Suhu naik", "Saat energi bertambah, pembacaan termometer meningkat.", color=RED))
+        self.play(Transform(level, new_level), Transform(temp_label, new_temp_label), FadeIn(formula), run_time=0.85)
+
+        timeline = spec.get("timeline") or []
+        rows = [["t", "T"]] + [[_fmt_num(x.get("time", 0)), f"{_fmt_num(x.get('temp', 0))}{unit}"] for x in timeline[:4]]
+        table = _make_table(rows, col_widths=[0.75, 1.0], font_size=13).move_to(LEFT * 4.85 + UP * 1.35)
+        active_card = self.replace_card(active_card, self.make_card("Data suhu", "Perubahan suhu dapat dicatat sebagai data waktu terhadap temperatur.", color=GREEN))
+        self.play(FadeIn(table), run_time=0.55)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class WaveOpticsTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_wave_optics_distinct",
+        "node_id": "phase5_wave_optics_sinusoidal_model",
+        "template_id": "manim.wave_optics.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Gelombang Sinus",
+        "subtitle": "Amplitudo, panjang gelombang, dan fase dapat dibaca dari bentuk gelombang.",
+        "amplitude": 1.2,
+        "wavelength": 3.0,
+        "phase_shift": 0.0,
+        "formula_latex": "y=A\\sin(kx+\\phi)",
+        "steps": [
+            {"title": "Baca amplitudo", "body": "Amplitudo adalah simpangan maksimum dari garis setimbang."},
+            {"title": "Baca panjang gelombang", "body": "Jarak puncak ke puncak berikutnya adalah satu panjang gelombang."},
+            {"title": "Fase bergeser", "body": "Perubahan fase menggeser bentuk gelombang ke kiri atau kanan."},
+        ],
+        "summary": "Gelombang sinus dapat dijelaskan lewat amplitudo, panjang gelombang, dan fase.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        A = _as_float(spec.get("amplitude", 1.2), 1.2)
+        lam = max(0.5, _as_float(spec.get("wavelength", 3.0), 3.0))
+        phase = _as_float(spec.get("phase_shift", 0), 0)
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Bentuk periodik", "Gelombang berulang secara teratur di sepanjang sumbu posisi.", color=BLUE))
+
+        axes = Axes(x_range=[-1, 7, 1], y_range=[-2, 2, 1], x_length=5.8, y_length=2.8, tips=False, axis_config={"include_numbers": False})
+        axes.move_to(LEFT * 2.75 + DOWN * 0.30)
+        equilibrium = DashedLine(axes.c2p(-1, 0), axes.c2p(7, 0), color=GRAY_B)
+        k = TAU / lam
+        graph = axes.plot(lambda x: A * math.sin(k * x + phase), x_range=[-1, 7], color=YELLOW, stroke_width=4)
+        formula = _math_or_text(spec.get("formula_latex", "y=A\\sin(kx+\\phi)"), font_size=30, color=YELLOW).move_to(LEFT * 2.75 + UP * 1.85)
+        self.play(Create(axes), Create(equilibrium), Create(graph), FadeIn(formula), run_time=1.0)
+
+        amp_arrow = DoubleArrow(axes.c2p(0, 0), axes.c2p(0, A), buff=0, color=GREEN)
+        amp_label = Text(f"A = {_fmt_num(A)}", font_size=16, color=GREEN).next_to(amp_arrow, LEFT, buff=0.08)
+        active_card = self.replace_card(active_card, self.make_card("Amplitudo", "Amplitudo mengukur simpangan maksimum dari garis setimbang.", color=GREEN))
+        self.play(Create(amp_arrow), FadeIn(amp_label), run_time=0.55)
+
+        wave_arrow = DoubleArrow(axes.c2p(0.25 * lam, A + 0.35), axes.c2p(1.25 * lam, A + 0.35), buff=0, color=TEAL)
+        wave_label = Text(f"λ = {_fmt_num(lam)}", font_size=16, color=TEAL).next_to(wave_arrow, UP, buff=0.07)
+        active_card = self.replace_card(active_card, self.make_card("Panjang gelombang", "Jarak antara dua puncak berurutan disebut panjang gelombang.", color=TEAL))
+        self.play(Create(wave_arrow), FadeIn(wave_label), run_time=0.55)
+
+        shifted = axes.plot(lambda x: A * math.sin(k * x + phase + PI / 4), x_range=[-1, 7], color=PURPLE, stroke_width=3)
+        phase_label = Text("fase bergeser", font_size=16, color=PURPLE).next_to(shifted, DOWN, buff=0.12)
+        active_card = self.replace_card(active_card, self.make_card("Fase", "Gelombang dengan fase berbeda tampak bergeser, tetapi bentuk periodiknya tetap.", color=PURPLE))
+        self.play(TransformFromCopy(graph, shifted), FadeIn(phase_label), run_time=0.75)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class StoichiometryBoardTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_stoichiometry_board_distinct",
+        "node_id": "phase5_chemistry_stoichiometry_mole_ratio",
+        "template_id": "manim.stoichiometry_board.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Stoikiometri dari Koefisien Reaksi",
+        "subtitle": "Koefisien persamaan seimbang menjadi rasio mol antar zat.",
+        "balanced_equation": "N₂ + 3H₂ → 2NH₃",
+        "species": [{"formula": "N₂", "coef": 1}, {"formula": "H₂", "coef": 3}, {"formula": "NH₃", "coef": 2}],
+        "given": {"species": "N₂", "amount": 2, "unit": "mol"},
+        "target": {"species": "NH₃", "amount": 4, "unit": "mol"},
+        "steps": [
+            {"title": "Baca koefisien", "body": "Koefisien menyatakan perbandingan mol dalam reaksi seimbang."},
+            {"title": "Buat rasio", "body": "Gunakan rasio zat target terhadap zat yang diketahui."},
+            {"title": "Hitung target", "body": "Mol target diperoleh dari mol diketahui dikali rasio koefisien."},
+        ],
+        "summary": "Stoikiometri memakai koefisien reaksi seimbang untuk mengonversi jumlah mol antar zat.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        species = spec.get("species") or []
+        given = spec.get("given", {}) or {}
+        target = spec.get("target", {}) or {}
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Persamaan seimbang", "Koefisien di depan rumus kimia adalah kunci rasio mol.", color=BLUE))
+
+        equation = Text(spec.get("balanced_equation", spec.get("final_solution", "N₂ + 3H₂ → 2NH₃")), font_size=30, color=YELLOW, weight=BOLD)
+        equation.move_to(LEFT * 2.75 + UP * 1.75)
+        self.play(Write(equation), run_time=0.75)
+
+        rows = [["Zat", "Koef", "Makna"]]
+        for item in species[:5]:
+            rows.append([item.get("formula", "?"), _fmt_num(item.get("coef", 1)), f"{_fmt_num(item.get('coef', 1))} mol"])
+        ratio_table = _make_table(rows, col_widths=[0.95, 0.75, 1.2], font_size=14).move_to(LEFT * 4.35 + DOWN * 0.05)
+        active_card = self.replace_card(active_card, self.make_card("Tabel rasio", "Setiap koefisien dibaca sebagai bagian dari perbandingan mol.", color=TEAL))
+        self.play(FadeIn(ratio_table), run_time=0.65)
+
+        given_text = f"Diketahui: {_fmt_num(given.get('amount', 1))} {given.get('unit', 'mol')} {given.get('species', '?')}"
+        target_text = f"Target: {target.get('species', '?')}"
+        given_box = self.make_card("Diketahui", given_text, color=BLUE, width=3.1, body_width=24).move_to(LEFT * 1.35 + UP * 0.25)
+        target_box = self.make_card("Ditanya", target_text, color=GREEN, width=3.1, body_width=24).move_to(LEFT * 1.35 + DOWN * 1.05)
+        arrow = Arrow(given_box.get_bottom(), target_box.get_top(), buff=0.10, color=YELLOW)
+        self.play(FadeIn(given_box), FadeIn(target_box), Create(arrow), run_time=0.65)
+
+        result = f"{_fmt_num(given.get('amount', 1))} × rasio = {_fmt_num(target.get('amount', 0))} {target.get('unit', 'mol')} {target.get('species', '?')}"
+        result_text = Text(safe_text(result, 80, 44), font_size=18, color=YELLOW).move_to(LEFT * 2.55 + DOWN * 2.45)
+        active_card = self.replace_card(active_card, self.make_card("Konversi mol", "Kalikan jumlah diketahui dengan rasio koefisien target terhadap koefisien awal.", color=YELLOW))
+        self.play(FadeIn(result_text), run_time=0.55)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElementaryNumberLinePlaceValueTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_elementary_place_value_distinct",
+        "node_id": "phase2_place_value_number_line",
+        "template_id": "manim.elementary_number_line_place_value.v1",
+        "phase": "B",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Nilai Tempat di Garis Bilangan",
+        "subtitle": "Puluhan dan satuan membantu membaca posisi angka.",
+        "number": 47,
+        "place_values": [{"place": "Puluhan", "digit": 4, "value": 40}, {"place": "Satuan", "digit": 7, "value": 7}],
+        "number_range": {"min": 0, "max": 100, "step": 10},
+        "steps": [
+            {"title": "Pisah nilai tempat", "body": "Angka 47 terdiri dari 4 puluhan dan 7 satuan."},
+            {"title": "Bangun nilainya", "body": "Empat puluhan bernilai 40, lalu ditambah 7 satuan."},
+            {"title": "Letakkan di garis", "body": "Angka 47 berada setelah 40 dan sebelum 50."},
+        ],
+        "summary": "Nilai tempat membantu membangun angka dan menempatkannya pada garis bilangan.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        number = _as_int(spec.get("number", 47), 47)
+        place_values = spec.get("place_values") or [{"place": "Puluhan", "digit": number // 10, "value": (number // 10) * 10}, {"place": "Satuan", "digit": number % 10, "value": number % 10}]
+        nr = spec.get("number_range", {}) or {}
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Nilai tempat", "Setiap digit memiliki nilai berbeda tergantung posisinya.", color=BLUE))
+
+        rows = [["Tempat", "Digit", "Nilai"]] + [[p.get("place", ""), _fmt_num(p.get("digit", 0)), _fmt_num(p.get("value", 0))] for p in place_values]
+        table = _make_table(rows, col_widths=[1.3, 0.75, 0.95], font_size=14).move_to(LEFT * 4.15 + UP * 1.05)
+        number_text = Text(str(number), font_size=52, color=YELLOW, weight=BOLD).move_to(LEFT * 1.45 + UP * 1.10)
+        expanded = Text(" + ".join([_fmt_num(p.get("value", 0)) for p in place_values]), font_size=25, color=GREEN).next_to(number_text, DOWN, buff=0.18)
+        self.play(FadeIn(number_text), FadeIn(table), run_time=0.65)
+        active_card = self.replace_card(active_card, self.make_card("Bentuk panjang", "Nilai tiap digit dijumlahkan untuk membentuk angka lengkap.", color=GREEN))
+        self.play(FadeIn(expanded), run_time=0.5)
+
+        min_v = _as_float(nr.get("min", 0), 0)
+        max_v = _as_float(nr.get("max", 100), 100)
+        step = _as_float(nr.get("step", 10), 10)
+        line = NumberLine(x_range=[min_v, max_v, step], length=5.8, include_numbers=True, font_size=14).move_to(LEFT * 2.75 + DOWN * 1.35)
+        dot = Dot(line.n2p(number), radius=0.08, color=YELLOW)
+        dot_label = Text(str(number), font_size=19, color=YELLOW).next_to(dot, UP, buff=0.10)
+        ten_floor = (number // 10) * 10
+        interval = Line(line.n2p(ten_floor), line.n2p(ten_floor + 10), color=GREEN, stroke_width=6)
+        active_card = self.replace_card(active_card, self.make_card("Posisi angka", f"{number} berada di antara {ten_floor} dan {ten_floor + 10}.", color=YELLOW))
+        self.play(Create(line), Create(interval), FadeIn(dot), FadeIn(dot_label), run_time=0.85)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class QuadraticModelTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_quadratic_model_distinct",
+        "node_id": "phase5_quadratic_model_vertex_roots",
+        "template_id": "manim.quadratic_model.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Model Fungsi Kuadrat",
+        "subtitle": "Parabola memperlihatkan titik puncak, akar, dan arah bukaan.",
+        "function": {"type": "quadratic", "params": {"a": 1, "b": -2, "c": -3}},
+        "x_range": [-3, 5, 1],
+        "y_range": [-5, 10, 1],
+        "formula_latex": "f(x)=x^2-2x-3",
+        "vertex": {"x": 1, "y": -4},
+        "roots": [-1, 3],
+        "steps": [
+            {"title": "Arah bukaan", "body": "Tanda koefisien a menentukan parabola terbuka ke atas atau ke bawah."},
+            {"title": "Titik puncak", "body": "Puncak menunjukkan nilai minimum atau maksimum."},
+            {"title": "Akar fungsi", "body": "Akar adalah titik potong grafik dengan sumbu x."},
+        ],
+        "summary": "Grafik kuadrat membantu membaca puncak, akar, dan perilaku fungsi secara visual.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        f = build_function(spec.get("function", {"type": "quadratic", "params": {}}))
+        xr = spec.get("x_range", [-3, 5, 1])
+        yr = spec.get("y_range", [-5, 10, 1])
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Parabola", "Fungsi kuadrat membentuk kurva parabola yang simetris terhadap sumbu tertentu.", color=BLUE))
+
+        axes = _build_axes_from_ranges(xr, yr, x_length=5.6, y_length=3.2)
+        axes.move_to(LEFT * 2.75 + DOWN * 0.35)
+        graph = axes.plot(f, x_range=[xr[0], xr[1]], color=YELLOW, stroke_width=4)
+        formula = _math_or_text(spec.get("formula_latex", "f(x)=ax^2+bx+c"), font_size=30, color=YELLOW).move_to(LEFT * 2.75 + UP * 2.15)
+        self.play(Create(axes), Create(graph), FadeIn(formula), run_time=1.0)
+
+        vertex = spec.get("vertex", {}) or {}
+        vx = _as_float(vertex.get("x", 0), 0)
+        vy = _as_float(vertex.get("y", f(vx)), f(vx))
+        vdot = Dot(axes.c2p(vx, vy), color=GREEN, radius=0.07)
+        vlabel = Text(f"puncak ({_fmt_num(vx)}, {_fmt_num(vy)})", font_size=15, color=GREEN).next_to(vdot, DOWN, buff=0.10)
+        sym_axis = DashedLine(axes.c2p(vx, yr[0]), axes.c2p(vx, yr[1]), color=GREEN)
+        active_card = self.replace_card(active_card, self.make_card("Titik puncak", "Puncak adalah titik ekstrem parabola dan menjadi pusat simetri.", color=GREEN))
+        self.play(Create(sym_axis), FadeIn(vdot), FadeIn(vlabel), run_time=0.7)
+
+        root_mobs = VGroup()
+        for r in (spec.get("roots") or [])[:3]:
+            root = _as_float(r, 0)
+            dot = Dot(axes.c2p(root, 0), color=TEAL, radius=0.06)
+            label = Text(f"x={_fmt_num(root)}", font_size=14, color=TEAL).next_to(dot, UP, buff=0.08)
+            root_mobs.add(VGroup(dot, label))
+        if root_mobs:
+            active_card = self.replace_card(active_card, self.make_card("Akar fungsi", "Akar adalah posisi saat nilai fungsi sama dengan nol.", color=TEAL))
+            self.play(FadeIn(root_mobs), run_time=0.6)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ScatterAssociationTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_scatter_association_distinct",
+        "node_id": "phase4_statistics_scatter_association",
+        "template_id": "manim.scatter_association.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Asosiasi pada Diagram Pencar",
+        "subtitle": "Sebaran titik menunjukkan kecenderungan hubungan dua variabel.",
+        "points": [[1, 2.2], [2, 3.1], [3, 4.1], [4, 4.7], [5, 6.0], [6, 6.7], [7, 8.0]],
+        "trend_line": {"m": 0.95, "b": 1.1},
+        "x_range": [0, 8, 1],
+        "y_range": [0, 9, 1],
+        "association": "positif",
+        "steps": [
+            {"title": "Plot pasangan data", "body": "Setiap titik menyimpan satu pasangan nilai x dan y."},
+            {"title": "Lihat arah sebaran", "body": "Jika titik naik dari kiri ke kanan, asosiasinya positif."},
+            {"title": "Bukan sebab-akibat", "body": "Asosiasi menunjukkan pola hubungan, bukan bukti penyebab langsung."},
+        ],
+        "summary": "Diagram pencar membantu membaca arah dan kekuatan asosiasi antar dua variabel.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        points = spec.get("points") or [[0, 0], [1, 1]]
+        xr = spec.get("x_range", [0, 8, 1])
+        yr = spec.get("y_range", [0, 9, 1])
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Pasangan data", "Satu titik menunjukkan satu pengamatan dengan dua variabel.", color=BLUE))
+
+        axes = _build_axes_from_ranges(xr, yr, x_length=5.4, y_length=3.15)
+        axes.move_to(LEFT * 2.75 + DOWN * 0.35)
+        dots = VGroup(*[Dot(axes.c2p(_as_float(p[0], 0), _as_float(p[1], 0)), color=YELLOW, radius=0.055) for p in points[:30]])
+        self.play(Create(axes), LaggedStart(*[FadeIn(dot) for dot in dots], lag_ratio=0.04), run_time=0.95)
+
+        trend = spec.get("trend_line", {}) or {}
+        m = _as_float(trend.get("m", 1), 1)
+        b = _as_float(trend.get("b", 0), 0)
+        line = axes.plot(lambda x: m * x + b, x_range=[xr[0], xr[1]], color=GREEN, stroke_width=4)
+        label = Text(f"asosiasi {spec.get('association', 'positif')}", font_size=18, color=GREEN).next_to(line, UP, buff=0.10)
+        active_card = self.replace_card(active_card, self.make_card("Garis kecenderungan", "Garis bantu merangkum arah umum dari sebaran titik.", color=GREEN))
+        self.play(Create(line), FadeIn(label), run_time=0.65)
+
+        cluster = SurroundingRectangle(dots, color=TEAL, buff=0.15)
+        active_card = self.replace_card(active_card, self.make_card("Kekuatan pola", "Semakin rapat titik di sekitar garis, pola asosiasinya semakin jelas.", color=TEAL))
+        self.play(Create(cluster), run_time=0.50)
+
+        warning = Text("asosiasi ≠ sebab-akibat", font_size=20, color=YELLOW, weight=BOLD).move_to(LEFT * 2.75 + DOWN * 2.45)
+        self.play(FadeIn(warning), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElectricityMagnetismTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_electricity_magnetism_distinct",
+        "node_id": "phase5_physics_electric_magnetic_field",
+        "template_id": "manim.electricity_magnetism.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Medan Listrik dan Magnet",
+        "subtitle": "Muatan bergerak dipengaruhi medan listrik dan medan magnet.",
+        "charge": {"label": "q+", "sign": "+"},
+        "electric_field": {"direction": "right", "label": "E"},
+        "magnetic_field": {"direction": "out", "label": "B"},
+        "trajectory_label": "lintasan membelok",
+        "steps": [
+            {"title": "Medan listrik", "body": "Medan listrik memberi gaya searah medan untuk muatan positif."},
+            {"title": "Medan magnet", "body": "Medan magnet memengaruhi muatan yang bergerak."},
+            {"title": "Lintasan berubah", "body": "Gabungan gaya dapat mengubah arah gerak partikel."},
+        ],
+        "summary": "Muatan dalam medan listrik dan magnet dapat mengalami gaya yang mengubah geraknya.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Medan listrik", "Panah sejajar menggambarkan arah medan listrik di suatu daerah.", color=BLUE))
+
+        field_arrows = VGroup()
+        for y in [-1.2, -0.45, 0.3, 1.05]:
+            arrow = Arrow(LEFT * 5.25 + UP * y, LEFT * 1.2 + UP * y, buff=0, color=BLUE, stroke_width=3)
+            field_arrows.add(arrow)
+        e_label = Text(spec.get("electric_field", {}).get("label", "E"), font_size=24, color=BLUE).move_to(LEFT * 5.0 + UP * 1.65)
+        self.play(LaggedStart(*[Create(a) for a in field_arrows], lag_ratio=0.08), FadeIn(e_label), run_time=0.85)
+
+        charge = Circle(radius=0.20, color=YELLOW, fill_color=YELLOW, fill_opacity=0.85).move_to(LEFT * 4.85 + DOWN * 1.70)
+        charge_label = Text(spec.get("charge", {}).get("label", "q"), font_size=15, color=BLACK).move_to(charge)
+        particle = VGroup(charge, charge_label)
+        path = VMobject(color=YELLOW)
+        path.set_points_smoothly([LEFT * 4.85 + DOWN * 1.70, LEFT * 3.70 + DOWN * 0.55, LEFT * 2.25 + UP * 0.65, LEFT * 0.95 + UP * 1.20])
+        path.set_stroke(width=4)
+        active_card = self.replace_card(active_card, self.make_card("Muatan bergerak", "Partikel bermuatan bergerak melewati daerah bermedan.", color=YELLOW))
+        self.play(FadeIn(particle), run_time=0.25)
+        self.play(MoveAlongPath(particle, path), Create(path), run_time=1.05)
+
+        b_symbols = VGroup()
+        for x in [-4.6, -3.7, -2.8, -1.9, -1.0]:
+            for y in [-1.25, -0.25, 0.75]:
+                circle = Circle(radius=0.10, color=PURPLE)
+                dot = Dot(radius=0.025, color=PURPLE).move_to(circle)
+                b_symbols.add(VGroup(circle, dot).move_to(RIGHT * x + UP * y))
+        b_label = Text(spec.get("magnetic_field", {}).get("label", "B keluar bidang"), font_size=18, color=PURPLE).move_to(LEFT * 1.20 + DOWN * 1.85)
+        active_card = self.replace_card(active_card, self.make_card("Medan magnet", "Simbol titik menunjukkan medan magnet keluar dari bidang layar.", color=PURPLE))
+        self.play(FadeIn(b_symbols), FadeIn(b_label), run_time=0.75)
+
+        traj_label = Text(spec.get("trajectory_label", "lintasan membelok"), font_size=18, color=YELLOW).next_to(path, UP, buff=0.10)
+        self.play(FadeIn(traj_label), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class EnergyEnvironmentSystemTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_energy_environment_system_distinct",
+        "node_id": "phase5_energy_environment_system",
+        "template_id": "manim.energy_environment_system.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Sistem Energi dan Lingkungan",
+        "subtitle": "Aliran energi menentukan manfaat sekaligus dampak lingkungan.",
+        "nodes": [
+            {"label": "Sumber", "detail": "matahari/batubara"},
+            {"label": "Konversi", "detail": "pembangkit"},
+            {"label": "Pemakaian", "detail": "listrik"},
+            {"label": "Dampak", "detail": "emisi/limbah"},
+        ],
+        "flows": ["energi masuk", "energi listrik", "dampak"],
+        "impact_metrics": [{"label": "Emisi fosil", "value": 8}, {"label": "Emisi terbarukan", "value": 2}],
+        "steps": [
+            {"title": "Lacak aliran energi", "body": "Energi berpindah dari sumber ke proses konversi lalu ke pengguna."},
+            {"title": "Hitung dampak", "body": "Setiap pilihan energi memiliki keluaran lingkungan berbeda."},
+            {"title": "Bandingkan skenario", "body": "Sistem lebih bersih jika dampaknya lebih rendah untuk manfaat yang sama."},
+        ],
+        "summary": "Analisis sistem energi melihat sumber, proses, manfaat, dan dampak lingkungan sebagai satu rangkaian.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        nodes = spec.get("nodes") or []
+        if not nodes:
+            nodes = [{"label": "Sumber"}, {"label": "Konversi"}, {"label": "Pakai"}, {"label": "Dampak"}]
+        nodes = nodes[:4]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Rantai sistem", "Energi tidak berdiri sendiri: ada sumber, proses, pemakaian, dan dampak.", color=BLUE))
+
+        colors = [YELLOW, BLUE, GREEN, RED]
+        node_groups = VGroup()
+        for i, node in enumerate(nodes):
+            box = RoundedRectangle(width=1.25, height=0.82, corner_radius=0.15, color=colors[i], fill_color=colors[i], fill_opacity=0.20)
+            title = Text(_safe_label(node.get("label", f"N{i+1}"), 13), font_size=15, color=colors[i], weight=BOLD)
+            detail = Text(_safe_label(node.get("detail", ""), 16), font_size=11, color=GRAY_A)
+            text = VGroup(title, detail).arrange(DOWN, buff=0.05).move_to(box)
+            group = VGroup(box, text).move_to(LEFT * 5.0 + RIGHT * i * 1.45 + UP * 0.55)
+            node_groups.add(group)
+        arrows = VGroup(*[Arrow(node_groups[i].get_right(), node_groups[i+1].get_left(), buff=0.05, color=GRAY_B, stroke_width=3) for i in range(len(node_groups)-1)])
+        self.play(LaggedStart(*[FadeIn(g) for g in node_groups], lag_ratio=0.12), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.10), run_time=1.0)
+
+        flow_labels = spec.get("flows") or []
+        flow_mobs = VGroup()
+        for i, label in enumerate(flow_labels[:len(arrows)]):
+            flow_mobs.add(Text(_safe_label(label, 18), font_size=12, color=GRAY_A).next_to(arrows[i], DOWN, buff=0.08))
+        if flow_mobs:
+            self.play(FadeIn(flow_mobs), run_time=0.4)
+
+        metrics = spec.get("impact_metrics") or []
+        base_y = -2.0
+        bars = VGroup()
+        labels = VGroup()
+        max_v = max([_as_float(m.get("value", 0), 0) for m in metrics] or [1])
+        for i, metric in enumerate(metrics[:3]):
+            h = max(0.20, 2.0 * _as_float(metric.get("value", 0), 0) / max_v)
+            color = RED if i == 0 else GREEN
+            bar = Rectangle(width=0.55, height=h, color=color, fill_color=color, fill_opacity=0.70).move_to(LEFT * 4.25 + RIGHT * i * 1.2 + UP * (base_y + h/2))
+            lab = Text(_safe_label(metric.get("label", ""), 18), font_size=12, color=GRAY_A).next_to(bar, DOWN, buff=0.08)
+            val = Text(_fmt_num(metric.get("value", 0)), font_size=14, color=color).next_to(bar, UP, buff=0.06)
+            bars.add(bar)
+            labels.add(lab, val)
+        active_card = self.replace_card(active_card, self.make_card("Dampak lingkungan", "Dampak dapat dibandingkan dengan indikator seperti emisi atau limbah.", color=GREEN))
+        self.play(LaggedStart(*[GrowFromEdge(b, DOWN) for b in bars], lag_ratio=0.12), FadeIn(labels), run_time=0.8)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ModernAtomicNuclearTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_modern_atomic_nuclear_distinct",
+        "node_id": "phase5_atomic_nuclear_decay",
+        "template_id": "manim.modern_atomic_nuclear.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Model Atom dan Peluruhan Inti",
+        "subtitle": "Inti, elektron, dan peluruhan dapat divisualkan sebagai struktur dan proses.",
+        "atom": {"protons": 6, "neutrons": 6, "electrons": 6, "label": "C-12"},
+        "decay": {"type": "alpha", "before": "U-238", "after": "Th-234", "particle": "α"},
+        "half_life_values": [8, 4, 2, 1],
+        "steps": [
+            {"title": "Struktur atom", "body": "Inti berisi proton dan neutron, elektron berada di sekitar inti."},
+            {"title": "Peluruhan inti", "body": "Inti tidak stabil dapat memancarkan partikel dan berubah menjadi inti lain."},
+            {"title": "Jumlah berkurang", "body": "Pada waktu paruh, jumlah inti tersisa menjadi setengahnya."},
+        ],
+        "summary": "Fisika atom modern melihat struktur atom sekaligus proses perubahan inti seperti peluruhan radioaktif.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        atom = spec.get("atom", {}) or {}
+        decay = spec.get("decay", {}) or {}
+        values = spec.get("half_life_values") or [8, 4, 2, 1]
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Struktur atom", "Model atom memisahkan inti dan elektron agar perannya mudah dilihat.", color=BLUE))
+
+        nucleus = VGroup()
+        count = min(14, _as_int(atom.get("protons", 3), 3) + _as_int(atom.get("neutrons", 3), 3))
+        for i in range(count):
+            angle = TAU * i / max(1, count)
+            radius = 0.08 + 0.22 * (i % 3) / 3
+            color = RED if i % 2 == 0 else BLUE
+            nucleus.add(Dot(radius=0.055, color=color).move_to(LEFT * 3.75 + UP * 0.55 + RIGHT * math.cos(angle) * radius + UP * math.sin(angle) * radius))
+        orbits = VGroup(*[Circle(radius=r, color=GRAY_B, stroke_width=1.5).move_to(LEFT * 3.75 + UP * 0.55) for r in [0.75, 1.10]])
+        electrons = VGroup()
+        for i in range(min(8, _as_int(atom.get("electrons", 6), 6))):
+            r = 0.75 if i < 2 else 1.10
+            angle = TAU * i / max(1, min(8, _as_int(atom.get("electrons", 6), 6)))
+            electrons.add(Dot(radius=0.045, color=YELLOW).move_to(LEFT * 3.75 + UP * 0.55 + RIGHT * math.cos(angle) * r + UP * math.sin(angle) * r))
+        atom_label = Text(atom.get("label", "Atom"), font_size=18, color=YELLOW).next_to(orbits, DOWN, buff=0.12)
+        self.play(Create(orbits), FadeIn(nucleus), FadeIn(electrons), FadeIn(atom_label), run_time=0.95)
+
+        before = Text(decay.get("before", "Inti awal"), font_size=22, color=RED).move_to(LEFT * 4.65 + DOWN * 1.75)
+        after = Text(decay.get("after", "Inti baru"), font_size=22, color=GREEN).move_to(LEFT * 2.00 + DOWN * 1.75)
+        particle = Text(decay.get("particle", "α"), font_size=24, color=YELLOW).move_to(LEFT * 3.25 + DOWN * 1.25)
+        decay_arrow = Arrow(before.get_right(), after.get_left(), buff=0.12, color=YELLOW, stroke_width=4)
+        active_card = self.replace_card(active_card, self.make_card("Peluruhan inti", "Inti tidak stabil dapat memancarkan partikel dan berubah menjadi inti lain.", color=YELLOW))
+        self.play(FadeIn(before), Create(decay_arrow), FadeIn(particle), FadeIn(after), run_time=0.75)
+
+        max_v = max(values)
+        bars = VGroup()
+        for i, v in enumerate(values[:5]):
+            h = max(0.14, 1.35 * _as_float(v, 0) / max_v)
+            bar = Rectangle(width=0.34, height=h, color=PURPLE, fill_color=PURPLE, fill_opacity=0.65).move_to(LEFT * 1.30 + RIGHT * i * 0.47 + UP * (0.05 + h/2))
+            label = Text(_fmt_num(v), font_size=12, color=PURPLE).next_to(bar, UP, buff=0.04)
+            bars.add(VGroup(bar, label))
+        half_label = Text("waktu paruh", font_size=16, color=PURPLE).next_to(bars, DOWN, buff=0.12)
+        active_card = self.replace_card(active_card, self.make_card("Waktu paruh", "Setiap interval waktu paruh menyisakan sekitar setengah jumlah sebelumnya.", color=PURPLE))
+        self.play(LaggedStart(*[GrowFromEdge(b[0], DOWN) for b in bars], lag_ratio=0.10), FadeIn(bars), FadeIn(half_label), run_time=0.85)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ChemistryReactionEquationTemplate(WicaraTemplateScene):
+    SPEC = {
+        "id": "sample_chem_reaction_equation_distinct",
+        "node_id": "phase5_chemical_reaction_balancing",
+        "template_id": "manim.chem_reaction_equation.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Menyeimbangkan Persamaan Reaksi",
+        "subtitle": "Jumlah atom tiap unsur harus sama di kiri dan kanan.",
+        "equation": "Fe + O₂ → Fe₂O₃",
+        "final_solution": "4Fe + 3O₂ → 2Fe₂O₃",
+        "atom_counts": [
+            {"element": "Fe", "left_before": 1, "right_before": 2, "left_after": 4, "right_after": 4},
+            {"element": "O", "left_before": 2, "right_before": 3, "left_after": 6, "right_after": 6},
+        ],
+        "balancing_steps": [
+            {"label": "Set Fe₂O₃ = 2", "equation": "Fe + O₂ → 2Fe₂O₃"},
+            {"label": "Set Fe = 4", "equation": "4Fe + O₂ → 2Fe₂O₃"},
+            {"label": "Set O₂ = 3", "equation": "4Fe + 3O₂ → 2Fe₂O₃"},
+        ],
+        "steps": [
+            {"title": "Hitung atom awal", "body": "Bandingkan jumlah atom setiap unsur pada kedua ruas."},
+            {"title": "Ubah koefisien", "body": "Koefisien mengubah jumlah molekul tanpa mengganti rumus zat."},
+            {"title": "Cek ulang", "body": "Persamaan seimbang jika jumlah atom kiri dan kanan sama."},
+        ],
+        "summary": "Persamaan reaksi seimbang mempertahankan jumlah atom setiap unsur pada kedua ruas.",
+    }
+
+    def construct(self):
+        spec = self.SPEC
+        counts = spec.get("atom_counts") or []
+        steps = spec.get("balancing_steps") or spec.get("solution_steps") or []
+
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Hukum kekekalan atom", "Atom tidak hilang; jumlah tiap unsur harus sama di kedua sisi reaksi.", color=BLUE))
+
+        equation = Text(spec.get("equation", "Fe + O₂ → Fe₂O₃"), font_size=29, color=YELLOW, weight=BOLD).move_to(LEFT * 2.75 + UP * 1.85)
+        self.play(Write(equation), run_time=0.75)
+
+        rows = [["Unsur", "Kiri awal", "Kanan awal", "Kiri akhir", "Kanan akhir"]]
+        for row in counts[:5]:
+            rows.append([
+                row.get("element", "?"),
+                _fmt_num(row.get("left_before", 0)),
+                _fmt_num(row.get("right_before", 0)),
+                _fmt_num(row.get("left_after", 0)),
+                _fmt_num(row.get("right_after", 0)),
+            ])
+        table = _make_table(rows, col_widths=[0.75, 0.9, 0.95, 0.9, 0.95], font_size=12).move_to(LEFT * 2.85 + UP * 0.40)
+        active_card = self.replace_card(active_card, self.make_card("Inventaris atom", "Tabel atom membuat ketidakseimbangan terlihat jelas.", color=TEAL))
+        self.play(FadeIn(table), run_time=0.65)
+
+        step_group = VGroup()
+        for i, st in enumerate(steps[:3]):
+            label = st.get("label") or st.get("operation") or f"Langkah {i+1}"
+            eq = st.get("equation") or f"{st.get('left_result','')} → {st.get('right_result','')}"
+            box = RoundedRectangle(width=4.7, height=0.45, corner_radius=0.10, color=[BLUE, TEAL, GREEN][i], fill_opacity=0.20)
+            text = Text(f"{label}: {eq}", font_size=13, color=WHITE).move_to(box)
+            step_group.add(VGroup(box, text))
+        step_group.arrange(DOWN, buff=0.12).move_to(LEFT * 2.75 + DOWN * 1.20)
+        active_card = self.replace_card(active_card, self.make_card("Koefisien bertahap", "Ubah koefisien secara sistematis, lalu cek atom lagi.", color=GREEN))
+        self.play(LaggedStart(*[FadeIn(g) for g in step_group], lag_ratio=0.12), run_time=0.8)
+
+        final_eq = Text(spec.get("final_solution", ""), font_size=25, color=GREEN, weight=BOLD).move_to(LEFT * 2.75 + DOWN * 2.35)
+        active_card = self.replace_card(active_card, self.make_card("Persamaan seimbang", "Setelah jumlah atom sama, persamaan dapat dipakai untuk analisis reaksi.", color=YELLOW))
+        self.play(FadeIn(final_eq), Circumscribe(final_eq, color=GREEN), run_time=0.75)
+
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+# ============================================================
+# PHASE 5: TEMPLATE 30-60 BUNDLE (MERGED)
+# ============================================================
+
+def simple_box(label, detail=None, width=1.55, height=0.88, color=BLUE, font_size=20):
+    box = RoundedRectangle(
+        width=width,
+        height=height,
+        corner_radius=0.15,
+        color=color,
+        fill_color=color,
+        fill_opacity=0.18,
+        stroke_width=2,
+    )
+    title = Text(str(label), font_size=font_size, color=color, weight=BOLD)
+    if detail:
+        subtitle = Text(str(detail), font_size=max(12, font_size - 7), color=WHITE)
+        texts = VGroup(title, subtitle).arrange(DOWN, buff=0.06)
+    else:
+        texts = title
+    texts.move_to(box.get_center())
+    return VGroup(box, texts)
+
+
+def circle_chip(label, radius=0.34, color=BLUE, font_size=18, fill_opacity=0.20):
+    circ = Circle(radius=radius, color=color, fill_color=color, fill_opacity=fill_opacity, stroke_width=2)
+    txt = Text(str(label), font_size=font_size, color=color, weight=BOLD).move_to(circ)
+    return VGroup(circ, txt)
+
+
+def atom_chip(label, color=BLUE, radius=0.26, font_size=15):
+    outer = Circle(radius=radius, color=color, stroke_width=2)
+    inner = Dot(radius=0.06, color=color)
+    txt = Text(str(label), font_size=font_size, color=color).next_to(outer, DOWN, buff=0.05)
+    return VGroup(outer, inner, txt)
+
+
+def arrow_between(a, b, color=WHITE, buff=0.12, stroke_width=3):
+    return Arrow(a.get_right(), b.get_left(), buff=buff, color=color, stroke_width=stroke_width)
+
+
+def down_arrow(a, b, color=WHITE, buff=0.08, stroke_width=3):
+    return Arrow(a.get_bottom(), b.get_top(), buff=buff, color=color, stroke_width=stroke_width)
+
+
+def make_step_badges(steps, color=BLUE, font_size=15):
+    badges = VGroup()
+    for idx, step in enumerate(steps[:4]):
+        badge = circle_chip(str(idx + 1), radius=0.18, color=color, font_size=font_size, fill_opacity=0.22)
+        label = Text(str(step), font_size=13, color=WHITE)
+        group = VGroup(badge, label).arrange(RIGHT, buff=0.10)
+        badges.add(group)
+    badges.arrange(DOWN, aligned_edge=LEFT, buff=0.12)
+    return badges
+
+
+# -----------------------------------------------------------------------------
+# 30-60 SPEC DEFINITIONS
+# -----------------------------------------------------------------------------
+
+TEMPLATE_30_60_SPECS = {
+    30: {
+        "id": "sample_ecosystem_interdependence_30",
+        "node_id": "phase5_sd_ecosystem_interdependence",
+        "template_id": "manim.sd_ecosystem_food_chain.v1",
+        "phase": "E",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Keterkaitan dalam Ekosistem",
+        "subtitle": "Makhluk hidup saling bergantung melalui habitat, makanan, dan peran masing-masing.",
+        "sun_label": "Matahari",
+        "chain": ["Rumput", "Belalang", "Katak", "Ular", "Elang"],
+        "habitat_label": "Sawah",
+        "decomposer_label": "Pengurai",
+        "steps": [
+            {"title": "Sumber energi", "body": "Energi awal datang dari matahari lalu ditangkap tumbuhan."},
+            {"title": "Rantai makanan", "body": "Setiap makhluk hidup dapat menjadi sumber makanan bagi makhluk hidup lain."},
+            {"title": "Keseimbangan", "body": "Jika satu bagian terganggu, seluruh ekosistem juga ikut terpengaruh."},
+        ],
+        "summary": "Ekosistem bekerja sebagai jaringan saling ketergantungan antara komponen hidup dan lingkungan.",
+    },
+    31: {
+        "id": "sample_energy_forms_31",
+        "node_id": "phase5_sd_energy_forms",
+        "template_id": "manim.sd_energy_forms.v1",
+        "phase": "E",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Perubahan Bentuk Energi",
+        "subtitle": "Energi panas, cahaya, bunyi, dan listrik dapat berubah dari satu bentuk ke bentuk lain.",
+        "forms": [
+            {"label": "Listrik", "detail": "setrika"},
+            {"label": "Panas", "detail": "kompor"},
+            {"label": "Cahaya", "detail": "lampu"},
+            {"label": "Bunyi", "detail": "speaker"},
+        ],
+        "steps": [
+            {"title": "Kenali bentuk energi", "body": "Benda di sekitar kita memanfaatkan berbagai bentuk energi."},
+            {"title": "Lihat perubahan", "body": "Energi listrik bisa berubah menjadi cahaya, panas, atau bunyi."},
+            {"title": "Hubungkan dengan contoh", "body": "Setiap alat rumah tangga memberi contoh perubahan energi yang berbeda."},
+        ],
+        "summary": "Energi tidak hilang, tetapi dapat berpindah dan berubah bentuk sesuai proses yang terjadi.",
+    },
+    32: {
+        "id": "sample_quadratic_model_32",
+        "node_id": "phase5_quadratic_application",
+        "template_id": "manim.quadratic_model.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Grafik Fungsi Kuadrat",
+        "subtitle": "Parabola memperlihatkan akar, titik puncak, dan arah bukaan fungsi kuadrat.",
+        "function": {"type": "quadratic", "params": {"a": 1, "b": -4, "c": 3}},
+        "x_range": [-1, 5, 1],
+        "y_range": [-2, 8, 1],
+        "formula_latex": "f(x)=x^2-4x+3",
+        "vertex": {"x": 2, "y": -1},
+        "roots": [1, 3],
+        "steps": [
+            {"title": "Arah bukaan", "body": "Karena koefisien a positif, parabola terbuka ke atas."},
+            {"title": "Titik puncak", "body": "Titik puncak menunjukkan nilai minimum fungsi."},
+            {"title": "Akar fungsi", "body": "Akar dibaca sebagai titik potong grafik dengan sumbu x."},
+        ],
+        "summary": "Representasi grafik memudahkan pembacaan sifat penting dari fungsi kuadrat.",
+    },
+    33: {
+        "id": "sample_bivariable_association_33",
+        "node_id": "phase4_bivariable_association",
+        "template_id": "manim.scatter_association.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Asosiasi Dua Variabel",
+        "subtitle": "Diagram pencar membantu membaca kecenderungan hubungan antara waktu belajar dan nilai tes.",
+        "points": [[1, 55], [2, 60], [3, 63], [4, 70], [5, 74], [6, 81], [7, 84]],
+        "trend_line": {"m": 4.8, "b": 50},
+        "x_range": [0, 8, 1],
+        "y_range": [45, 90, 5],
+        "association": "positif",
+        "steps": [
+            {"title": "Plot data", "body": "Setiap titik mewakili satu pasangan data waktu belajar dan nilai."},
+            {"title": "Baca kecenderungan", "body": "Titik yang naik ke kanan menunjukkan asosiasi positif."},
+            {"title": "Tafsir hati-hati", "body": "Asosiasi tidak otomatis berarti sebab-akibat."},
+        ],
+        "summary": "Hubungan dua variabel dapat diringkas melalui pola sebaran dan garis kecenderungan.",
+    },
+    34: {
+        "id": "sample_life_structure_classification_34",
+        "node_id": "phase5_bio_structure_classification",
+        "template_id": "manim.bio_structure_labeling.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Struktur dan Klasifikasi Makhluk Hidup",
+        "subtitle": "Makhluk hidup dapat dikenali dari ciri tubuh lalu dikelompokkan ke dalam klasifikasi tertentu.",
+        "organism": "Tumbuhan berbunga",
+        "levels": ["Makhluk hidup", "Tumbuhan", "Berbiji", "Angiospermae"],
+        "parts": ["Akar", "Batang", "Daun", "Bunga"],
+        "steps": [
+            {"title": "Amati struktur", "body": "Bagian tubuh membantu mengenali fungsi dan identitas organisme."},
+            {"title": "Kelompokkan ciri", "body": "Ciri yang sama dipakai untuk menempatkan organisme ke kelompok tertentu."},
+            {"title": "Hubungkan", "body": "Struktur yang tampak mendukung klasifikasi yang lebih sistematis."},
+        ],
+        "summary": "Struktur organisme dan klasifikasi saling terkait untuk memahami keragaman makhluk hidup.",
+    },
+    35: {
+        "id": "sample_electricity_magnetism_circuit_35",
+        "node_id": "phase5_electricity_magnetism_circuit",
+        "template_id": "manim.electricity_magnetism_circuit.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Listrik, Magnet, dan Rangkaian",
+        "subtitle": "Arus listrik pada rangkaian dapat menyalakan lampu dan menimbulkan efek magnet pada kumparan.",
+        "steps": [
+            {"title": "Rangkaian tertutup", "body": "Baterai, kabel, sakelar, dan lampu harus terhubung membentuk lintasan tertutup."},
+            {"title": "Arus mengalir", "body": "Saat sakelar ditutup, arus listrik mengalir dan lampu menyala."},
+            {"title": "Efek magnet", "body": "Kumparan berarus dapat menarik benda logam kecil seperti elektromagnet sederhana."},
+        ],
+        "summary": "Listrik dan magnet saling berhubungan dalam banyak alat sederhana di sekitar kita.",
+    },
+    36: {
+        "id": "sample_environment_energy_system_36",
+        "node_id": "phase5_environment_energy_system",
+        "template_id": "manim.energy_environment_system.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Energi, Iklim, dan Lingkungan",
+        "subtitle": "Pilihan sumber energi memengaruhi emisi dan kualitas lingkungan.",
+        "nodes": [
+            {"label": "Sumber", "detail": "fosil/terbarukan"},
+            {"label": "Konversi", "detail": "pembangkit"},
+            {"label": "Pemakaian", "detail": "transportasi/rumah"},
+            {"label": "Dampak", "detail": "emisi"},
+        ],
+        "flows": ["energi primer", "energi listrik", "dampak lingkungan"],
+        "impact_metrics": [{"label": "Fosil", "value": 8}, {"label": "Terbarukan", "value": 3}],
+        "steps": [
+            {"title": "Lacak sistem", "body": "Energi bergerak dari sumber ke pemakaian melalui tahap konversi."},
+            {"title": "Bandingkan dampak", "body": "Setiap sumber energi memiliki jejak lingkungan yang berbeda."},
+            {"title": "Ambil keputusan", "body": "Pilihan energi perlu mempertimbangkan manfaat dan dampak jangka panjang."},
+        ],
+        "summary": "Analisis sistem energi membantu menjelaskan hubungan antara kebutuhan energi dan perubahan lingkungan.",
+    },
+    37: {
+        "id": "sample_modern_atomic_nuclear_37",
+        "node_id": "phase5_modern_atomic_nuclear",
+        "template_id": "manim.modern_atomic_nuclear.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Atom dan Inti Atom",
+        "subtitle": "Model atom modern membantu menjelaskan inti, elektron, dan peluruhan radioaktif sederhana.",
+        "isotope": {"label": "C-14", "proton": 6, "neutron": 8, "electron": 6},
+        "half_life_bars": [100, 50, 25, 12.5],
+        "steps": [
+            {"title": "Bagian atom", "body": "Atom memiliki inti berisi proton dan neutron, serta elektron di sekitarnya."},
+            {"title": "Isotop", "body": "Isotop memiliki jumlah proton sama tetapi neutron berbeda."},
+            {"title": "Peluruhan", "body": "Jumlah inti radioaktif berkurang secara bertahap menurut waktu paruh."},
+        ],
+        "summary": "Konsep atom modern menggabungkan struktur atom dan sifat inti yang dapat berubah.",
+    },
+    38: {
+        "id": "sample_virus_lifecycle_health_38",
+        "node_id": "phase5_bio_virus_lifecycle",
+        "template_id": "manim.bio_virus_lifecycle.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Virus, Siklus, dan Kesehatan",
+        "subtitle": "Virus masuk ke sel inang, memperbanyak diri, lalu dapat memengaruhi kesehatan manusia.",
+        "stages": ["Menempel", "Masuk", "Replikasi", "Perakitan", "Keluar"],
+        "health_actions": ["Cuci tangan", "Vaksin", "Masker"],
+        "steps": [
+            {"title": "Kenali virus", "body": "Virus membutuhkan sel inang untuk memperbanyak diri."},
+            {"title": "Ikuti siklus", "body": "Siklus hidup virus terdiri atas tahapan masuk, replikasi, dan pelepasan."},
+            {"title": "Jaga kesehatan", "body": "Pencegahan penyakit dilakukan dengan perilaku hidup sehat dan perlindungan diri."},
+        ],
+        "summary": "Memahami siklus hidup virus membantu menjelaskan cara pencegahan penyakit secara ilmiah.",
+    },
+    39: {
+        "id": "sample_mutation_evolution_selection_39",
+        "node_id": "phase5_bio_evolution_selection",
+        "template_id": "manim.bio_evolution_selection.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Mutasi, Evolusi, dan Seleksi",
+        "subtitle": "Variasi muncul melalui mutasi dan dapat dipilih oleh lingkungan melalui seleksi alam.",
+        "population_labels": ["Variasi A", "Variasi B", "Variasi C"],
+        "environment_factor": "Lingkungan kering",
+        "steps": [
+            {"title": "Variasi", "body": "Populasi memiliki perbedaan sifat yang dapat diwariskan."},
+            {"title": "Seleksi", "body": "Lingkungan menyeleksi individu yang lebih sesuai untuk bertahan hidup."},
+            {"title": "Perubahan populasi", "body": "Sifat yang menguntungkan cenderung lebih sering muncul pada generasi berikutnya."},
+        ],
+        "summary": "Evolusi dapat dipahami sebagai perubahan komposisi sifat dalam populasi dari waktu ke waktu.",
+    },
+    40: {
+        "id": "sample_reaction_equation_conservation_40",
+        "node_id": "phase5_reaction_equation_conservation",
+        "template_id": "manim.chem_reaction_equation.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Persamaan Reaksi dan Kekekalan",
+        "subtitle": "Jumlah atom harus tetap sama di ruas kiri dan kanan persamaan reaksi.",
+        "unbalanced_equation": "H2 + O2 -> H2O",
+        "balanced_equation": "2H2 + O2 -> 2H2O",
+        "reactant_counts": [{"label": "H", "left": 2, "right": 2}, {"label": "O", "left": 2, "right": 1}],
+        "balanced_counts": [{"label": "H", "left": 4, "right": 4}, {"label": "O", "left": 2, "right": 2}],
+        "steps": [
+            {"title": "Hitung atom", "body": "Setiap unsur dihitung pada pereaksi dan hasil reaksi."},
+            {"title": "Setarakan koefisien", "body": "Koefisien diubah tanpa mengubah rumus kimia zat."},
+            {"title": "Cek kekekalan", "body": "Jumlah atom akhir harus sama pada kedua ruas."},
+        ],
+        "summary": "Penyetaraan persamaan reaksi menegaskan hukum kekekalan massa pada tingkat partikel.",
+    },
+    41: {
+        "id": "sample_reaction_rate_collision_41",
+        "node_id": "phase5_reaction_rate_collision",
+        "template_id": "manim.chem_particle_reaction_rate.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Laju Reaksi dan Tumbukan",
+        "subtitle": "Reaksi kimia berlangsung lebih cepat jika tumbukan efektif antar partikel lebih sering terjadi.",
+        "factors": ["Suhu", "Konsentrasi", "Luas permukaan", "Katalis"],
+        "steps": [
+            {"title": "Partikel bergerak", "body": "Partikel pereaksi selalu bergerak dan saling bertumbukan."},
+            {"title": "Tumbukan efektif", "body": "Tidak semua tumbukan menghasilkan reaksi; orientasi dan energi harus sesuai."},
+            {"title": "Faktor laju", "body": "Suhu, konsentrasi, luas permukaan, dan katalis memengaruhi jumlah tumbukan efektif."},
+        ],
+        "summary": "Teori tumbukan menjelaskan mengapa kondisi tertentu dapat mempercepat atau memperlambat reaksi.",
+    },
+    42: {
+        "id": "sample_redox_electrochemistry_42",
+        "node_id": "phase5_redox_electrochemistry",
+        "template_id": "manim.chem_redox_electrochemistry.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Redoks dan Elektrokimia",
+        "subtitle": "Elektron berpindah dari anoda ke katoda dalam sel elektrokimia.",
+        "left_half": "Zn -> Zn2+ + 2e-",
+        "right_half": "Cu2+ + 2e- -> Cu",
+        "cell_label": "Sel Volta",
+        "steps": [
+            {"title": "Oksidasi", "body": "Anoda melepaskan elektron sehingga terjadi oksidasi."},
+            {"title": "Reduksi", "body": "Katoda menerima elektron sehingga terjadi reduksi."},
+            {"title": "Arus dan ion", "body": "Aliran elektron di kawat dan perpindahan ion menjaga reaksi tetap berlangsung."},
+        ],
+        "summary": "Konsep redoks terhubung langsung dengan cara kerja sel volta, baterai, dan proses elektrolisis.",
+    },
+    43: {
+        "id": "sample_organic_functional_group_43",
+        "node_id": "phase5_organic_functional_group",
+        "template_id": "manim.chem_organic_structure.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Struktur Organik dan Gugus Fungsi",
+        "subtitle": "Kerangka karbon dan gugus fungsi menentukan sifat senyawa organik.",
+        "molecules": [
+            {"name": "Etanol", "formula": "C2H5OH", "group": "-OH"},
+            {"name": "Asam asetat", "formula": "CH3COOH", "group": "-COOH"},
+            {"name": "Propanon", "formula": "CH3COCH3", "group": "C=O"},
+        ],
+        "steps": [
+            {"title": "Kerangka karbon", "body": "Atom karbon dapat membentuk rantai lurus, bercabang, atau cincin."},
+            {"title": "Gugus fungsi", "body": "Gugus fungsi memberi ciri reaksi dan sifat khas pada senyawa."},
+            {"title": "Bandingkan contoh", "body": "Senyawa dengan kerangka berbeda dapat dibedakan lewat gugus fungsi utamanya."},
+        ],
+        "summary": "Mengenali gugus fungsi membantu menghubungkan struktur organik dengan sifat dan kegunaannya.",
+    },
+    44: {
+        "id": "sample_arithmetic_operation_44",
+        "node_id": "phase3_elementary_arithmetic_operation",
+        "template_id": "manim.elementary_arithmetic_blocks.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Operasi Hitung dengan Blok",
+        "subtitle": "Penjumlahan dan pengurangan dapat dipahami sebagai penggabungan dan pengambilan blok.",
+        "expression": "7 - 3 = 4",
+        "left_count": 7,
+        "remove_count": 3,
+        "result_count": 4,
+        "steps": [
+            {"title": "Mulai dari jumlah awal", "body": "Tampilkan banyak benda sesuai bilangan pertama."},
+            {"title": "Ambil sebagian", "body": "Untuk pengurangan, beberapa benda dipisahkan atau diambil."},
+            {"title": "Hitung sisa", "body": "Benda yang tersisa menunjukkan hasil operasi hitung."},
+        ],
+        "summary": "Model konkret membantu siswa memahami makna operasi hitung, bukan sekadar hafalan simbol.",
+    },
+    45: {
+        "id": "sample_equation_balance_unknown_45",
+        "node_id": "phase3_equation_unknown_balance",
+        "template_id": "manim.equation_balance.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Nilai Tak Diketahui sebagai Keseimbangan",
+        "subtitle": "Kotak kosong dapat dicari dengan menjaga agar kedua sisi tetap seimbang.",
+        "equation_latex": "x + 4 = 9",
+        "left_terms": ["x", "4"],
+        "right_terms": ["9"],
+        "unknown_value": 5,
+        "steps": [
+            {"title": "Lihat keseimbangan", "body": "Persamaan berarti nilai kiri dan kanan harus sama."},
+            {"title": "Balik operasi", "body": "Untuk mencari x, kurangi kedua sisi dengan 4."},
+            {"title": "Temukan nilai", "body": "Setelah disederhanakan, diperoleh x sama dengan 5."},
+        ],
+        "summary": "Model keseimbangan memudahkan pemahaman tentang makna persamaan dan nilai yang belum diketahui.",
+    },
+    46: {
+        "id": "sample_data_representation_summary_46",
+        "node_id": "phase3_data_representation_summary",
+        "template_id": "manim.elementary_data_chart.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Dari Tabel ke Diagram",
+        "subtitle": "Data sederhana dapat diringkas dalam bentuk tabel, piktogram, dan diagram batang.",
+        "categories": ["Apel", "Jeruk", "Mangga", "Pisang"],
+        "values": [4, 2, 5, 3],
+        "steps": [
+            {"title": "Catat data", "body": "Data awal bisa ditulis dalam tabel sederhana."},
+            {"title": "Ubah ke gambar", "body": "Piktogram menampilkan data dengan simbol yang mudah dibaca."},
+            {"title": "Bandingkan", "body": "Diagram batang memudahkan melihat kategori terbanyak dan tersedikit."},
+        ],
+        "summary": "Representasi data membantu membaca dan membandingkan informasi secara lebih cepat.",
+    },
+    47: {
+        "id": "sample_body_senses_health_47",
+        "node_id": "phase3_body_senses_health",
+        "template_id": "manim.sd_body_senses_health.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Tubuh, Pancaindra, dan Kesehatan",
+        "subtitle": "Bagian tubuh dan pancaindra memiliki fungsi yang perlu dijaga kesehatannya.",
+        "senses": ["Mata", "Telinga", "Hidung", "Lidah", "Kulit"],
+        "healthy_habits": ["Cuci tangan", "Makan sehat", "Tidur cukup"],
+        "steps": [
+            {"title": "Kenali pancaindra", "body": "Setiap indra membantu kita menerima informasi dari lingkungan."},
+            {"title": "Hubungkan fungsi", "body": "Mata untuk melihat, telinga untuk mendengar, dan seterusnya."},
+            {"title": "Rawat tubuh", "body": "Kebiasaan hidup sehat membantu tubuh dan indra bekerja dengan baik."},
+        ],
+        "summary": "Belajar bagian tubuh perlu disertai pemahaman cara menjaga kesehatan sehari-hari.",
+    },
+    48: {
+        "id": "sample_living_things_lifecycle_48",
+        "node_id": "phase3_living_things_lifecycle",
+        "template_id": "manim.sd_life_cycle_classification.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Makhluk Hidup, Klasifikasi, dan Siklus Hidup",
+        "subtitle": "Makhluk hidup memiliki ciri tertentu dan mengalami tahapan pertumbuhan dalam siklus hidupnya.",
+        "categories": ["Hewan", "Tumbuhan"],
+        "life_cycle": ["Telur", "Larva", "Pupa", "Kupu-kupu"],
+        "steps": [
+            {"title": "Ciri makhluk hidup", "body": "Makhluk hidup tumbuh, bernapas, membutuhkan makanan, dan berkembang biak."},
+            {"title": "Kelompokkan", "body": "Makhluk hidup dapat dikelompokkan sebagai hewan atau tumbuhan berdasarkan cirinya."},
+            {"title": "Ikuti siklus hidup", "body": "Beberapa hewan mengalami perubahan bentuk bertahap hingga dewasa."},
+        ],
+        "summary": "Klasifikasi dan siklus hidup membantu memahami keragaman serta perubahan pada makhluk hidup.",
+    },
+    49: {
+        "id": "sample_force_motion_simple_machine_49",
+        "node_id": "phase3_force_motion_simple_machine",
+        "template_id": "manim.sd_force_motion.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Gaya, Gerak, dan Pesawat Sederhana",
+        "subtitle": "Gaya dapat mengubah gerak benda dan pesawat sederhana membantu meringankan kerja.",
+        "machines": ["Tuas", "Katrol", "Bidang miring"],
+        "steps": [
+            {"title": "Gaya dorong atau tarik", "body": "Benda dapat bergerak saat diberi gaya dorong atau tarik."},
+            {"title": "Arah gerak", "body": "Gaya dapat mempercepat, memperlambat, atau mengubah arah gerak benda."},
+            {"title": "Bantuan alat", "body": "Pesawat sederhana membantu manusia melakukan kerja dengan lebih mudah."},
+        ],
+        "summary": "Konsep gaya dan gerak menjadi lebih konkret saat dikaitkan dengan alat sederhana di sekitar kita.",
+    },
+    50: {
+        "id": "sample_algebra_expression_50",
+        "node_id": "phase4_algebra_expression_transform",
+        "template_id": "manim.algebra_expression.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Transformasi Bentuk Aljabar",
+        "subtitle": "Ekspresi aljabar dapat diperluas, disederhanakan, dan difaktorkan dengan tetap menjaga kesetaraan.",
+        "expression_start": "2(x + 3) + x",
+        "expression_expand": "2x + 6 + x",
+        "expression_simplify": "3x + 6",
+        "expression_factor": "3(x + 2)",
+        "steps": [
+            {"title": "Distribusikan", "body": "Kalikan faktor di luar kurung ke setiap suku di dalam kurung."},
+            {"title": "Gabungkan suku sejenis", "body": "Suku yang memiliki variabel sama dapat dijumlahkan."},
+            {"title": "Faktorkan kembali", "body": "Bentuk sederhana dapat diubah lagi menjadi bentuk faktor yang ekuivalen."},
+        ],
+        "summary": "Transformasi aljabar membantu berpindah antara bentuk ekspresi yang berbeda tetapi setara.",
+    },
+    51: {
+        "id": "sample_inequality_region_51",
+        "node_id": "phase5_inequality_region",
+        "template_id": "manim.inequality_region.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Pertidaksamaan dan Daerah Solusi",
+        "subtitle": "Daerah solusi pada bidang koordinat menunjukkan semua pasangan titik yang memenuhi pertidaksamaan.",
+        "inequality_latex": r"y \leq x + 1",
+        "boundary_label": "y = x + 1",
+        "x_range": [-3, 4, 1],
+        "y_range": [-2, 5, 1],
+        "steps": [
+            {"title": "Gambar garis batas", "body": "Ubah pertidaksamaan menjadi persamaan untuk mendapatkan garis batas."},
+            {"title": "Uji titik", "body": "Gunakan titik uji untuk menentukan sisi daerah yang memenuhi."},
+            {"title": "Arsir solusi", "body": "Semua titik pada daerah diarsir merupakan solusi pertidaksamaan."},
+        ],
+        "summary": "Visualisasi daerah solusi sangat membantu ketika mempelajari pertidaksamaan satu atau dua variabel.",
+    },
+    52: {
+        "id": "sample_trigonometric_ratio_triangle_52",
+        "node_id": "phase5_trigonometric_ratio_triangle",
+        "template_id": "manim.trig_ratio_triangle.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Perbandingan Trigonometri pada Segitiga",
+        "subtitle": "Sinus, cosinus, dan tangen dibentuk dari hubungan sisi-sisi pada segitiga siku-siku.",
+        "sides": {"depan": 3, "samping": 4, "miring": 5},
+        "theta_label": "θ",
+        "steps": [
+            {"title": "Tentukan sudut acuan", "body": "Pilih sudut yang akan dipakai untuk membaca sisi depan dan sisi samping."},
+            {"title": "Identifikasi sisi", "body": "Setiap sisi memiliki peran berbeda: depan, samping, dan miring."},
+            {"title": "Bangun rasio", "body": "sin θ = depan/miring, cos θ = samping/miring, tan θ = depan/samping."},
+        ],
+        "summary": "Trigonometri dasar berangkat dari hubungan sederhana pada segitiga siku-siku.",
+    },
+    53: {
+        "id": "sample_function_composition_inverse_53",
+        "node_id": "phase5_function_composition_inverse",
+        "template_id": "manim.function_composition_transform.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Komposisi dan Invers Fungsi",
+        "subtitle": "Fungsi dapat dipandang sebagai mesin yang mengubah input menjadi output, lalu dibalik dengan fungsi invers.",
+        "input_value": 2,
+        "f_label": "f(x)=2x+1",
+        "g_label": "g(x)=x^2",
+        "inverse_label": "f^{-1}(x)=(x-1)/2",
+        "steps": [
+            {"title": "Komposisi", "body": "Pada komposisi, output dari fungsi pertama menjadi input fungsi berikutnya."},
+            {"title": "Urutan penting", "body": "f∘g dan g∘f belum tentu menghasilkan nilai yang sama."},
+            {"title": "Invers", "body": "Fungsi invers membalik perubahan sehingga output dapat dikembalikan menjadi input semula."},
+        ],
+        "summary": "Model mesin fungsi membantu memvisualkan komposisi, transformasi, dan gagasan fungsi invers.",
+    },
+    54: {
+        "id": "sample_acid_base_safety_54",
+        "node_id": "phase5_acid_base_safety",
+        "template_id": "manim.chem_acid_base_safety.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Asam, Basa, dan Keselamatan",
+        "subtitle": "Zat asam dan basa di sekitar kita perlu dikenali sifatnya serta ditangani dengan aman.",
+        "ph_values": [{"label": "Cuka", "value": 3}, {"label": "Air", "value": 7}, {"label": "Sabun", "value": 10}],
+        "safety_items": ["Sarung tangan", "Kacamata", "Label bahan"],
+        "steps": [
+            {"title": "Kenali pH", "body": "Asam memiliki pH di bawah 7, sedangkan basa di atas 7."},
+            {"title": "Temukan contoh", "body": "Banyak bahan rumah tangga dapat dikelompokkan sebagai asam atau basa."},
+            {"title": "Utamakan keselamatan", "body": "Penanganan zat kimia harus memperhatikan alat pelindung dan petunjuk label."},
+        ],
+        "summary": "Konsep asam-basa sebaiknya selalu diajarkan bersama konteks penggunaan aman dalam kehidupan sehari-hari.",
+    },
+    55: {
+        "id": "sample_wave_sound_light_55",
+        "node_id": "phase5_wave_sound_light",
+        "template_id": "manim.wave_sound_light.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Gelombang, Bunyi, dan Cahaya",
+        "subtitle": "Gelombang memiliki panjang gelombang, amplitudo, dan frekuensi yang berkaitan dengan bunyi serta cahaya.",
+        "wave_labels": ["Puncak", "Lembah", "λ", "A"],
+        "steps": [
+            {"title": "Amati bentuk gelombang", "body": "Gelombang memiliki puncak, lembah, amplitudo, dan panjang gelombang."},
+            {"title": "Hubungkan dengan bunyi", "body": "Bunyi dapat dipahami melalui getaran dan perambatan gelombang."},
+            {"title": "Hubungkan dengan cahaya", "body": "Cahaya juga menunjukkan sifat gelombang seperti pemantulan dan pembiasan sederhana."},
+        ],
+        "summary": "Satu kerangka gelombang dapat dipakai untuk menjelaskan bunyi maupun cahaya dasar.",
+    },
+    56: {
+        "id": "sample_measurement_uncertainty_56",
+        "node_id": "phase5_measurement_uncertainty",
+        "template_id": "manim.measurement_uncertainty.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Pengukuran dan Ketidakpastian",
+        "subtitle": "Setiap hasil pengukuran memiliki satuan, ketelitian alat, dan ketidakpastian tertentu.",
+        "tool_label": "Penggaris",
+        "readings": [12.2, 12.3, 12.2],
+        "reported_value": "12,23 ± 0,05 cm",
+        "steps": [
+            {"title": "Baca skala alat", "body": "Hasil ukur ditentukan dengan memperhatikan satuan dan skala terkecil alat."},
+            {"title": "Ulangi pengukuran", "body": "Pengukuran berulang membantu melihat variasi hasil."},
+            {"title": "Laporkan hasil", "body": "Hasil akhir ditulis bersama satuan dan ketidakpastian pengukuran."},
+        ],
+        "summary": "Belajar mengukur tidak hanya tentang angka, tetapi juga tentang kualitas hasil dan ketelitiannya.",
+    },
+    57: {
+        "id": "sample_motion_kinematics_57",
+        "node_id": "phase4_motion_kinematics",
+        "template_id": "manim.motion_kinematics.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Kinematika Gerak",
+        "subtitle": "Gerak dapat dijelaskan melalui posisi, kecepatan, dan grafik perubahan terhadap waktu.",
+        "positions": [0, 2, 5, 9],
+        "times": [0, 1, 2, 3],
+        "steps": [
+            {"title": "Posisi terhadap waktu", "body": "Gerak diamati dengan membandingkan perubahan posisi pada selang waktu tertentu."},
+            {"title": "Makna kecepatan", "body": "Kecepatan menyatakan seberapa cepat posisi berubah."},
+            {"title": "Baca grafik", "body": "Kemiringan grafik posisi-waktu memberi petunjuk tentang kecepatan gerak."},
+        ],
+        "summary": "Representasi tabel, lintasan, dan grafik saling melengkapi untuk menjelaskan gerak.",
+    },
+    58: {
+        "id": "sample_heat_temperature_transfer_58",
+        "node_id": "phase5_heat_temperature_transfer",
+        "template_id": "manim.heat_transfer_thermo.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Suhu, Kalor, dan Perpindahan Panas",
+        "subtitle": "Kalor berpindah dari suhu tinggi ke suhu rendah melalui konduksi, konveksi, atau radiasi.",
+        "modes": ["Konduksi", "Konveksi", "Radiasi"],
+        "temperatures": [80, 30],
+        "steps": [
+            {"title": "Bedakan suhu dan kalor", "body": "Suhu menyatakan derajat panas, sedangkan kalor adalah energi yang berpindah."},
+            {"title": "Arah perpindahan", "body": "Kalor selalu berpindah dari benda bersuhu lebih tinggi ke lebih rendah."},
+            {"title": "Tiga mekanisme", "body": "Perpindahan panas dapat terjadi lewat konduksi, konveksi, dan radiasi."},
+        ],
+        "summary": "Konsep suhu dan kalor menjadi lebih jelas saat dikaitkan dengan arah aliran energi dan mekanismenya.",
+    },
+    59: {
+        "id": "sample_electric_circuit_59",
+        "node_id": "phase5_electric_circuit",
+        "template_id": "manim.electric_circuit.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Rangkaian Listrik Sederhana",
+        "subtitle": "Baterai, sakelar, kabel, dan lampu bekerja bersama dalam lintasan arus tertutup.",
+        "components": ["Baterai", "Sakelar", "Lampu"],
+        "steps": [
+            {"title": "Susun komponen", "body": "Komponen utama rangkaian dihubungkan dengan kabel penghantar."},
+            {"title": "Tutup sakelar", "body": "Arus hanya dapat mengalir saat lintasan tertutup."},
+            {"title": "Bandingkan kondisi", "body": "Saat rangkaian terbuka, arus terputus dan lampu padam."},
+        ],
+        "summary": "Rangkaian listrik sederhana menegaskan bahwa arus membutuhkan jalur tertutup untuk mengalir.",
+    },
+    60: {
+        "id": "sample_chemistry_inquiry_safety_60",
+        "node_id": "phase5_chemistry_inquiry_safety",
+        "template_id": "manim.chem_lab_safety.v1",
+        "phase": "E",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Hakikat Kimia dan Keselamatan Laboratorium",
+        "subtitle": "Belajar kimia dimulai dari observasi zat dan perubahan, namun harus selalu disertai prosedur keselamatan.",
+        "icons": ["Gelas kimia", "Api", "Kacamata", "Label bahaya"],
+        "steps": [
+            {"title": "Amati materi", "body": "Kimia mempelajari komposisi, sifat, dan perubahan zat."},
+            {"title": "Kerja ilmiah", "body": "Eksperimen dilakukan dengan pengamatan, pencatatan, dan penarikan kesimpulan."},
+            {"title": "Patuhi aturan", "body": "Keselamatan laboratorium harus diutamakan sebelum, saat, dan sesudah eksperimen."},
+        ],
+        "summary": "Pembelajaran kimia yang baik selalu menggabungkan rasa ingin tahu ilmiah dengan budaya keselamatan.",
+    },
+}
+
+
+# -----------------------------------------------------------------------------
+# NEW DISTINCT TEMPLATES
+# -----------------------------------------------------------------------------
+
+class EcosystemInterdependenceTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[30]
+
+    def construct(self):
+        spec = self.SPEC
+        chain = spec.get("chain", [])[:5]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Ekosistem", "Makhluk hidup saling terhubung lewat aliran energi dan peran dalam habitat.", color=GREEN))
+
+        sun = circle_chip(spec.get("sun_label", "Matahari"), radius=0.42, color=YELLOW, font_size=16, fill_opacity=0.28).move_to(LEFT * 5.2 + UP * 1.4)
+        habitat = RoundedRectangle(width=6.6, height=2.8, corner_radius=0.18, color=GREEN, fill_color=GREEN, fill_opacity=0.10).move_to(LEFT * 2.1 + DOWN * 0.45)
+        habitat_label = Text(spec.get("habitat_label", "Habitat"), font_size=20, color=GREEN, weight=BOLD).next_to(habitat, UP, buff=0.08)
+        self.play(FadeIn(habitat), FadeIn(habitat_label), FadeIn(sun), run_time=0.7)
+
+        nodes = VGroup()
+        x_positions = [-4.8, -3.3, -1.8, -0.3, 1.2]
+        colors = [GREEN, TEAL, BLUE, PURPLE, RED]
+        for idx, label in enumerate(chain):
+            node = simple_box(label, width=1.25, height=0.76, color=colors[idx % len(colors)], font_size=18)
+            node.move_to(RIGHT * x_positions[idx] + DOWN * 0.35)
+            nodes.add(node)
+        arrows = VGroup(*[Arrow(nodes[i].get_right(), nodes[i + 1].get_left(), buff=0.10, color=WHITE, stroke_width=3) for i in range(len(nodes) - 1)])
+        solar = Arrow(sun.get_bottom(), nodes[0].get_top(), buff=0.12, color=YELLOW, stroke_width=3)
+        self.play(LaggedStart(*[FadeIn(node) for node in nodes], lag_ratio=0.12), Create(arrows), Create(solar), run_time=1.1)
+
+        decomposer = simple_box(spec.get("decomposer_label", "Pengurai"), detail="mengembalikan unsur hara", width=1.8, height=0.86, color=ORANGE, font_size=18).move_to(RIGHT * 2.75 + DOWN * 1.65)
+        cycle1 = CurvedArrow(nodes[-1].get_bottom() + DOWN * 0.06, decomposer.get_left(), angle=-0.6, color=ORANGE)
+        cycle2 = CurvedArrow(decomposer.get_top(), nodes[0].get_bottom() + DOWN * 0.06, angle=-0.6, color=ORANGE)
+        active_card = self.replace_card(active_card, self.make_card("Pengurai", "Sisa makhluk hidup diuraikan lalu unsur hara kembali dimanfaatkan tumbuhan.", color=ORANGE))
+        self.play(FadeIn(decomposer), Create(cycle1), Create(cycle2), run_time=0.9)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class EnergyFormsConversionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[31]
+
+    def construct(self):
+        spec = self.SPEC
+        forms = spec.get("forms", [])[:4]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Bentuk energi", "Energi dapat hadir sebagai panas, cahaya, bunyi, listrik, dan bentuk lain.", color=BLUE))
+
+        center = circle_chip("Energi", radius=0.56, color=YELLOW, font_size=24, fill_opacity=0.25).move_to(LEFT * 2.2 + DOWN * 0.2)
+        self.play(FadeIn(center), run_time=0.45)
+        positions = [LEFT * 4.5 + UP * 1.2, LEFT * 4.5 + DOWN * 1.4, LEFT * 0.0 + UP * 1.2, LEFT * 0.0 + DOWN * 1.4]
+        groups = VGroup()
+        arrows = VGroup()
+        colors = [BLUE, RED, TEAL, PURPLE]
+        for idx, item in enumerate(forms):
+            box = simple_box(item.get("label", "Energi"), detail=item.get("detail"), width=1.6, height=0.85, color=colors[idx], font_size=18).move_to(positions[idx])
+            groups.add(box)
+            arrows.add(Arrow(center.get_center(), box.get_center(), buff=0.58, color=colors[idx], stroke_width=3))
+        self.play(LaggedStart(*[FadeIn(g) for g in groups], lag_ratio=0.12), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.08), run_time=1.1)
+
+        flow_labels = VGroup(
+            Text("listrik → panas", font_size=16, color=RED),
+            Text("listrik → cahaya", font_size=16, color=TEAL),
+            Text("listrik → bunyi", font_size=16, color=PURPLE),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.10).move_to(RIGHT * 3.95 + DOWN * 0.2)
+        frame = RoundedRectangle(width=2.7, height=1.5, corner_radius=0.16, color=WHITE).move_to(flow_labels)
+        active_card = self.replace_card(active_card, self.make_card("Perubahan energi", "Satu bentuk energi dapat berubah menjadi bentuk lain saat alat bekerja.", color=TEAL))
+        self.play(FadeIn(frame), FadeIn(flow_labels), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class LifeStructureClassificationTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[34]
+
+    def construct(self):
+        spec = self.SPEC
+        levels = spec.get("levels", [])[:4]
+        parts = spec.get("parts", [])[:4]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Struktur organisme", "Bagian tubuh memberi petunjuk tentang fungsi dan identitas makhluk hidup.", color=GREEN))
+
+        organism = RoundedRectangle(width=2.0, height=2.7, corner_radius=0.18, color=GREEN, fill_color=GREEN, fill_opacity=0.12).move_to(LEFT * 3.9 + DOWN * 0.15)
+        stem = Line(organism.get_bottom() + DOWN * 0.55, organism.get_center() + DOWN * 0.15, color=GREEN)
+        leaves = VGroup(
+            Ellipse(width=0.7, height=0.28, color=GREEN, fill_color=GREEN, fill_opacity=0.25).rotate(0.45).move_to(organism.get_center() + LEFT * 0.35 + UP * 0.15),
+            Ellipse(width=0.7, height=0.28, color=GREEN, fill_color=GREEN, fill_opacity=0.25).rotate(-0.45).move_to(organism.get_center() + RIGHT * 0.35 + UP * 0.15),
+            Ellipse(width=0.7, height=0.28, color=GREEN, fill_color=GREEN, fill_opacity=0.25).rotate(0.45).move_to(organism.get_center() + LEFT * 0.35 + DOWN * 0.35),
+            Ellipse(width=0.7, height=0.28, color=GREEN, fill_color=GREEN, fill_opacity=0.25).rotate(-0.45).move_to(organism.get_center() + RIGHT * 0.35 + DOWN * 0.35),
+        )
+        flower = Circle(radius=0.18, color=YELLOW, fill_color=YELLOW, fill_opacity=0.8).move_to(organism.get_top() + DOWN * 0.35)
+        org_label = Text(spec.get("organism", "Organisme"), font_size=18, color=GREEN, weight=BOLD).next_to(organism, DOWN, buff=0.08)
+        self.play(FadeIn(organism), Create(stem), FadeIn(leaves), FadeIn(flower), FadeIn(org_label), run_time=1.0)
+
+        part_labels = VGroup()
+        target_points = [organism.get_bottom() + LEFT * 0.1, organism.get_center() + DOWN * 0.2, organism.get_center() + UP * 0.35, flower.get_center()]
+        for idx, part in enumerate(parts):
+            text = Text(part, font_size=15, color=WHITE)
+            text.move_to(LEFT * 1.55 + UP * (1.2 - idx * 0.7))
+            arrow = Arrow(text.get_right(), target_points[idx], buff=0.08, color=WHITE, stroke_width=2.5)
+            part_labels.add(VGroup(text, arrow))
+        active_card = self.replace_card(active_card, self.make_card("Identifikasi bagian", "Label struktur membantu menghubungkan nama bagian dan fungsinya.", color=TEAL))
+        self.play(LaggedStart(*[FadeIn(g) for g in part_labels], lag_ratio=0.10), run_time=0.8)
+
+        classes = VGroup(*[simple_box(level, width=1.55, height=0.62, color=BLUE if i < 2 else PURPLE, font_size=17) for i, level in enumerate(levels)]).arrange(DOWN, buff=0.10).move_to(RIGHT * 3.8 + DOWN * 0.1)
+        braces = Brace(classes, LEFT, color=WHITE)
+        class_label = Text("Klasifikasi", font_size=18, color=WHITE).next_to(braces, LEFT, buff=0.08)
+        self.play(FadeIn(classes), FadeIn(braces), FadeIn(class_label), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElectricityMagnetismCircuitTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[35]
+
+    def construct(self):
+        spec = self.SPEC
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Rangkaian", "Arus listrik memerlukan lintasan tertutup untuk mengalir.", color=BLUE))
+
+        wire = VMobject(color=WHITE, stroke_width=4)
+        pts = [LEFT * 5 + UP * 1.3, LEFT * 1.8 + UP * 1.3, LEFT * 1.8 + DOWN * 1.3, LEFT * 5 + DOWN * 1.3, LEFT * 5 + UP * 1.3]
+        wire.set_points_as_corners(pts)
+        battery1 = Line(LEFT * 5 + UP * 0.35, LEFT * 5 + DOWN * 0.10, color=YELLOW, stroke_width=5)
+        battery2 = Line(LEFT * 4.7 + UP * 0.55, LEFT * 4.7 + DOWN * 0.30, color=YELLOW, stroke_width=3)
+        switch = VGroup(Line(LEFT * 3.65 + UP * 1.3, LEFT * 3.2 + UP * 1.3, color=WHITE, stroke_width=4), Line(LEFT * 3.2 + UP * 1.3, LEFT * 2.8 + UP * 1.55, color=WHITE, stroke_width=4))
+        bulb = Circle(radius=0.28, color=YELLOW, fill_color=YELLOW, fill_opacity=0.28).move_to(LEFT * 1.8 + DOWN * 0.1)
+        filament = Text("X", font_size=18, color=YELLOW).move_to(bulb)
+        self.play(Create(wire), FadeIn(battery1), FadeIn(battery2), FadeIn(switch), FadeIn(bulb), FadeIn(filament), run_time=1.0)
+
+        active_card = self.replace_card(active_card, self.make_card("Arus mengalir", "Saat sakelar ditutup, elektron bergerak sepanjang rangkaian dan lampu menyala.", color=YELLOW))
+        close_switch = Line(LEFT * 3.2 + UP * 1.3, LEFT * 2.8 + UP * 1.3, color=YELLOW, stroke_width=4)
+        glow = SurroundingRectangle(bulb, color=YELLOW, buff=0.12)
+        current_arrows = VGroup(
+            Arrow(LEFT * 4.6 + UP * 1.3, LEFT * 4.0 + UP * 1.3, buff=0.08, color=YELLOW),
+            Arrow(LEFT * 1.8 + UP * 0.7, LEFT * 1.8 + DOWN * 0.2, buff=0.08, color=YELLOW),
+            Arrow(LEFT * 3.8 + DOWN * 1.3, LEFT * 4.6 + DOWN * 1.3, buff=0.08, color=YELLOW),
+        )
+        self.play(Transform(switch[1], close_switch), FadeIn(current_arrows), Create(glow), run_time=0.9)
+
+        coil = VGroup(*[Arc(radius=0.22, angle=PI, color=PURPLE).shift(RIGHT * (2.7 + i * 0.28) + DOWN * 0.25) for i in range(5)])
+        nail = Rectangle(width=0.22, height=1.1, color=GRAY, fill_color=GRAY, fill_opacity=0.55).move_to(RIGHT * 4.3 + DOWN * 0.25)
+        clips = VGroup(*[SmallDot(color=WHITE).move_to(RIGHT * 5.15 + UP * (0.55 - i * 0.18)) for i in range(4)])
+        arrow = CurvedArrow(RIGHT * 3.6 + DOWN * 0.85, RIGHT * 5.0 + UP * 0.2, angle=-0.6, color=PURPLE)
+        active_card = self.replace_card(active_card, self.make_card("Elektromagnet", "Kumparan berarus dapat menimbulkan medan magnet yang menarik logam kecil.", color=PURPLE))
+        self.play(FadeIn(coil), FadeIn(nail), FadeIn(clips), Create(arrow), run_time=0.9)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class VirusLifecycleHealthTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[38]
+
+    def construct(self):
+        spec = self.SPEC
+        stages = spec.get("stages", [])[:5]
+        health = spec.get("health_actions", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Virus", "Virus memerlukan sel inang untuk memperbanyak diri.", color=RED))
+
+        stage_groups = VGroup()
+        positions = [LEFT * 5.0 + UP * 0.5, LEFT * 3.3 + UP * 1.3, LEFT * 1.5 + UP * 0.5, RIGHT * 0.2 + UP * 1.3, RIGHT * 2.0 + UP * 0.5]
+        for idx, stg in enumerate(stages):
+            cell = Circle(radius=0.48, color=BLUE, fill_color=BLUE, fill_opacity=0.14)
+            virus = Star(n=8, outer_radius=0.18, color=RED, fill_color=RED, fill_opacity=0.8)
+            virus.move_to(cell.get_center() + (LEFT * 0.12 if idx % 2 == 0 else RIGHT * 0.12))
+            label = Text(stg, font_size=15, color=WHITE).next_to(cell, DOWN, buff=0.06)
+            group = VGroup(cell, virus, label).move_to(positions[idx])
+            stage_groups.add(group)
+        arrows = VGroup(*[CurvedArrow(stage_groups[i].get_right(), stage_groups[i + 1].get_left(), angle=0.2 if i % 2 == 0 else -0.2, color=WHITE) for i in range(len(stage_groups) - 1)])
+        self.play(LaggedStart(*[FadeIn(g) for g in stage_groups], lag_ratio=0.1), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.08), run_time=1.2)
+
+        health_boxes = VGroup(*[simple_box(item, width=1.45, height=0.62, color=GREEN, font_size=16) for item in health]).arrange(DOWN, buff=0.10).move_to(RIGHT * 4.2 + DOWN * 1.0)
+        shield = Shield().scale(0.55).set_color(GREEN).move_to(RIGHT * 2.9 + DOWN * 1.0) if 'Shield' in globals() else circle_chip("+", radius=0.28, color=GREEN, font_size=20).move_to(RIGHT * 2.9 + DOWN * 1.0)
+        active_card = self.replace_card(active_card, self.make_card("Pencegahan", "Perlindungan diri dan perilaku sehat membantu mencegah penyebaran penyakit.", color=GREEN))
+        self.play(FadeIn(health_boxes), FadeIn(shield), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MutationEvolutionSelectionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[39]
+
+    def construct(self):
+        spec = self.SPEC
+        labels = spec.get("population_labels", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Variasi populasi", "Individu dalam populasi tidak selalu sama persis; ada variasi sifat.", color=TEAL))
+
+        pop1 = VGroup()
+        colors = [BLUE, GREEN, ORANGE]
+        xs = [-5.0, -4.3, -3.6, -2.9, -2.2, -1.5]
+        for i, x in enumerate(xs):
+            label = labels[i % len(labels)][-1]
+            chip = circle_chip(label, radius=0.22, color=colors[i % len(colors)], font_size=14, fill_opacity=0.24).move_to(RIGHT * x + UP * (0.7 if i % 2 == 0 else 0.15))
+            pop1.add(chip)
+        env = simple_box(spec.get("environment_factor", "Lingkungan"), width=2.2, height=0.7, color=RED, font_size=18).move_to(LEFT * 0.45 + UP * 0.4)
+        arrow = Arrow(pop1.get_right(), env.get_left(), buff=0.2, color=WHITE)
+        self.play(LaggedStart(*[FadeIn(p) for p in pop1], lag_ratio=0.06), FadeIn(env), Create(arrow), run_time=1.0)
+
+        pop2 = VGroup()
+        xs2 = [1.4, 2.1, 2.8, 3.5, 4.2, 4.9]
+        for i, x in enumerate(xs2):
+            color = GREEN if i < 4 else ORANGE
+            lbl = labels[1][-1] if i < 4 else labels[2][-1]
+            chip = circle_chip(lbl, radius=0.22, color=color, font_size=14, fill_opacity=0.24).move_to(RIGHT * x + UP * (0.7 if i % 2 == 0 else 0.15))
+            pop2.add(chip)
+        active_card = self.replace_card(active_card, self.make_card("Seleksi alam", "Lingkungan menyeleksi sifat yang paling menguntungkan untuk bertahan hidup.", color=GREEN))
+        self.play(FadeIn(pop2), run_time=0.8)
+        gen_label = Text("Generasi berikutnya", font_size=18, color=WHITE).next_to(pop2, DOWN, buff=0.18)
+        self.play(FadeIn(gen_label), run_time=0.3)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ReactionRateCollisionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[41]
+
+    def construct(self):
+        spec = self.SPEC
+        factors = spec.get("factors", [])[:4]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Partikel bereaksi", "Reaksi bergantung pada tumbukan antar partikel pereaksi.", color=BLUE))
+
+        box = RoundedRectangle(width=4.5, height=2.5, corner_radius=0.16, color=WHITE).move_to(LEFT * 2.7 + DOWN * 0.15)
+        particles_a = VGroup(*[Dot(radius=0.08, color=BLUE).move_to(box.get_center() + LEFT * (1.5 - 0.7 * i) + UP * (0.65 - 0.45 * (i % 2))) for i in range(4)])
+        particles_b = VGroup(*[Dot(radius=0.08, color=RED).move_to(box.get_center() + RIGHT * (1.3 - 0.55 * i) + DOWN * (0.55 - 0.32 * (i % 2))) for i in range(4)])
+        self.play(FadeIn(box), FadeIn(particles_a), FadeIn(particles_b), run_time=0.7)
+
+        paths = VGroup(
+            Arrow(particles_a[0].get_center(), particles_b[0].get_center(), buff=0.12, color=YELLOW),
+            Arrow(particles_a[2].get_center(), particles_b[2].get_center(), buff=0.12, color=YELLOW),
+        )
+        spark = Star(n=6, outer_radius=0.18, color=YELLOW, fill_color=YELLOW, fill_opacity=0.8).move_to((particles_a[0].get_center() + particles_b[0].get_center()) / 2)
+        active_card = self.replace_card(active_card, self.make_card("Tumbukan efektif", "Tumbukan harus cukup energi dan orientasinya tepat agar reaksi terjadi.", color=YELLOW))
+        self.play(LaggedStart(*[Create(p) for p in paths], lag_ratio=0.08), FadeIn(spark), run_time=0.8)
+
+        factor_boxes = VGroup(*[simple_box(f, width=1.5, height=0.58, color=GREEN if i < 2 else TEAL, font_size=15) for i, f in enumerate(factors)]).arrange(DOWN, buff=0.10).move_to(RIGHT * 3.95 + DOWN * 0.05)
+        frame = SurroundingRectangle(factor_boxes, color=WHITE, buff=0.12)
+        self.play(FadeIn(frame), FadeIn(factor_boxes), run_time=0.75)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class RedoxElectrochemistryTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[42]
+
+    def construct(self):
+        spec = self.SPEC
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Sel elektrokimia", "Dua setengah sel dihubungkan untuk menghasilkan aliran elektron.", color=BLUE))
+
+        beaker_l = RoundedRectangle(width=1.7, height=2.1, corner_radius=0.12, color=BLUE).move_to(LEFT * 3.8 + DOWN * 0.1)
+        beaker_r = RoundedRectangle(width=1.7, height=2.1, corner_radius=0.12, color=GREEN).move_to(LEFT * 0.7 + DOWN * 0.1)
+        sol_l = Rectangle(width=1.52, height=1.05, color=BLUE, fill_color=BLUE, fill_opacity=0.25).move_to(beaker_l.get_bottom() + UP * 0.55)
+        sol_r = Rectangle(width=1.52, height=1.05, color=GREEN, fill_color=GREEN, fill_opacity=0.25).move_to(beaker_r.get_bottom() + UP * 0.55)
+        elec_l = Rectangle(width=0.18, height=1.5, color=GRAY, fill_color=GRAY, fill_opacity=0.7).move_to(beaker_l.get_center() + UP * 0.15)
+        elec_r = Rectangle(width=0.18, height=1.5, color=GRAY, fill_color=GRAY, fill_opacity=0.7).move_to(beaker_r.get_center() + UP * 0.15)
+        wire = ArcBetweenPoints(elec_l.get_top(), elec_r.get_top(), angle=-1.0, color=WHITE)
+        bulb = Circle(radius=0.22, color=YELLOW, fill_color=YELLOW, fill_opacity=0.25).move_to((wire.get_center()) + UP * 0.55)
+        salt_bridge = Line(beaker_l.get_right() + UP * 0.2, beaker_r.get_left() + UP * 0.2, color=PURPLE, stroke_width=6)
+        labels = VGroup(
+            Text(spec.get("left_half", "oksidasi"), font_size=16, color=BLUE).next_to(beaker_l, DOWN, buff=0.10),
+            Text(spec.get("right_half", "reduksi"), font_size=16, color=GREEN).next_to(beaker_r, DOWN, buff=0.10),
+            Text(spec.get("cell_label", "Sel"), font_size=18, color=WHITE).next_to(bulb, UP, buff=0.10),
+        )
+        self.play(FadeIn(beaker_l), FadeIn(beaker_r), FadeIn(sol_l), FadeIn(sol_r), FadeIn(elec_l), FadeIn(elec_r), Create(wire), FadeIn(bulb), FadeIn(salt_bridge), FadeIn(labels), run_time=1.2)
+
+        electrons = VGroup(*[SmallDot(color=YELLOW).move_to(interpolate(elec_l.get_top(), elec_r.get_top(), t)) for t in [0.2, 0.45, 0.7]])
+        ion_arrows = VGroup(Arrow(beaker_l.get_right(), beaker_r.get_left(), buff=0.25, color=PURPLE), Arrow(beaker_r.get_left() + DOWN * 0.35, beaker_l.get_right() + DOWN * 0.35, buff=0.25, color=PURPLE))
+        active_card = self.replace_card(active_card, self.make_card("Elektron dan ion", "Elektron mengalir melalui kawat, sedangkan ion berpindah lewat jembatan garam.", color=PURPLE))
+        self.play(FadeIn(electrons), Create(ion_arrows), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class OrganicStructureFunctionalGroupTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[43]
+
+    def construct(self):
+        spec = self.SPEC
+        mols = spec.get("molecules", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Senyawa organik", "Senyawa organik memiliki kerangka karbon dan dapat dibedakan dengan gugus fungsi.", color=BLUE))
+
+        cards = VGroup()
+        x_positions = [-4.4, -2.0, 0.4]
+        colors = [TEAL, ORANGE, PURPLE]
+        for idx, mol in enumerate(mols):
+            frame = RoundedRectangle(width=2.05, height=2.1, corner_radius=0.16, color=colors[idx], fill_color=colors[idx], fill_opacity=0.10)
+            name = Text(mol.get("name", "Senyawa"), font_size=18, color=colors[idx], weight=BOLD)
+            formula = _math_or_text(mol.get("formula", "C_xH_y"), font_size=24, color=WHITE)
+            group = simple_box(mol.get("group", "-X"), width=1.0, height=0.50, color=colors[idx], font_size=16)
+            card = VGroup(frame, VGroup(name, formula, group).arrange(DOWN, buff=0.16)).move_to(RIGHT * x_positions[idx] + DOWN * 0.05)
+            cards.add(card)
+        self.play(LaggedStart(*[FadeIn(c) for c in cards], lag_ratio=0.12), run_time=1.0)
+
+        carbon_chain = VGroup(*[Circle(radius=0.13, color=WHITE).move_to(RIGHT * (-5.1 + i * 0.36) + DOWN * 2.0) for i in range(7)])
+        links = VGroup(*[Line(carbon_chain[i].get_right(), carbon_chain[i + 1].get_left(), color=WHITE) for i in range(len(carbon_chain) - 1)])
+        chain_label = Text("Kerangka karbon", font_size=18, color=WHITE).next_to(carbon_chain, UP, buff=0.10)
+        active_card = self.replace_card(active_card, self.make_card("Kerangka dan gugus", "Kerangka karbon menunjukkan susunan utama, sedangkan gugus fungsi menentukan sifat khas.", color=TEAL))
+        self.play(FadeIn(carbon_chain), FadeIn(links), FadeIn(chain_label), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class DataRepresentationSummaryTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[46]
+
+    def construct(self):
+        spec = self.SPEC
+        cats = spec.get("categories", [])[:4]
+        vals = spec.get("values", [])[:4]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Tabel data", "Data awal dapat dicatat dalam tabel sederhana.", color=BLUE))
+
+        rows = VGroup()
+        for idx, (c, v) in enumerate(zip(cats, vals)):
+            left = simple_box(c, width=1.4, height=0.5, color=BLUE, font_size=16)
+            right = simple_box(str(v), width=0.8, height=0.5, color=TEAL, font_size=16)
+            row = VGroup(left, right).arrange(RIGHT, buff=0.08)
+            rows.add(row)
+        rows.arrange(DOWN, buff=0.08).move_to(LEFT * 4.45 + DOWN * 0.2)
+        table_frame = SurroundingRectangle(rows, color=WHITE, buff=0.12)
+        self.play(FadeIn(table_frame), FadeIn(rows), run_time=0.8)
+
+        pictos = VGroup()
+        for idx, (c, v) in enumerate(zip(cats, vals)):
+            icon_row = VGroup(*[Dot(radius=0.08, color=YELLOW).shift(RIGHT * (0.22 * j)) for j in range(v)]).arrange(RIGHT, buff=0.08)
+            label = Text(c, font_size=14, color=WHITE)
+            group = VGroup(label, icon_row).arrange(RIGHT, buff=0.12)
+            pictos.add(group)
+        pictos.arrange(DOWN, aligned_edge=LEFT, buff=0.12).move_to(LEFT * 1.25 + DOWN * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Piktogram", "Simbol berulang membantu pembaca muda melihat banyaknya data.", color=YELLOW))
+        self.play(FadeIn(pictos), run_time=0.8)
+
+        axes = Axes(x_range=[0, 5, 1], y_range=[0, max(vals) + 1, 1], x_length=2.7, y_length=2.1, axis_config={"include_numbers": False, "stroke_width": 2})
+        axes.move_to(RIGHT * 3.65 + DOWN * 0.2)
+        bars = VGroup()
+        for idx, v in enumerate(vals):
+            bar = Rectangle(width=0.36, height=(v / (max(vals) + 1)) * 1.75 + 0.15, color=GREEN, fill_color=GREEN, fill_opacity=0.35)
+            bar.move_to(axes.c2p(idx + 0.7, 0) + UP * (bar.height / 2))
+            label = Text(cats[idx][0], font_size=13, color=WHITE).next_to(bar, DOWN, buff=0.05)
+            bars.add(VGroup(bar, label))
+        active_card = self.replace_card(active_card, self.make_card("Diagram batang", "Diagram batang membuat perbandingan kategori menjadi lebih jelas.", color=GREEN))
+        self.play(Create(axes), LaggedStart(*[FadeIn(b) for b in bars], lag_ratio=0.08), run_time=0.95)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class BodySensesHealthTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[47]
+
+    def construct(self):
+        spec = self.SPEC
+        senses = spec.get("senses", [])[:5]
+        habits = spec.get("healthy_habits", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Pancaindra", "Pancaindra membantu kita menerima informasi dari lingkungan.", color=BLUE))
+
+        head = Circle(radius=0.62, color=WHITE).move_to(LEFT * 3.6 + UP * 0.55)
+        body = Line(head.get_bottom(), head.get_bottom() + DOWN * 1.35, color=WHITE)
+        arms = VGroup(Line(body.get_center() + UP * 0.45, body.get_center() + LEFT * 0.85 + UP * 0.1, color=WHITE), Line(body.get_center() + UP * 0.45, body.get_center() + RIGHT * 0.85 + UP * 0.1, color=WHITE))
+        legs = VGroup(Line(body.get_bottom(), body.get_bottom() + LEFT * 0.65 + DOWN * 0.95, color=WHITE), Line(body.get_bottom(), body.get_bottom() + RIGHT * 0.65 + DOWN * 0.95, color=WHITE))
+        self.play(FadeIn(head), Create(body), Create(arms), Create(legs), run_time=0.7)
+
+        sense_points = [head.get_center() + LEFT * 0.20 + UP * 0.15, head.get_center() + RIGHT * 0.20 + UP * 0.15, head.get_center() + LEFT * 0.65, head.get_center() + RIGHT * 0.65, body.get_bottom() + RIGHT * 1.0]
+        labels = VGroup()
+        text_positions = [LEFT * 5.3 + UP * 1.45, LEFT * 5.3 + UP * 0.75, LEFT * 5.3 + DOWN * 0.05, LEFT * 5.3 + DOWN * 0.85, LEFT * 5.3 + DOWN * 1.65]
+        for idx, s in enumerate(senses):
+            t = Text(s, font_size=15, color=WHITE).move_to(text_positions[idx])
+            arr = Arrow(t.get_right(), sense_points[idx], buff=0.06, color=WHITE, stroke_width=2.5)
+            labels.add(VGroup(t, arr))
+        self.play(LaggedStart(*[FadeIn(l) for l in labels], lag_ratio=0.08), run_time=0.8)
+
+        habit_boxes = VGroup(*[simple_box(h, width=1.7, height=0.58, color=GREEN, font_size=15) for h in habits]).arrange(DOWN, buff=0.10).move_to(RIGHT * 3.8 + DOWN * 0.2)
+        active_card = self.replace_card(active_card, self.make_card("Jaga kesehatan", "Kebiasaan sehat membantu tubuh dan pancaindra berfungsi baik.", color=GREEN))
+        self.play(FadeIn(habit_boxes), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class LivingThingsLifecycleClassificationTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[48]
+
+    def construct(self):
+        spec = self.SPEC
+        cats = spec.get("categories", [])[:2]
+        cycle = spec.get("life_cycle", [])[:4]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Kelompok makhluk hidup", "Makhluk hidup dapat dikelompokkan berdasarkan ciri umum yang dimilikinya.", color=TEAL))
+
+        cat_boxes = VGroup(*[simple_box(c, width=1.9, height=0.72, color=TEAL if i == 0 else GREEN, font_size=18) for i, c in enumerate(cats)]).arrange(RIGHT, buff=0.35).move_to(LEFT * 2.7 + UP * 1.1)
+        self.play(FadeIn(cat_boxes), run_time=0.6)
+
+        cycle_nodes = VGroup()
+        positions = [RIGHT * 1.0 + UP * 0.75, RIGHT * 3.0 + UP * 0.75, RIGHT * 3.0 + DOWN * 0.95, RIGHT * 1.0 + DOWN * 0.95]
+        for idx, label in enumerate(cycle):
+            node = circle_chip(label, radius=0.38, color=BLUE if idx < 2 else PURPLE, font_size=14, fill_opacity=0.22).move_to(positions[idx])
+            cycle_nodes.add(node)
+        cycle_arrows = VGroup(
+            Arrow(cycle_nodes[0].get_right(), cycle_nodes[1].get_left(), buff=0.10, color=WHITE),
+            Arrow(cycle_nodes[1].get_bottom(), cycle_nodes[2].get_top(), buff=0.10, color=WHITE),
+            Arrow(cycle_nodes[2].get_left(), cycle_nodes[3].get_right(), buff=0.10, color=WHITE),
+            Arrow(cycle_nodes[3].get_top(), cycle_nodes[0].get_bottom(), buff=0.10, color=WHITE),
+        )
+        active_card = self.replace_card(active_card, self.make_card("Siklus hidup", "Tahapan hidup dapat disusun sebagai urutan perubahan dari awal hingga dewasa.", color=BLUE))
+        self.play(LaggedStart(*[FadeIn(n) for n in cycle_nodes], lag_ratio=0.08), LaggedStart(*[Create(a) for a in cycle_arrows], lag_ratio=0.08), run_time=1.0)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ForceMotionSimpleMachineTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[49]
+
+    def construct(self):
+        spec = self.SPEC
+        machines = spec.get("machines", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Gaya dan gerak", "Dorongan atau tarikan dapat membuat benda bergerak.", color=BLUE))
+
+        cart = Rectangle(width=1.6, height=0.7, color=TEAL, fill_color=TEAL, fill_opacity=0.25).move_to(LEFT * 4.1 + DOWN * 0.25)
+        wheels = VGroup(Circle(radius=0.16, color=WHITE).move_to(cart.get_bottom() + LEFT * 0.45 + DOWN * 0.1), Circle(radius=0.16, color=WHITE).move_to(cart.get_bottom() + RIGHT * 0.45 + DOWN * 0.1))
+        push = Arrow(LEFT * 5.3 + DOWN * 0.25, cart.get_left(), buff=0.08, color=YELLOW, stroke_width=4)
+        motion = Arrow(cart.get_right(), cart.get_right() + RIGHT * 1.25, buff=0.05, color=GREEN, stroke_width=4)
+        self.play(FadeIn(cart), FadeIn(wheels), Create(push), Create(motion), run_time=0.9)
+
+        machine_boxes = VGroup(*[simple_box(m, width=1.7, height=0.62, color=ORANGE if i == 0 else PURPLE if i == 1 else GREEN, font_size=15) for i, m in enumerate(machines)]).arrange(DOWN, buff=0.12).move_to(RIGHT * 3.8 + DOWN * 0.15)
+        icons = VGroup(
+            Line(RIGHT * 1.9 + UP * 1.0, RIGHT * 3.0 + DOWN * 0.1, color=ORANGE, stroke_width=4),
+            Arc(radius=0.35, angle=PI, color=PURPLE).move_to(RIGHT * 2.9 + UP * 0.05),
+            Line(RIGHT * 2.2 + DOWN * 1.0, RIGHT * 3.2 + DOWN * 0.45, color=GREEN, stroke_width=4),
+        )
+        active_card = self.replace_card(active_card, self.make_card("Pesawat sederhana", "Alat sederhana membantu mengubah arah gaya atau memperkecil usaha.", color=ORANGE))
+        self.play(FadeIn(machine_boxes), FadeIn(icons), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class AlgebraExpressionTransformationTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[50]
+
+    def construct(self):
+        spec = self.SPEC
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Ekspresi awal", "Bentuk aljabar dapat diubah sambil tetap mempertahankan nilai yang sama.", color=BLUE))
+
+        exprs = [spec.get("expression_start"), spec.get("expression_expand"), spec.get("expression_simplify"), spec.get("expression_factor")]
+        expr_mobs = VGroup()
+        for idx, expr in enumerate(exprs):
+            eq = _math_or_text(expr, font_size=28, color=WHITE).move_to(LEFT * 2.4 + UP * (1.25 - idx * 0.95))
+            expr_mobs.add(eq)
+        arrows = VGroup(*[Arrow(expr_mobs[i].get_bottom(), expr_mobs[i + 1].get_top(), buff=0.08, color=YELLOW) for i in range(len(expr_mobs) - 1)])
+        self.play(LaggedStart(*[FadeIn(m) for m in expr_mobs], lag_ratio=0.10), LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.10), run_time=1.0)
+
+        badges = make_step_badges(["distribusi", "gabung suku", "faktorisasi"], color=TEAL).move_to(RIGHT * 3.95 + DOWN * 0.2)
+        active_card = self.replace_card(active_card, self.make_card("Langkah transformasi", "Distribusi, penyederhanaan, dan faktorisasi adalah operasi yang sering dipakai.", color=TEAL))
+        self.play(FadeIn(badges), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class InequalityRegionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[51]
+
+    def construct(self):
+        spec = self.SPEC
+        xr = spec.get("x_range", [-3, 4, 1])
+        yr = spec.get("y_range", [-2, 5, 1])
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Garis batas", "Pertidaksamaan dua variabel dianalisis melalui garis batas pada bidang koordinat.", color=BLUE))
+
+        axes = _build_axes_from_ranges(xr, yr, x_length=5.4, y_length=3.3)
+        axes.move_to(LEFT * 2.75 + DOWN * 0.25)
+        line = axes.plot(lambda x: x + 1, x_range=[xr[0], xr[1]], color=YELLOW, stroke_width=4)
+        line_label = _math_or_text(spec.get("boundary_label", "y=x+1"), font_size=22, color=YELLOW).move_to(LEFT * 1.0 + UP * 1.6)
+        self.play(Create(axes), Create(line), FadeIn(line_label), run_time=1.0)
+
+        poly = Polygon(axes.c2p(xr[0], yr[0]), axes.c2p(xr[1], yr[0]), axes.c2p(xr[1], xr[1] + 1), axes.c2p(xr[0], xr[0] + 1), color=GREEN, fill_color=GREEN, fill_opacity=0.20, stroke_opacity=0)
+        test_point = Dot(axes.c2p(0, 0), color=RED)
+        tp_label = Text("uji (0,0)", font_size=15, color=RED).next_to(test_point, RIGHT, buff=0.08)
+        active_card = self.replace_card(active_card, self.make_card("Uji titik", "Titik uji membantu menentukan sisi mana yang memenuhi pertidaksamaan.", color=RED))
+        self.play(FadeIn(poly), FadeIn(test_point), FadeIn(tp_label), run_time=0.8)
+
+        ineq = _math_or_text(spec.get("inequality_latex", r"y \le x+1"), font_size=28, color=GREEN).move_to(RIGHT * 3.9 + DOWN * 0.2)
+        self.play(FadeIn(ineq), run_time=0.4)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class TrigonometricRatioTriangleTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[52]
+
+    def construct(self):
+        spec = self.SPEC
+        sides = spec.get("sides", {"depan": 3, "samping": 4, "miring": 5})
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Segitiga siku-siku", "Trigonometri dasar dibangun dari hubungan sisi-sisi pada segitiga siku-siku.", color=BLUE))
+
+        a = LEFT * 4.9 + DOWN * 1.4
+        b = LEFT * 1.7 + DOWN * 1.4
+        c = LEFT * 4.9 + UP * 1.0
+        tri = Polygon(a, b, c, color=WHITE, stroke_width=3)
+        right_mark = VGroup(Line(a + RIGHT * 0.28, a + RIGHT * 0.28 + UP * 0.28, color=WHITE), Line(a + UP * 0.28, a + RIGHT * 0.28 + UP * 0.28, color=WHITE))
+        theta = Arc(radius=0.42, start_angle=0, angle=0.62, color=YELLOW).move_to(a + RIGHT * 0.2 + UP * 0.2)
+        theta_label = Text(spec.get("theta_label", "θ"), font_size=18, color=YELLOW).move_to(a + RIGHT * 0.55 + UP * 0.15)
+        labels = VGroup(
+            Text(f"depan = {sides.get('depan', 3)}", font_size=16, color=GREEN).next_to(Line(c, b), RIGHT, buff=0.15),
+            Text(f"samping = {sides.get('samping', 4)}", font_size=16, color=BLUE).next_to(Line(a, c), LEFT, buff=0.15),
+            Text(f"miring = {sides.get('miring', 5)}", font_size=16, color=PURPLE).next_to(Line(a, b), DOWN, buff=0.15),
+        )
+        self.play(Create(tri), FadeIn(right_mark), Create(theta), FadeIn(theta_label), FadeIn(labels), run_time=1.0)
+
+        ratios = VGroup(
+            _math_or_text(r"\sin\theta = \frac{depan}{miring}", font_size=24, color=GREEN),
+            _math_or_text(r"\cos\theta = \frac{samping}{miring}", font_size=24, color=BLUE),
+            _math_or_text(r"\tan\theta = \frac{depan}{samping}", font_size=24, color=PURPLE),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.16).move_to(RIGHT * 3.55 + DOWN * 0.15)
+        active_card = self.replace_card(active_card, self.make_card("Rasio trigonometrik", "Sinus, cosinus, dan tangen berasal dari pembagian sisi yang tepat.", color=GREEN))
+        self.play(FadeIn(ratios), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class FunctionCompositionInverseTransformTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[53]
+
+    def construct(self):
+        spec = self.SPEC
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Mesin fungsi", "Fungsi dapat dibayangkan sebagai mesin yang memproses input menjadi output.", color=BLUE))
+
+        inp = simple_box(f"x={spec.get('input_value', 2)}", width=1.0, height=0.62, color=YELLOW, font_size=18).move_to(LEFT * 5.1)
+        fbox = simple_box(spec.get("f_label", "f"), width=1.7, height=0.9, color=TEAL, font_size=17).move_to(LEFT * 2.9)
+        gbox = simple_box(spec.get("g_label", "g"), width=1.7, height=0.9, color=PURPLE, font_size=17).move_to(LEFT * 0.7)
+        out = simple_box("hasil", width=1.1, height=0.62, color=GREEN, font_size=18).move_to(RIGHT * 1.6)
+        arrs = VGroup(Arrow(inp.get_right(), fbox.get_left(), buff=0.10, color=WHITE), Arrow(fbox.get_right(), gbox.get_left(), buff=0.10, color=WHITE), Arrow(gbox.get_right(), out.get_left(), buff=0.10, color=WHITE))
+        self.play(FadeIn(inp), FadeIn(fbox), FadeIn(gbox), FadeIn(out), LaggedStart(*[Create(a) for a in arrs], lag_ratio=0.08), run_time=1.0)
+
+        inv = simple_box(spec.get("inverse_label", "f^{-1}"), width=2.1, height=0.8, color=ORANGE, font_size=16).move_to(RIGHT * 4.2)
+        inv_arrow = CurvedArrow(out.get_right(), inv.get_left(), angle=-0.4, color=ORANGE)
+        back_arrow = CurvedArrow(inv.get_bottom(), inp.get_bottom(), angle=-0.6, color=ORANGE)
+        active_card = self.replace_card(active_card, self.make_card("Fungsi invers", "Fungsi invers berusaha membalik proses sehingga kita dapat kembali ke input semula.", color=ORANGE))
+        self.play(FadeIn(inv), Create(inv_arrow), Create(back_arrow), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class AcidBaseSafetyContextTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[54]
+
+    def construct(self):
+        spec = self.SPEC
+        vals = spec.get("ph_values", [])[:3]
+        items = spec.get("safety_items", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Skala pH", "Skala pH membantu menempatkan zat sebagai asam, netral, atau basa.", color=BLUE))
+
+        line = NumberLine(x_range=[0, 14, 1], length=6.2, include_numbers=True, color=WHITE).move_to(LEFT * 2.0 + DOWN * 0.1)
+        acid_zone = Rectangle(width=2.65, height=0.32, color=RED, fill_color=RED, fill_opacity=0.22).move_to(line.n2p(3) + DOWN * 0.26)
+        neutral = Rectangle(width=0.42, height=0.32, color=YELLOW, fill_color=YELLOW, fill_opacity=0.22).move_to(line.n2p(7) + DOWN * 0.26)
+        base_zone = Rectangle(width=2.65, height=0.32, color=BLUE, fill_color=BLUE, fill_opacity=0.22).move_to(line.n2p(11) + DOWN * 0.26)
+        self.play(Create(line), FadeIn(acid_zone), FadeIn(neutral), FadeIn(base_zone), run_time=0.9)
+
+        markers = VGroup()
+        for idx, item in enumerate(vals):
+            dot = Dot(line.n2p(item.get("value", 7)), color=[RED, YELLOW, BLUE][idx])
+            label = Text(f"{item.get('label')}: {item.get('value')}", font_size=15, color=WHITE).next_to(dot, UP, buff=0.12)
+            markers.add(VGroup(dot, label))
+        self.play(FadeIn(markers), run_time=0.7)
+
+        safety = VGroup(*[simple_box(it, width=1.65, height=0.56, color=GREEN, font_size=15) for it in items]).arrange(DOWN, buff=0.10).move_to(RIGHT * 4.1 + DOWN * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Keselamatan", "Zat asam dan basa harus digunakan dengan alat pelindung dan prosedur aman.", color=GREEN))
+        self.play(FadeIn(safety), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class WaveSoundLightTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[55]
+
+    def construct(self):
+        spec = self.SPEC
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Bentuk gelombang", "Gelombang dapat digambarkan dengan puncak, lembah, amplitudo, dan panjang gelombang.", color=BLUE))
+
+        axes = Axes(x_range=[0, 8, 1], y_range=[-2, 2, 1], x_length=5.6, y_length=2.8, axis_config={"include_numbers": False, "stroke_width": 2})
+        axes.move_to(LEFT * 2.75 + DOWN * 0.2)
+        graph = axes.plot(lambda x: math.sin(x * math.pi / 2), x_range=[0, 8], color=YELLOW, stroke_width=4)
+        self.play(Create(axes), Create(graph), run_time=0.9)
+
+        crest = Dot(axes.c2p(1, 1), color=GREEN)
+        trough = Dot(axes.c2p(3, -1), color=RED)
+        amp = Brace(Line(axes.c2p(5, 0), axes.c2p(5, 1)), RIGHT, color=BLUE)
+        amp_label = Text("A", font_size=18, color=BLUE).next_to(amp, RIGHT, buff=0.06)
+        lam = DoubleArrow(axes.c2p(1, 1.45), axes.c2p(5, 1.45), color=PURPLE)
+        lam_label = Text("λ", font_size=18, color=PURPLE).next_to(lam, UP, buff=0.06)
+        active_card = self.replace_card(active_card, self.make_card("Besaran gelombang", "Amplitudo dan panjang gelombang adalah dua besaran penting yang dapat dibaca dari grafik.", color=PURPLE))
+        self.play(FadeIn(crest), FadeIn(trough), FadeIn(amp), FadeIn(amp_label), FadeIn(lam), FadeIn(lam_label), run_time=0.8)
+
+        panels = VGroup(simple_box("Bunyi", detail="getaran medium", width=1.7, height=0.75, color=TEAL, font_size=18), simple_box("Cahaya", detail="gelombang elektromagnetik", width=1.9, height=0.75, color=ORANGE, font_size=17)).arrange(DOWN, buff=0.14).move_to(RIGHT * 4.0 + DOWN * 0.05)
+        self.play(FadeIn(panels), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MeasurementUncertaintyTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[56]
+
+    def construct(self):
+        spec = self.SPEC
+        readings = spec.get("readings", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Alat ukur", "Hasil pengukuran harus dibaca dengan memperhatikan skala terkecil alat.", color=BLUE))
+
+        ruler = Rectangle(width=5.7, height=0.65, color=YELLOW, fill_color=YELLOW, fill_opacity=0.18).move_to(LEFT * 2.4 + DOWN * 0.1)
+        ticks = VGroup()
+        for i in range(0, 21):
+            h = 0.30 if i % 5 == 0 else 0.18
+            x = ruler.get_left()[0] + 0.18 + i * 0.26
+            ticks.add(Line([x, ruler.get_center()[1] - h / 2, 0], [x, ruler.get_center()[1] + h / 2, 0], color=WHITE, stroke_width=2))
+        obj = Rectangle(width=3.25, height=0.28, color=GREEN, fill_color=GREEN, fill_opacity=0.40).move_to(LEFT * 2.65 + DOWN * 0.1)
+        self.play(FadeIn(ruler), FadeIn(ticks), FadeIn(obj), run_time=0.9)
+
+        rows = VGroup(*[Text(f"ukur {i+1}: {r} cm", font_size=16, color=WHITE) for i, r in enumerate(readings)]).arrange(DOWN, aligned_edge=LEFT, buff=0.10).move_to(RIGHT * 3.7 + UP * 0.2)
+        result = simple_box(spec.get("reported_value", "hasil"), width=2.4, height=0.64, color=PURPLE, font_size=16).move_to(RIGHT * 3.8 + DOWN * 1.05)
+        active_card = self.replace_card(active_card, self.make_card("Pelaporan", "Beberapa hasil ukur dapat diringkas menjadi nilai akhir dengan ketidakpastian.", color=PURPLE))
+        self.play(FadeIn(rows), FadeIn(result), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class HeatTemperatureTransferTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[58]
+
+    def construct(self):
+        spec = self.SPEC
+        modes = spec.get("modes", [])[:3]
+        temps = spec.get("temperatures", [80, 30])
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Arah kalor", "Kalor berpindah dari benda bersuhu tinggi ke benda bersuhu rendah.", color=RED))
+
+        hot = Circle(radius=0.48, color=RED, fill_color=RED, fill_opacity=0.25).move_to(LEFT * 4.35 + UP * 0.1)
+        cold = Circle(radius=0.48, color=BLUE, fill_color=BLUE, fill_opacity=0.25).move_to(LEFT * 1.8 + UP * 0.1)
+        hot_label = Text(f"{temps[0]}°C", font_size=18, color=RED).move_to(hot)
+        cold_label = Text(f"{temps[1]}°C", font_size=18, color=BLUE).move_to(cold)
+        flow = Arrow(hot.get_right(), cold.get_left(), buff=0.1, color=YELLOW, stroke_width=4)
+        self.play(FadeIn(hot), FadeIn(cold), FadeIn(hot_label), FadeIn(cold_label), Create(flow), run_time=0.9)
+
+        mode_boxes = VGroup(*[simple_box(m, width=1.8, height=0.62, color=[ORANGE, TEAL, PURPLE][i], font_size=16) for i, m in enumerate(modes)]).arrange(DOWN, buff=0.12).move_to(RIGHT * 3.9 + DOWN * 0.1)
+        examples = VGroup(
+            Text("sendok logam", font_size=14, color=ORANGE),
+            Text("air mendidih", font_size=14, color=TEAL),
+            Text("sinar matahari", font_size=14, color=PURPLE),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.19).next_to(mode_boxes, RIGHT, buff=0.16)
+        active_card = self.replace_card(active_card, self.make_card("Mekanisme perpindahan", "Konduksi, konveksi, dan radiasi adalah tiga cara utama panas berpindah.", color=ORANGE))
+        self.play(FadeIn(mode_boxes), FadeIn(examples), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElectricCircuitTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[59]
+
+    def construct(self):
+        spec = self.SPEC
+        comps = spec.get("components", [])[:3]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Komponen rangkaian", "Rangkaian listrik sederhana tersusun dari sumber, penghantar, beban, dan sakelar.", color=BLUE))
+
+        # open circuit on left
+        wire_left = VMobject(color=WHITE, stroke_width=4)
+        pts = [LEFT * 5.1 + UP * 1.0, LEFT * 2.5 + UP * 1.0, LEFT * 2.5 + DOWN * 1.0, LEFT * 5.1 + DOWN * 1.0, LEFT * 5.1 + UP * 1.0]
+        wire_left.set_points_as_corners(pts)
+        bulb_left = Circle(radius=0.24, color=GRAY, fill_color=GRAY, fill_opacity=0.15).move_to(LEFT * 2.5 + UP * 0.0)
+        switch_open = VGroup(Line(LEFT * 3.9 + UP * 1.0, LEFT * 3.45 + UP * 1.0, color=WHITE, stroke_width=4), Line(LEFT * 3.45 + UP * 1.0, LEFT * 3.05 + UP * 1.28, color=WHITE, stroke_width=4))
+        batt = VGroup(Line(LEFT * 5.1 + UP * 0.25, LEFT * 5.1 + DOWN * 0.20, color=YELLOW, stroke_width=5), Line(LEFT * 4.85 + UP * 0.38, LEFT * 4.85 + DOWN * 0.03, color=YELLOW, stroke_width=3))
+        self.play(Create(wire_left), FadeIn(bulb_left), FadeIn(switch_open), FadeIn(batt), run_time=0.9)
+        open_label = Text("terbuka", font_size=16, color=GRAY).next_to(bulb_left, DOWN, buff=0.08)
+        self.play(FadeIn(open_label), run_time=0.2)
+
+        # closed circuit on right
+        frame = RoundedRectangle(width=3.8, height=3.0, corner_radius=0.18, color=WHITE).move_to(RIGHT * 3.0)
+        bulb = Circle(radius=0.26, color=YELLOW, fill_color=YELLOW, fill_opacity=0.35).move_to(RIGHT * 4.1 + UP * 0.0)
+        switch_closed = Line(RIGHT * 2.35 + UP * 1.1, RIGHT * 2.95 + UP * 1.1, color=YELLOW, stroke_width=4)
+        wire_r = VMobject(color=WHITE, stroke_width=4)
+        pts_r = [RIGHT * 1.7 + UP * 1.1, RIGHT * 4.1 + UP * 1.1, RIGHT * 4.1 + DOWN * 1.1, RIGHT * 1.7 + DOWN * 1.1, RIGHT * 1.7 + UP * 1.1]
+        wire_r.set_points_as_corners(pts_r)
+        batt_r = VGroup(Line(RIGHT * 1.7 + UP * 0.25, RIGHT * 1.7 + DOWN * 0.20, color=YELLOW, stroke_width=5), Line(RIGHT * 1.95 + UP * 0.38, RIGHT * 1.95 + DOWN * 0.03, color=YELLOW, stroke_width=3))
+        active_card = self.replace_card(active_card, self.make_card("Rangkaian tertutup", "Saat sakelar tertutup, arus mengalir dan lampu menyala.", color=YELLOW))
+        self.play(FadeIn(frame), Create(wire_r), FadeIn(batt_r), FadeIn(bulb), FadeIn(switch_closed), run_time=0.9)
+        current = VGroup(Arrow(RIGHT * 2.2 + UP * 1.1, RIGHT * 3.5 + UP * 1.1, buff=0.08, color=YELLOW), Arrow(RIGHT * 4.1 + DOWN * 0.4, RIGHT * 4.1 + DOWN * 0.9, buff=0.08, color=YELLOW), Arrow(RIGHT * 3.5 + DOWN * 1.1, RIGHT * 2.1 + DOWN * 1.1, buff=0.08, color=YELLOW))
+        self.play(FadeIn(current), run_time=0.45)
+
+        comp_boxes = VGroup(*[simple_box(c, width=1.35, height=0.48, color=TEAL, font_size=14) for c in comps]).arrange(DOWN, buff=0.08).move_to(RIGHT * 0.35 + DOWN * 2.15)
+        self.play(FadeIn(comp_boxes), run_time=0.4)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ChemistryInquirySafetyTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_30_60_SPECS[60]
+
+    def construct(self):
+        spec = self.SPEC
+        icons = spec.get("icons", [])[:4]
+        title_block = self.make_title_block(spec)
+        self.play(FadeIn(title_block, shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Hakikat kimia", "Kimia mempelajari zat, sifatnya, serta perubahan yang dialaminya.", color=BLUE))
+
+        beaker = RoundedRectangle(width=1.45, height=1.9, corner_radius=0.14, color=BLUE).move_to(LEFT * 4.3 + DOWN * 0.2)
+        liquid = Rectangle(width=1.24, height=0.92, color=BLUE, fill_color=BLUE, fill_opacity=0.24).move_to(beaker.get_bottom() + UP * 0.5)
+        flame = Triangle(color=ORANGE, fill_color=ORANGE, fill_opacity=0.45).scale(0.35).move_to(LEFT * 4.25 + DOWN * 1.65)
+        bubbles = VGroup(*[Dot(radius=0.05, color=WHITE).move_to(beaker.get_center() + LEFT * 0.25 + UP * (0.1 * i)) for i in range(4)])
+        self.play(FadeIn(beaker), FadeIn(liquid), FadeIn(flame), FadeIn(bubbles), run_time=0.8)
+
+        inquiry = VGroup(
+            simple_box("Amati", width=1.4, height=0.56, color=TEAL, font_size=16),
+            simple_box("Catat", width=1.4, height=0.56, color=TEAL, font_size=16),
+            simple_box("Simpulkan", width=1.7, height=0.56, color=TEAL, font_size=16),
+        ).arrange(DOWN, buff=0.10).move_to(LEFT * 1.25 + DOWN * 0.25)
+        arrows = VGroup(Arrow(inquiry[0].get_bottom(), inquiry[1].get_top(), buff=0.06, color=WHITE), Arrow(inquiry[1].get_bottom(), inquiry[2].get_top(), buff=0.06, color=WHITE))
+        active_card = self.replace_card(active_card, self.make_card("Penyelidikan ilmiah", "Observasi, pencatatan, dan kesimpulan adalah inti proses kerja ilmiah.", color=TEAL))
+        self.play(FadeIn(inquiry), FadeIn(arrows), run_time=0.8)
+
+        safety = VGroup(*[simple_box(ic, width=1.7, height=0.54, color=GREEN, font_size=14) for ic in icons]).arrange(DOWN, buff=0.08).move_to(RIGHT * 3.95 + DOWN * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Budaya keselamatan", "Sebelum bereksperimen, siswa harus memahami aturan keselamatan dan simbol bahaya.", color=GREEN))
+        self.play(FadeIn(safety), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+# -----------------------------------------------------------------------------
+# CONCEPT-SPECIFIC WRAPPERS OVER STABLE MVP TEMPLATES
+# -----------------------------------------------------------------------------
+
+class QuadraticModelConceptTemplate(QuadraticModelTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[32]
+
+
+class BivariableAssociationRegressionTemplate(ScatterAssociationTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[33]
+
+
+class EnvironmentEnergySystemConceptTemplate(EnergyEnvironmentSystemTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[36]
+
+
+class ModernAtomicNuclearConceptTemplate(ModernAtomicNuclearTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[37]
+
+
+class ReactionEquationConservationConceptTemplate(ChemistryReactionEquationTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[40]
+
+
+class ArithmeticOperationConcreteTemplate(ElementaryArithmeticBlocksTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[44]
+
+
+class EquationBalanceUnknownTemplate(EquationBalanceTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[45]
+
+
+class MotionKinematicsConceptTemplate(MotionKinematicsTemplate):
+    SPEC = TEMPLATE_30_60_SPECS[57]
+
+
+# -----------------------------------------------------------------------------
+# REGISTRY
+# -----------------------------------------------------------------------------
+
+TEMPLATE_30_60_REGISTRY = {
+    30: {"class_name": "EcosystemInterdependenceTemplate", "template_id": TEMPLATE_30_60_SPECS[30]["template_id"], "status": "new_distinct"},
+    31: {"class_name": "EnergyFormsConversionTemplate", "template_id": TEMPLATE_30_60_SPECS[31]["template_id"], "status": "new_distinct"},
+    32: {"class_name": "QuadraticModelConceptTemplate", "template_id": TEMPLATE_30_60_SPECS[32]["template_id"], "status": "wrapper_existing"},
+    33: {"class_name": "BivariableAssociationRegressionTemplate", "template_id": TEMPLATE_30_60_SPECS[33]["template_id"], "status": "wrapper_existing"},
+    34: {"class_name": "LifeStructureClassificationTemplate", "template_id": TEMPLATE_30_60_SPECS[34]["template_id"], "status": "new_distinct"},
+    35: {"class_name": "ElectricityMagnetismCircuitTemplate", "template_id": TEMPLATE_30_60_SPECS[35]["template_id"], "status": "new_distinct"},
+    36: {"class_name": "EnvironmentEnergySystemConceptTemplate", "template_id": TEMPLATE_30_60_SPECS[36]["template_id"], "status": "wrapper_existing"},
+    37: {"class_name": "ModernAtomicNuclearConceptTemplate", "template_id": TEMPLATE_30_60_SPECS[37]["template_id"], "status": "wrapper_existing"},
+    38: {"class_name": "VirusLifecycleHealthTemplate", "template_id": TEMPLATE_30_60_SPECS[38]["template_id"], "status": "new_distinct"},
+    39: {"class_name": "MutationEvolutionSelectionTemplate", "template_id": TEMPLATE_30_60_SPECS[39]["template_id"], "status": "new_distinct"},
+    40: {"class_name": "ReactionEquationConservationConceptTemplate", "template_id": TEMPLATE_30_60_SPECS[40]["template_id"], "status": "wrapper_existing"},
+    41: {"class_name": "ReactionRateCollisionTemplate", "template_id": TEMPLATE_30_60_SPECS[41]["template_id"], "status": "new_distinct"},
+    42: {"class_name": "RedoxElectrochemistryTemplate", "template_id": TEMPLATE_30_60_SPECS[42]["template_id"], "status": "new_distinct"},
+    43: {"class_name": "OrganicStructureFunctionalGroupTemplate", "template_id": TEMPLATE_30_60_SPECS[43]["template_id"], "status": "new_distinct"},
+    44: {"class_name": "ArithmeticOperationConcreteTemplate", "template_id": TEMPLATE_30_60_SPECS[44]["template_id"], "status": "wrapper_existing"},
+    45: {"class_name": "EquationBalanceUnknownTemplate", "template_id": TEMPLATE_30_60_SPECS[45]["template_id"], "status": "wrapper_existing"},
+    46: {"class_name": "DataRepresentationSummaryTemplate", "template_id": TEMPLATE_30_60_SPECS[46]["template_id"], "status": "new_distinct"},
+    47: {"class_name": "BodySensesHealthTemplate", "template_id": TEMPLATE_30_60_SPECS[47]["template_id"], "status": "new_distinct"},
+    48: {"class_name": "LivingThingsLifecycleClassificationTemplate", "template_id": TEMPLATE_30_60_SPECS[48]["template_id"], "status": "new_distinct"},
+    49: {"class_name": "ForceMotionSimpleMachineTemplate", "template_id": TEMPLATE_30_60_SPECS[49]["template_id"], "status": "new_distinct"},
+    50: {"class_name": "AlgebraExpressionTransformationTemplate", "template_id": TEMPLATE_30_60_SPECS[50]["template_id"], "status": "new_distinct"},
+    51: {"class_name": "InequalityRegionTemplate", "template_id": TEMPLATE_30_60_SPECS[51]["template_id"], "status": "new_distinct"},
+    52: {"class_name": "TrigonometricRatioTriangleTemplate", "template_id": TEMPLATE_30_60_SPECS[52]["template_id"], "status": "new_distinct"},
+    53: {"class_name": "FunctionCompositionInverseTransformTemplate", "template_id": TEMPLATE_30_60_SPECS[53]["template_id"], "status": "new_distinct"},
+    54: {"class_name": "AcidBaseSafetyContextTemplate", "template_id": TEMPLATE_30_60_SPECS[54]["template_id"], "status": "new_distinct"},
+    55: {"class_name": "WaveSoundLightTemplate", "template_id": TEMPLATE_30_60_SPECS[55]["template_id"], "status": "new_distinct"},
+    56: {"class_name": "MeasurementUncertaintyTemplate", "template_id": TEMPLATE_30_60_SPECS[56]["template_id"], "status": "new_distinct"},
+    57: {"class_name": "MotionKinematicsConceptTemplate", "template_id": TEMPLATE_30_60_SPECS[57]["template_id"], "status": "wrapper_existing"},
+    58: {"class_name": "HeatTemperatureTransferTemplate", "template_id": TEMPLATE_30_60_SPECS[58]["template_id"], "status": "new_distinct"},
+    59: {"class_name": "ElectricCircuitTemplate", "template_id": TEMPLATE_30_60_SPECS[59]["template_id"], "status": "new_distinct"},
+    60: {"class_name": "ChemistryInquirySafetyTemplate", "template_id": TEMPLATE_30_60_SPECS[60]["template_id"], "status": "new_distinct"},
+}
+
+
+__all__ = [
+    "TEMPLATE_30_60_SPECS",
+    "TEMPLATE_30_60_REGISTRY",
+    "EcosystemInterdependenceTemplate",
+    "EnergyFormsConversionTemplate",
+    "QuadraticModelConceptTemplate",
+    "BivariableAssociationRegressionTemplate",
+    "LifeStructureClassificationTemplate",
+    "ElectricityMagnetismCircuitTemplate",
+    "EnvironmentEnergySystemConceptTemplate",
+    "ModernAtomicNuclearConceptTemplate",
+    "VirusLifecycleHealthTemplate",
+    "MutationEvolutionSelectionTemplate",
+    "ReactionEquationConservationConceptTemplate",
+    "ReactionRateCollisionTemplate",
+    "RedoxElectrochemistryTemplate",
+    "OrganicStructureFunctionalGroupTemplate",
+    "ArithmeticOperationConcreteTemplate",
+    "EquationBalanceUnknownTemplate",
+    "DataRepresentationSummaryTemplate",
+    "BodySensesHealthTemplate",
+    "LivingThingsLifecycleClassificationTemplate",
+    "ForceMotionSimpleMachineTemplate",
+    "AlgebraExpressionTransformationTemplate",
+    "InequalityRegionTemplate",
+    "TrigonometricRatioTriangleTemplate",
+    "FunctionCompositionInverseTransformTemplate",
+    "AcidBaseSafetyContextTemplate",
+    "WaveSoundLightTemplate",
+    "MeasurementUncertaintyTemplate",
+    "MotionKinematicsConceptTemplate",
+    "HeatTemperatureTransferTemplate",
+    "ElectricCircuitTemplate",
+    "ChemistryInquirySafetyTemplate",
+]
+
+# ============================================================
+# END PHASE 5: TEMPLATE 30-60 BUNDLE (MERGED)
+# ============================================================

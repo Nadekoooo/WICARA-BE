@@ -1,0 +1,37 @@
+{
+  "id": "sample_body_senses_health_47",
+  "node_id": "phase3_body_senses_health",
+  "template_id": "manim.sd_body_senses_health.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Tubuh, Pancaindra, dan Kesehatan",
+  "subtitle": "Bagian tubuh dan pancaindra memiliki fungsi yang perlu dijaga kesehatannya.",
+  "senses": [
+    "Mata",
+    "Telinga",
+    "Hidung",
+    "Lidah",
+    "Kulit"
+  ],
+  "healthy_habits": [
+    "Cuci tangan",
+    "Makan sehat",
+    "Tidur cukup"
+  ],
+  "steps": [
+    {
+      "title": "Kenali pancaindra",
+      "body": "Setiap indra membantu kita menerima informasi dari lingkungan."
+    },
+    {
+      "title": "Hubungkan fungsi",
+      "body": "Mata untuk melihat, telinga untuk mendengar, dan seterusnya."
+    },
+    {
+      "title": "Rawat tubuh",
+      "body": "Kebiasaan hidup sehat membantu tubuh dan indra bekerja dengan baik."
+    }
+  ],
+  "summary": "Belajar bagian tubuh perlu disertai pemahaman cara menjaga kesehatan sehari-hari."
+}
