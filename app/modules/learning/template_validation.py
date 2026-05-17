@@ -159,6 +159,57 @@ class BaseTemplateSpec(BaseModel):
         return self
 
 
+class RemotionGenericTemplateSpec(BaseModel):
+    template_contract_version: str = Field(default="v1", min_length=1, max_length=16)
+    phase: str = Field(default="D", min_length=1, max_length=16)
+    audience_level: str = Field(default="smp", min_length=1, max_length=16)
+    language: str = Field(
+        default="id",
+        min_length=2,
+        max_length=16,
+        validation_alias=AliasChoices("language", "locale", "lang"),
+    )
+    title: str = Field(..., min_length=1, max_length=255)
+    subtitle: str = Field(default="", max_length=255)
+    steps: list[StepSpec] = Field(..., min_length=1, max_length=16)
+    summary: str = Field(..., min_length=1, max_length=2000)
+    fps: int = Field(default=30, ge=12, le=120)
+    width: int = Field(default=1280, ge=320, le=4096)
+    height: int = Field(default=720, ge=240, le=4096)
+    duration_in_frames: int = Field(
+        default=270,
+        ge=30,
+        le=10800,
+        validation_alias=AliasChoices("durationInFrames", "duration_in_frames"),
+    )
+    voiceover_script: str = Field(default="", max_length=6000)
+    intro_narration: str = Field(default="", max_length=1200)
+    summary_narration: str = Field(default="", max_length=1200)
+    narration_segments: list[NarrationSegmentSpec] = Field(default_factory=list, max_length=64)
+    model_config = ConfigDict(extra="allow")
+
+    @field_validator("language", mode="before")
+    @classmethod
+    def normalize_language(cls, value: Any) -> str:
+        normalized = str(value or "").strip().lower()
+        if not normalized:
+            return "id"
+        aliases = {
+            "indonesian": "id",
+            "bahasa": "id",
+            "english": "en",
+            "vietnamese": "vi",
+            "malay": "ms",
+            "japanese": "ja",
+        }
+        normalized = aliases.get(normalized, normalized)
+        if "-" in normalized:
+            base = normalized.split("-", 1)[0]
+            if base:
+                normalized = base
+        return normalized[:16]
+
+
 class NumberRangeSpec(BaseModel):
     min: float
     max: float
@@ -400,6 +451,7 @@ _SCHEMA_MODEL_MAP: dict[str, type[BaseModel]] = {
     "manim.motion_kinematics.v1": MotionKinematicsSpec,
     "manim.force_diagram.v1": ForceDiagramSpec,
     "manim.generic_explanation.v1": BaseTemplateSpec,
+    "remotion.generic_explanation.v1": RemotionGenericTemplateSpec,
 }
 
 

@@ -1,0 +1,40 @@
+{
+  "id": "spec_61_remotion_chem_particle_matter_v1",
+  "row_index": 61,
+  "concept_type": "matter_property_change_model",
+  "template_id": "remotion.chem_particle_matter.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Materi, Sifat, dan Perubahan",
+  "subtitle": "Sifat materi dan perubahan fisika/kimia dapat dijelaskan melalui model partikel.",
+  "steps": [
+    {
+      "title": "Amati sifat zat",
+      "body": "Zat memiliki sifat yang dapat diamati, seperti bentuk dan volume."
+    },
+    {
+      "title": "Gunakan model partikel",
+      "body": "Model partikel menjelaskan mengapa zat berperilaku berbeda."
+    },
+    {
+      "title": "Bedakan perubahan",
+      "body": "Sebagian perubahan hanya fisika, sebagian lain melibatkan perubahan kimia."
+    }
+  ],
+  "summary": "Template partikel ini tepat untuk konsep perubahan materi karena menekankan hubungan antara tampilan makro dan model mikro.",
+  "states": [
+    "Padat",
+    "Cair",
+    "Gas"
+  ],
+  "changes": [
+    "Mencair",
+    "Menguap",
+    "Membeku"
+  ]
+}

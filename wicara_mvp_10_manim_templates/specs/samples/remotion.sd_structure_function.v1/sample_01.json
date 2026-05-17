@@ -1,0 +1,42 @@
+{
+  "id": "spec_107_remotion_sd_structure_function_v1",
+  "row_index": 107,
+  "concept_type": "plant_animal_structure_function",
+  "template_id": "remotion.sd_structure_function.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Struktur dan Fungsi Tumbuhan/Hewan",
+  "subtitle": "Bagian tubuh tumbuhan dan hewan memiliki fungsi khusus yang membantu mereka bertahan hidup.",
+  "steps": [
+    {
+      "title": "Amati bagian tubuh",
+      "body": "Makhluk hidup tersusun atas bagian-bagian yang dapat dikenali."
+    },
+    {
+      "title": "Hubungkan fungsi",
+      "body": "Setiap bagian membantu organisme melakukan tugas tertentu."
+    },
+    {
+      "title": "Bandingkan tumbuhan dan hewan",
+      "body": "Keduanya memiliki struktur yang sesuai dengan kebutuhan hidupnya."
+    }
+  ],
+  "summary": "Template ini menampilkan dua panel besar tumbuhan dan hewan untuk memudahkan perbandingan fungsi struktural.",
+  "plant_parts": [
+    "Akar",
+    "Batang",
+    "Daun",
+    "Bunga"
+  ],
+  "animal_parts": [
+    "Paruh",
+    "Sirip",
+    "Kaki",
+    "Bulu"
+  ]
+}

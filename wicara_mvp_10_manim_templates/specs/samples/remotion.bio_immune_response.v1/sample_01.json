@@ -1,0 +1,42 @@
+{
+  "id": "spec_103_remotion_bio_immune_response_v1",
+  "row_index": 103,
+  "concept_type": "immune_response_interaction",
+  "template_id": "remotion.bio_immune_response.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Sistem Imun dan Respons Pertahanan",
+  "subtitle": "Tubuh mengenali patogen, mengaktifkan sel imun, dan membentuk respons pertahanan yang terkoordinasi.",
+  "steps": [
+    {
+      "title": "Kenali ancaman",
+      "body": "Patogen memicu respons imun bawaan dan adaptif."
+    },
+    {
+      "title": "Aktivasi sel imun",
+      "body": "Berbagai sel imun berkomunikasi dan bekerja sama."
+    },
+    {
+      "title": "Netralisasi",
+      "body": "Antibodi dan sel efektor membantu mengeliminasi ancaman."
+    }
+  ],
+  "summary": "Konsep interaksi imun memerlukan jaringan aktor biologis yang lebih kompleks daripada flow organ biasa.",
+  "actors": [
+    "Patogen",
+    "Makrofag",
+    "Sel T",
+    "Sel B",
+    "Antibodi"
+  ],
+  "stages": [
+    "Deteksi",
+    "Aktivasi",
+    "Eliminasi"
+  ]
+}

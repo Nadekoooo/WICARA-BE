@@ -1,0 +1,37 @@
+{
+  "id": "spec_39_remotion_bio_evolution_selection_v1",
+  "row_index": 39,
+  "concept_type": "mutation_evolution_selection",
+  "template_id": "remotion.bio_evolution_selection.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Mutasi, Evolusi, dan Seleksi Alam",
+  "subtitle": "Variasi genetik, seleksi alam, dan perubahan populasi menjelaskan evolusi organisme.",
+  "steps": [
+    {
+      "title": "Sumber variasi",
+      "body": "Mutasi dan rekombinasi menghasilkan variasi dalam populasi."
+    },
+    {
+      "title": "Tekanan seleksi",
+      "body": "Lingkungan menyeleksi variasi yang lebih menguntungkan."
+    },
+    {
+      "title": "Perubahan populasi",
+      "body": "Sifat yang adaptif dapat menjadi lebih dominan dari generasi ke generasi."
+    }
+  ],
+  "summary": "Konsep ini memerlukan ilustrasi perubahan komposisi populasi lintas generasi, sehingga reuse ke template proses lain tidak masuk akal.",
+  "variation": [
+    "Sifat A",
+    "Sifat B",
+    "Sifat C"
+  ],
+  "environment": "Lingkungan kering",
+  "outcome": "Frekuensi sifat berubah"
+}

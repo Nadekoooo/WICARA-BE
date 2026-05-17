@@ -1,0 +1,43 @@
+{
+  "id": "spec_31_remotion_sd_energy_forms_v1",
+  "row_index": 31,
+  "concept_type": "energy_light_sound_heat_electricity",
+  "template_id": "remotion.sd_energy_forms.v1",
+  "media_engine_family": "remotion_or_manim",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Bentuk dan Perubahan Energi",
+  "subtitle": "Energi panas, cahaya, bunyi, listrik, dan magnet dapat diamati pada alat serta peristiwa sehari-hari.",
+  "steps": [
+    {
+      "title": "Kenali bentuk energi",
+      "body": "Energi hadir dalam banyak bentuk."
+    },
+    {
+      "title": "Hubungkan dengan alat",
+      "body": "Benda di sekitar kita menunjukkan perubahan bentuk energi."
+    },
+    {
+      "title": "Bandingkan fungsi",
+      "body": "Setiap perubahan energi menghasilkan efek yang berbeda."
+    }
+  ],
+  "summary": "Karena fokusnya transisi antar bentuk energi, Remotion cocok untuk adegan ikon dan transformasi yang halus.",
+  "forms": [
+    "Panas",
+    "Cahaya",
+    "Bunyi",
+    "Listrik",
+    "Magnet"
+  ],
+  "examples": [
+    "Lampu",
+    "Kompor",
+    "Radio",
+    "Kipas"
+  ]
+}

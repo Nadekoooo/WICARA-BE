@@ -1,0 +1,40 @@
+{
+  "id": "spec_71_remotion_sd_mixture_separation_v1",
+  "row_index": 71,
+  "concept_type": "mixture_separation_change",
+  "template_id": "remotion.sd_mixture_separation.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Campuran dan Pemisahan Sederhana",
+  "subtitle": "Campuran dapat dipisahkan dengan cara sederhana seperti penyaringan, pengendapan, atau pemilahan.",
+  "steps": [
+    {
+      "title": "Bedakan campuran",
+      "body": "Campuran terdiri dari dua atau lebih zat yang bergabung tanpa membentuk zat baru."
+    },
+    {
+      "title": "Pilih cara pemisahan",
+      "body": "Cara pemisahan bergantung pada sifat bahan penyusunnya."
+    },
+    {
+      "title": "Hubungkan dengan contoh",
+      "body": "Contoh nyata membantu anak memahami prinsip pemisahan."
+    }
+  ],
+  "summary": "Versi SD memakai visual alat dan bahan sederhana, bukan setup lab detail.",
+  "mixtures": [
+    "Pasir + air",
+    "Beras + batu",
+    "Garam + air"
+  ],
+  "methods": [
+    "Memilah",
+    "Menyaring",
+    "Menguapkan"
+  ]
+}

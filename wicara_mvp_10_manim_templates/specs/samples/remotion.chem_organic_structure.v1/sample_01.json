@@ -1,0 +1,44 @@
+{
+  "id": "spec_43_remotion_chem_organic_structure_v1",
+  "row_index": 43,
+  "concept_type": "organic_structure_functional_group",
+  "template_id": "remotion.chem_organic_structure.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Struktur Organik dan Gugus Fungsi",
+  "subtitle": "Kerangka karbon dan gugus fungsi menentukan nama, reaktivitas, dan sifat senyawa organik.",
+  "steps": [
+    {
+      "title": "Lihat kerangka karbon",
+      "body": "Senyawa organik disusun oleh rantai atau cincin karbon."
+    },
+    {
+      "title": "Sorot gugus fungsi",
+      "body": "Gugus fungsi memberi sifat khas pada senyawa."
+    },
+    {
+      "title": "Bandingkan contoh",
+      "body": "Perbedaan gugus fungsi menjelaskan perbedaan sifat dan kegunaan."
+    }
+  ],
+  "summary": "Konsep ini layak punya template sendiri karena menuntut fokus pada struktur dan penyorotan gugus fungsi.",
+  "examples": [
+    {
+      "name": "Etanol",
+      "group": "-OH"
+    },
+    {
+      "name": "Asam asetat",
+      "group": "-COOH"
+    },
+    {
+      "name": "Propanon",
+      "group": "C=O"
+    }
+  ]
+}

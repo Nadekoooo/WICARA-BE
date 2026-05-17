@@ -1,0 +1,20 @@
+{
+  "name": "wicara-remotion-templates",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "render:list": "node scripts/list-templates.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.268"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.8.3"
+  }
+}

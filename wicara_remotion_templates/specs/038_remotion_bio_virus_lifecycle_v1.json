@@ -1,0 +1,42 @@
+{
+  "id": "spec_38_remotion_bio_virus_lifecycle_v1",
+  "row_index": 38,
+  "concept_type": "virus_structure_lifecycle_health",
+  "template_id": "remotion.bio_virus_lifecycle.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Virus, Siklus Replikasi, dan Kesehatan",
+  "subtitle": "Virus memiliki struktur sederhana, memperbanyak diri dalam sel inang, dan berkaitan dengan kesehatan manusia.",
+  "steps": [
+    {
+      "title": "Kenali struktur virus",
+      "body": "Virus membawa materi genetik dan selubung tertentu."
+    },
+    {
+      "title": "Ikuti siklus replikasi",
+      "body": "Virus hanya dapat berkembang biak di dalam sel inang."
+    },
+    {
+      "title": "Hubungkan dengan kesehatan",
+      "body": "Pemahaman mekanisme virus membantu upaya pencegahan penyakit."
+    }
+  ],
+  "summary": "Remotion sangat cocok untuk siklus tahap demi tahap seperti replikasi virus.",
+  "stages": [
+    "Menempel",
+    "Masuk",
+    "Replikasi",
+    "Perakitan",
+    "Keluar"
+  ],
+  "prevention": [
+    "Vaksin",
+    "Masker",
+    "Cuci tangan"
+  ]
+}

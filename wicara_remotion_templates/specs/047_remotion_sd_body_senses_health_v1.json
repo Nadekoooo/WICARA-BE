@@ -1,0 +1,42 @@
+{
+  "id": "spec_47_remotion_sd_body_senses_health_v1",
+  "row_index": 47,
+  "concept_type": "body_senses_health",
+  "template_id": "remotion.sd_body_senses_health.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Tubuh, Pancaindra, dan Kesehatan",
+  "subtitle": "Anak belajar fungsi anggota tubuh dan pancaindra sekaligus kebiasaan menjaga kesehatan.",
+  "steps": [
+    {
+      "title": "Kenali pancaindra",
+      "body": "Setiap indra memiliki fungsi khusus."
+    },
+    {
+      "title": "Hubungkan ke tubuh",
+      "body": "Pancaindra adalah bagian dari tubuh yang perlu dirawat."
+    },
+    {
+      "title": "Latih kebiasaan sehat",
+      "body": "Kesehatan tubuh dijaga melalui kebiasaan baik sehari-hari."
+    }
+  ],
+  "summary": "Template dibuat child-friendly dengan tokoh tubuh sederhana dan kartu kebiasaan sehat.",
+  "senses": [
+    "Mata",
+    "Telinga",
+    "Hidung",
+    "Lidah",
+    "Kulit"
+  ],
+  "habits": [
+    "Makan sehat",
+    "Cuci tangan",
+    "Tidur cukup"
+  ]
+}

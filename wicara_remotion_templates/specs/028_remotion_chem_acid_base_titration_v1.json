@@ -1,0 +1,38 @@
+{
+  "id": "spec_28_remotion_chem_acid_base_titration_v1",
+  "row_index": 28,
+  "concept_type": "acid_base_ph_titration",
+  "template_id": "remotion.chem_acid_base_titration.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Asam-Basa, pH, dan Titrasi",
+  "subtitle": "Konsep asam-basa dapat dipahami melalui skala pH, indikator, dan kurva titrasi sederhana.",
+  "steps": [
+    {
+      "title": "Pahami skala pH",
+      "body": "pH menunjukkan tingkat keasaman atau kebasaan larutan."
+    },
+    {
+      "title": "Gunakan indikator",
+      "body": "Indikator berubah warna pada rentang pH tertentu."
+    },
+    {
+      "title": "Amati titrasi",
+      "body": "Kurva titrasi menunjukkan perubahan pH saat titran ditambahkan."
+    }
+  ],
+  "summary": "Representasi skala, lab setup, dan kurva dipakai bersama agar siswa melihat konsep, alat, dan data dalam satu frame.",
+  "samples": [
+    "HCl",
+    "CH3COOH",
+    "NaOH",
+    "NH3"
+  ],
+  "indicator": "Fenolftalein",
+  "equivalence_ph": 7
+}

@@ -1,0 +1,40 @@
+{
+  "id": "spec_48_remotion_sd_life_cycle_classification_v1",
+  "row_index": 48,
+  "concept_type": "living_things_classification_lifecycle",
+  "template_id": "remotion.sd_life_cycle_classification.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Klasifikasi dan Siklus Hidup Makhluk Hidup",
+  "subtitle": "Makhluk hidup memiliki ciri tertentu dan mengalami tahapan pertumbuhan atau metamorfosis.",
+  "steps": [
+    {
+      "title": "Kenali ciri makhluk hidup",
+      "body": "Makhluk hidup tumbuh, bernapas, dan berkembang biak."
+    },
+    {
+      "title": "Kelompokkan",
+      "body": "Hewan dan tumbuhan dapat dibedakan dari cirinya."
+    },
+    {
+      "title": "Ikuti perubahan",
+      "body": "Beberapa makhluk hidup mengalami tahapan siklus hidup yang jelas."
+    }
+  ],
+  "summary": "Konsep klasifikasi dan siklus hidup disatukan secara masuk akal karena keduanya sama-sama fokus pada organisme dasar di tingkat SD.",
+  "groups": [
+    "Hewan",
+    "Tumbuhan"
+  ],
+  "life_cycle": [
+    "Telur",
+    "Larva",
+    "Pupa",
+    "Kupu-kupu"
+  ]
+}

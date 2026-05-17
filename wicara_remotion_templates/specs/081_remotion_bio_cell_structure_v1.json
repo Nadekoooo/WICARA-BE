@@ -1,0 +1,41 @@
+{
+  "id": "spec_81_remotion_bio_cell_structure_v1",
+  "row_index": 81,
+  "concept_type": "cell_structure_organelle",
+  "template_id": "remotion.bio_cell_structure.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Struktur Sel dan Organel",
+  "subtitle": "Sel memiliki bagian-bagian khusus yang menjalankan fungsi tertentu dalam kehidupan organisme.",
+  "steps": [
+    {
+      "title": "Kenali sel sebagai unit dasar",
+      "body": "Semua makhluk hidup tersusun atas sel."
+    },
+    {
+      "title": "Beri label organel",
+      "body": "Setiap organel memiliki bentuk dan fungsi yang khas."
+    },
+    {
+      "title": "Bandingkan tipe sel",
+      "body": "Sel tumbuhan dan sel hewan memiliki persamaan serta perbedaan."
+    }
+  ],
+  "summary": "Template labeling sel memang membutuhkan layout khusus dengan callout organel.",
+  "organelles": [
+    "Membran",
+    "Inti",
+    "Sitoplasma",
+    "Mitokondria",
+    "Kloroplas"
+  ],
+  "cell_types": [
+    "Sel hewan",
+    "Sel tumbuhan"
+  ]
+}

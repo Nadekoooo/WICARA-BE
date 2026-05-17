@@ -1,0 +1,41 @@
+{
+  "id": "spec_19_remotion_bio_flow_system_v1",
+  "row_index": 19,
+  "concept_type": "human_body_system_flow",
+  "template_id": "remotion.bio_flow_system.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Sistem Organ Manusia",
+  "subtitle": "Tubuh manusia bekerja melalui beberapa sistem yang saling mendukung agar kita dapat hidup, bergerak, dan tumbuh.",
+  "steps": [
+    {
+      "title": "Kenali fungsi utama",
+      "body": "Setiap sistem organ memiliki fungsi pokok dalam tubuh."
+    },
+    {
+      "title": "Amati kerja sama",
+      "body": "Sistem tubuh tidak bekerja sendiri-sendiri."
+    },
+    {
+      "title": "Hubungkan ke aktivitas harian",
+      "body": "Makan, bernapas, dan bergerak melibatkan banyak sistem sekaligus."
+    }
+  ],
+  "summary": "Belajar sistem tubuh paling efektif bila fokus pada fungsi dan keterkaitan antar sistem.",
+  "systems": [
+    "Pencernaan",
+    "Pernapasan",
+    "Peredaran darah",
+    "Gerak"
+  ],
+  "outputs": [
+    "Energi",
+    "Oksigen",
+    "Nutrisi"
+  ]
+}

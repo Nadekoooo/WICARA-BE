@@ -1,68 +1,37 @@
 {
-  "id": "sample_financial_growth_distinct",
-  "node_id": "phase5_financial_compound_growth",
+  "id": "ct_002_financial_growth_model",
+  "node_id": "financial_growth_model",
   "template_id": "manim.financial_growth.v1",
   "phase": "E",
   "audience_level": "sma",
   "language": "id",
-  "title": "Pertumbuhan Nilai Majemuk",
-  "subtitle": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
-  "initial_amount": 100,
-  "rate_percent": 20,
+  "title": "Model Keuangan dan Pertumbuhan Nilai",
+  "subtitle": "Nilai tabungan bertumbuh dari periode ke periode melalui kenaikan persentase tetap.",
+  "initial_amount": 500,
+  "rate_percent": 10,
   "periods": 5,
   "values": [
-    100,
-    120,
-    144,
-    173,
-    207
+    500,
+    550,
+    605,
+    665.5,
+    732.05
   ],
-  "currency": "ribu",
-  "formula_latex": "A_n=A_0(1+r)^n",
+  "currency": "ribu rupiah",
+  "formula_latex": "A_n = A_0(1+r)^n",
   "steps": [
     {
-      "title": "Nilai awal",
-      "body": "Mulai dari modal atau nilai dasar pada periode pertama.",
-      "narration": "Nilai awal. Mulai dari modal atau nilai dasar pada periode pertama."
+      "title": "Mulai dari nilai awal",
+      "body": "Model keuangan selalu berangkat dari modal atau saldo pada periode pertama."
     },
     {
-      "title": "Persentase tumbuh",
-      "body": "Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja.",
-      "narration": "Persentase tumbuh. Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja."
+      "title": "Terapkan pertumbuhan",
+      "body": "Setiap periode, nilai baru dihitung dari nilai sebelumnya, bukan hanya dari nilai awal."
     },
     {
-      "title": "Efek majemuk",
-      "body": "Selisih antar batang makin besar karena basis perhitungannya ikut membesar.",
-      "narration": "Efek majemuk. Selisih antar batang makin besar karena basis perhitungannya ikut membesar."
+      "title": "Amati efek majemuk",
+      "body": "Kenaikan absolut membesar karena basis perhitungan ikut bertambah."
     }
   ],
-  "summary": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya.",
-  "intro_narration": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
-  "summary_narration": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya.",
-  "voiceover_script": "Kenaikan persentase dihitung dari nilai periode sebelumnya.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Kenaikan persentase dihitung dari nilai periode sebelumnya."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Nilai awal. Mulai dari modal atau nilai dasar pada periode pertama."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Persentase tumbuh. Setiap periode, kenaikan dihitung dari nilai terbaru, bukan nilai awal saja."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Efek majemuk. Selisih antar batang makin besar karena basis perhitungannya ikut membesar."
-    },
-    {
-      "slot": "summary",
-      "text": "Pertumbuhan majemuk membuat nilai bertambah berdasarkan persentase dari nilai periode sebelumnya."
-    }
-  ]
+  "summary": "Pertumbuhan nilai majemuk menjelaskan mengapa tabungan atau investasi dapat meningkat semakin cepat seiring waktu."
 }

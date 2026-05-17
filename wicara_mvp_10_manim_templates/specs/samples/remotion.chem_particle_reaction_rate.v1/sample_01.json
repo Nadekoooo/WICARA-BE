@@ -1,0 +1,40 @@
+{
+  "id": "spec_41_remotion_chem_particle_reaction_rate_v1",
+  "row_index": 41,
+  "concept_type": "reaction_rate_collision_model",
+  "template_id": "remotion.chem_particle_reaction_rate.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Laju Reaksi dan Teori Tumbukan",
+  "subtitle": "Reaksi berlangsung ketika partikel bertumbukan secara efektif dengan energi dan orientasi yang sesuai.",
+  "steps": [
+    {
+      "title": "Gerak partikel",
+      "body": "Partikel pereaksi selalu bergerak dan bertumbukan."
+    },
+    {
+      "title": "Tumbukan efektif",
+      "body": "Tidak semua tumbukan menghasilkan reaksi."
+    },
+    {
+      "title": "Faktor laju",
+      "body": "Kondisi tertentu meningkatkan peluang tumbukan efektif."
+    }
+  ],
+  "summary": "Adegan tumbukan partikel lebih alami dibuat di Remotion daripada di layout grafik murni.",
+  "factors": [
+    "Suhu",
+    "Konsentrasi",
+    "Luas permukaan",
+    "Katalis"
+  ],
+  "particles": [
+    "A",
+    "B"
+  ]
+}

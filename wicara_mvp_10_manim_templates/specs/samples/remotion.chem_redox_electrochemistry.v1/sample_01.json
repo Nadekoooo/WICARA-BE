@@ -1,0 +1,39 @@
+{
+  "id": "spec_42_remotion_chem_redox_electrochemistry_v1",
+  "row_index": 42,
+  "concept_type": "redox_electrochemistry_model",
+  "template_id": "remotion.chem_redox_electrochemistry.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Redoks dan Elektrokimia",
+  "subtitle": "Reaksi oksidasi-reduksi berkaitan dengan perpindahan elektron dan kerja sel elektrokimia.",
+  "steps": [
+    {
+      "title": "Bedakan oksidasi dan reduksi",
+      "body": "Elektron dilepas di anoda dan diterima di katoda."
+    },
+    {
+      "title": "Susun sel",
+      "body": "Sel volta memerlukan dua setengah sel dan jembatan garam."
+    },
+    {
+      "title": "Hubungkan arus",
+      "body": "Perpindahan elektron menjelaskan arus pada rangkaian luar."
+    }
+  ],
+  "summary": "Template ini memang layak reuse antar topik elektrokimia karena morfologi visualnya spesifik pada sel volta.",
+  "half_reactions": [
+    "Zn → Zn²⁺ + 2e⁻",
+    "Cu²⁺ + 2e⁻ → Cu"
+  ],
+  "cell_parts": [
+    "Anoda",
+    "Katoda",
+    "Jembatan garam"
+  ]
+}

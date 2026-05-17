@@ -1,76 +1,45 @@
 {
-  "id": "sample_data_representation_distinct",
-  "node_id": "phase4_statistics_data_display",
+  "id": "ct_003_data_representation_model",
+  "node_id": "data_representation_model",
   "template_id": "manim.data_representation.v1",
   "phase": "D",
   "audience_level": "smp",
   "language": "id",
-  "title": "Representasi Data Kategori",
-  "subtitle": "Diagram batang membuat perbandingan kategori lebih cepat terlihat.",
+  "title": "Representasi dan Penyajian Data",
+  "subtitle": "Data kategori lebih mudah dibandingkan jika diubah menjadi diagram batang.",
   "categories": [
     {
-      "label": "A",
+      "label": "Jalan kaki",
+      "value": 8
+    },
+    {
+      "label": "Sepeda",
       "value": 12
     },
     {
-      "label": "B",
-      "value": 19
+      "label": "Motor",
+      "value": 20
     },
     {
-      "label": "C",
-      "value": 7
-    },
-    {
-      "label": "D",
-      "value": 15
+      "label": "Angkot",
+      "value": 10
     }
   ],
   "unit": "siswa",
-  "highlight_category": "B",
+  "highlight_category": "Motor",
   "steps": [
     {
-      "title": "Ubah tabel jadi visual",
-      "body": "Setiap kategori diberi batang dengan tinggi sesuai nilainya.",
-      "narration": "Ubah tabel jadi visual. Setiap kategori diberi batang dengan tinggi sesuai nilainya."
+      "title": "Susun data mentah",
+      "body": "Kategori dan jumlah disiapkan terlebih dahulu agar siap divisualisasikan."
     },
     {
-      "title": "Bandingkan tinggi",
-      "body": "Batang yang lebih tinggi menunjukkan nilai yang lebih besar.",
-      "narration": "Bandingkan tinggi. Batang yang lebih tinggi menunjukkan nilai yang lebih besar."
+      "title": "Ubah jadi diagram",
+      "body": "Tiap kategori diberi batang dengan tinggi sesuai nilainya."
     },
     {
-      "title": "Ambil informasi penting",
-      "body": "Kita dapat cepat melihat kategori terbesar dan terkecil.",
-      "narration": "Ambil informasi penting. Kita dapat cepat melihat kategori terbesar dan terkecil."
+      "title": "Baca informasi utama",
+      "body": "Dari diagram, kita bisa cepat melihat kategori paling besar, paling kecil, dan perbandingannya."
     }
   ],
-  "summary": "Diagram batang cocok untuk membandingkan nilai antar kategori secara visual.",
-  "intro_narration": "Diagram batang membuat perbandingan kategori lebih cepat terlihat.",
-  "summary_narration": "Diagram batang cocok untuk membandingkan nilai antar kategori secara visual.",
-  "voiceover_script": "Diagram batang membuat perbandingan kategori lebih cepat terlihat.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Diagram batang membuat perbandingan kategori lebih cepat terlihat."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Ubah tabel jadi visual. Setiap kategori diberi batang dengan tinggi sesuai nilainya."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Bandingkan tinggi. Batang yang lebih tinggi menunjukkan nilai yang lebih besar."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Ambil informasi penting. Kita dapat cepat melihat kategori terbesar dan terkecil."
-    },
-    {
-      "slot": "summary",
-      "text": "Diagram batang cocok untuk membandingkan nilai antar kategori secara visual."
-    }
-  ]
+  "summary": "Representasi data yang baik membantu pembaca melihat pola tanpa harus membaca seluruh tabel satu per satu."
 }

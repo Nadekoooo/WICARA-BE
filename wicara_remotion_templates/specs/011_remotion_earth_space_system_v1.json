@@ -1,0 +1,40 @@
+{
+  "id": "spec_11_remotion_earth_space_system_v1",
+  "row_index": 11,
+  "concept_type": "earth_space_system_model",
+  "template_id": "remotion.earth_space_system.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Bumi, Tata Surya, dan Gerak Langit",
+  "subtitle": "Gerak Bumi, Bulan, dan Matahari menjelaskan siang-malam, fase Bulan, musim, dan peristiwa kebumian tertentu.",
+  "steps": [
+    {
+      "title": "Amati posisi benda langit",
+      "body": "Matahari, Bumi, dan Bulan berada pada posisi yang terus berubah."
+    },
+    {
+      "title": "Hubungkan gerak dan fenomena",
+      "body": "Rotasi dan revolusi menghasilkan pola astronomi yang teramati."
+    },
+    {
+      "title": "Kaitkan dengan kehidupan",
+      "body": "Fenomena langit memengaruhi kalender, musim, dan observasi sehari-hari."
+    }
+  ],
+  "summary": "Model ruang angkasa membantu siswa menghubungkan gerak benda langit dengan fenomena yang tampak dari Bumi.",
+  "bodies": [
+    "Matahari",
+    "Bumi",
+    "Bulan"
+  ],
+  "phenomena": [
+    "Siang-malam",
+    "Musim",
+    "Gerhana"
+  ]
+}

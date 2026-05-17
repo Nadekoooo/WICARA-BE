@@ -1,0 +1,41 @@
+{
+  "id": "spec_12_remotion_chem_bonding_molecule_v1",
+  "row_index": 12,
+  "concept_type": "chemical_bonding_molecular_structure",
+  "template_id": "remotion.chem_bonding_molecule.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Ikatan Kimia dan Bentuk Molekul",
+  "subtitle": "Atom berikatan untuk mencapai kestabilan dan susunan pasangan elektron memengaruhi bentuk molekul.",
+  "steps": [
+    {
+      "title": "Lihat kecenderungan elektron",
+      "body": "Atom cenderung mencapai konfigurasi elektron yang lebih stabil."
+    },
+    {
+      "title": "Bedakan jenis ikatan",
+      "body": "Ikatan dapat terbentuk melalui serah-terima atau penggunaan bersama elektron."
+    },
+    {
+      "title": "Hubungkan dengan bentuk",
+      "body": "Tolak-menolak pasangan elektron menentukan geometri molekul."
+    }
+  ],
+  "summary": "Visualisasi ikatan dan bentuk molekul membantu menjelaskan sifat zat pada level partikel.",
+  "examples": [
+    "NaCl",
+    "H2O",
+    "CO2",
+    "NH3"
+  ],
+  "bond_types": [
+    "Ionik",
+    "Kovalen",
+    "Polar"
+  ]
+}

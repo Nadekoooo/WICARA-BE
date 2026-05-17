@@ -1,0 +1,41 @@
+{
+  "id": "spec_104_remotion_bio_homeostasis_feedback_v1",
+  "row_index": 104,
+  "concept_type": "homeostasis_feedback_model",
+  "template_id": "remotion.bio_homeostasis_feedback.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Homeostasis dan Umpan Balik",
+  "subtitle": "Tubuh menjaga kestabilan kondisi internal melalui sistem sensor, pusat kontrol, dan efektor.",
+  "steps": [
+    {
+      "title": "Deteksi perubahan",
+      "body": "Reseptor mengenali penyimpangan dari kondisi normal."
+    },
+    {
+      "title": "Proses kontrol",
+      "body": "Pusat kontrol mengirimkan sinyal yang sesuai."
+    },
+    {
+      "title": "Kembalikan set point",
+      "body": "Efektor bekerja untuk mengurangi penyimpangan."
+    }
+  ],
+  "summary": "Loop feedback memerlukan komposisi melingkar yang khas, jadi template ini tidak pantas direuse ke template linear lain.",
+  "loop": [
+    "Stimulus",
+    "Reseptor",
+    "Pusat kontrol",
+    "Efektor",
+    "Respon"
+  ],
+  "examples": [
+    "Suhu tubuh",
+    "Glukosa darah"
+  ]
+}

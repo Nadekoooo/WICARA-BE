@@ -1,0 +1,41 @@
+{
+  "id": "spec_26_remotion_chem_atomic_periodic_v1",
+  "row_index": 26,
+  "concept_type": "atomic_structure_periodic_model",
+  "template_id": "remotion.chem_atomic_periodic.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Atom, Elektron, dan Sistem Periodik",
+  "subtitle": "Struktur atom dan konfigurasi elektron berkaitan erat dengan posisi unsur pada sistem periodik.",
+  "steps": [
+    {
+      "title": "Bangun model atom",
+      "body": "Atom terdiri dari inti dan elektron yang menempati kulit atau orbital."
+    },
+    {
+      "title": "Tentukan konfigurasi",
+      "body": "Jumlah elektron menentukan konfigurasi dan sifat unsur."
+    },
+    {
+      "title": "Hubungkan ke tabel periodik",
+      "body": "Posisi unsur mencerminkan pola konfigurasi dan kecenderungan sifat."
+    }
+  ],
+  "summary": "Template ini menghubungkan model atom mikro dengan representasi makro pada sistem periodik.",
+  "example_element": "Na",
+  "subparticles": [
+    "Proton",
+    "Neutron",
+    "Elektron"
+  ],
+  "periodic_groups": [
+    "Golongan 1",
+    "Golongan 17",
+    "Golongan 18"
+  ]
+}

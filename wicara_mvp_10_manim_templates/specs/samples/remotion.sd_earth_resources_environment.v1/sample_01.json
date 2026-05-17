@@ -1,0 +1,41 @@
+{
+  "id": "spec_70_remotion_sd_earth_resources_environment_v1",
+  "row_index": 70,
+  "concept_type": "earth_surface_resources_environment",
+  "template_id": "remotion.sd_earth_resources_environment.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Permukaan Bumi, Sumber Daya, dan Lingkungan",
+  "subtitle": "Permukaan Bumi terdiri dari daratan dan perairan, menyediakan sumber daya alam, dan dapat berubah oleh aktivitas manusia atau alam.",
+  "steps": [
+    {
+      "title": "Kenali permukaan Bumi",
+      "body": "Daratan dan perairan memiliki ciri yang berbeda."
+    },
+    {
+      "title": "Temukan sumber daya",
+      "body": "Alam menyediakan bahan penting bagi kehidupan."
+    },
+    {
+      "title": "Jaga lingkungan",
+      "body": "Pemakaian sumber daya perlu dilakukan dengan bijak."
+    }
+  ],
+  "summary": "Template ini fokus pada lanskap, sumber daya, dan perubahan lingkungan yang mudah divisualisasikan dengan panel ilustratif.",
+  "resources": [
+    "Air",
+    "Tanah",
+    "Hutan",
+    "Mineral"
+  ],
+  "changes": [
+    "Erosi",
+    "Penebangan",
+    "Banjir"
+  ]
+}

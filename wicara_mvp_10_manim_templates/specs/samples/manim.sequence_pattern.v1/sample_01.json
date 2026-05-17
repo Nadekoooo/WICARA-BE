@@ -1,26 +1,20 @@
 {
-  "id": "sample_pattern_sequence_generalization_64",
-  "node_id": "phase3_pattern_sequence_generalization",
+  "id": "ct_008_sequence_pattern_generalization",
+  "node_id": "sequence_pattern_generalization",
   "template_id": "manim.sequence_pattern.v1",
-  "phase": "C",
-  "audience_level": "sd",
+  "phase": "D",
+  "audience_level": "smp",
   "language": "id",
-  "title": "Pola, Barisan, dan Generalisasi Awal",
-  "subtitle": "Pola gambar dapat diubah menjadi barisan bilangan lalu digeneralisasi menjadi aturan sederhana.",
+  "title": "Pola, Barisan, dan Generalisasi",
+  "subtitle": "Dari beberapa suku awal, kita bisa menemukan aturan lalu memprediksi suku berikutnya.",
   "terms": [
     3,
-    5,
-    7,
-    9
+    6,
+    9,
+    12
   ],
-  "term_labels": [
-    "pola 1",
-    "pola 2",
-    "pola 3",
-    "pola 4"
-  ],
-  "rule_text": "tambah 2 setiap langkah",
-  "rule": "Tambah 2 setiap langkah",
+  "visual_pattern_type": "growing_dots",
+  "rule": "Tambah 3 setiap langkah",
   "table_values": [
     {
       "n": 1,
@@ -28,34 +22,34 @@
     },
     {
       "n": 2,
-      "value": 5
+      "value": 6
     },
     {
       "n": 3,
-      "value": 7
+      "value": 9
     },
     {
       "n": 4,
-      "value": 9
+      "value": 12
     }
   ],
   "target_term": {
     "n": 5,
-    "value": 11
+    "value": 15
   },
   "steps": [
     {
-      "title": "Amati pola",
-      "body": "Setiap pola memiliki jumlah benda yang dapat dihitung."
+      "title": "Amati suku-suku awal",
+      "body": "Perhatikan bagaimana nilai berubah dari satu suku ke suku berikutnya."
     },
     {
-      "title": "Bandingkan antar pola",
-      "body": "Selisih yang tetap menunjukkan aturan pertumbuhan."
+      "title": "Temukan aturan",
+      "body": "Perubahan tetap memungkinkan kita membuat aturan umum pola."
     },
     {
-      "title": "Buat generalisasi",
-      "body": "Aturan pola membantu memprediksi pola berikutnya tanpa menggambar semuanya."
+      "title": "Generalisasi",
+      "body": "Setelah aturan ditemukan, suku berikutnya dapat diprediksi tanpa menebak."
     }
   ],
-  "summary": "Generalisasi pola adalah jembatan awal dari gambar konkret menuju pemikiran aljabar."
+  "summary": "Generalisasi pola mengubah pengamatan beberapa contoh menjadi aturan yang bisa dipakai lebih luas."
 }
