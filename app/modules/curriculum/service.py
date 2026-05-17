@@ -30,7 +30,13 @@ from app.modules.curriculum.kurikulum_merdeka import (
     SUBJECT_DISPLAY_ORDER,
     canonical_subject_code,
 )
-from app.modules.learning.models import LearnerConceptState
+from app.modules.learning.models import (
+    AssessmentAttempt,
+    AssessmentQuestion,
+    AssessmentSession,
+    LearnerConceptState,
+    LearningGoal,
+)
 
 STATUS_LABELS = {
     "mastered": "MASTERED",
@@ -206,6 +212,16 @@ def get_knowledge_map(
         user=user,
         concept_ids=list(concept_by_id),
     )
+    posttest_required_concept_ids = _posttest_required_concept_ids(
+        session,
+        user=user,
+        concept_ids=list(concept_by_id),
+    )
+    latest_posttest_pass_by_concept = _latest_posttest_pass_by_concept(
+        session,
+        user=user,
+        concept_ids=list(concept_by_id),
+    )
     prerequisite_ids_by_concept: dict[UUID, list[UUID]] = defaultdict(list)
     for edge in edges:
         if edge.edge_type != "prerequisite":
@@ -232,6 +248,8 @@ def get_knowledge_map(
                 state=state_by_concept.get(concept.id),
                 is_personalized=user is not None,
                 prerequisite_gate=prerequisite_gates.get(concept.id, empty_gate),
+                posttest_required=(concept.id in posttest_required_concept_ids),
+                latest_posttest_pass=latest_posttest_pass_by_concept.get(concept.id),
             )
             for concept in concepts
         ],
@@ -321,6 +339,22 @@ def get_concept_detail(
             *[item.id for item in cross_subject_concepts],
         ],
     )
+    concept_ids_for_detail = [
+        concept.id,
+        *[item.id for item in prerequisite_concepts],
+        *[item.id for item in related_concept_models],
+        *[item.id for item in cross_subject_concepts],
+    ]
+    posttest_required_concept_ids = _posttest_required_concept_ids(
+        session,
+        user=user,
+        concept_ids=concept_ids_for_detail,
+    )
+    latest_posttest_pass_by_concept = _latest_posttest_pass_by_concept(
+        session,
+        user=user,
+        concept_ids=concept_ids_for_detail,
+    )
     concept_state = state_by_concept.get(concept.id)
     concept_prerequisite_gate = _prerequisite_gate(
         [item.id for item in prerequisite_concepts],
@@ -336,6 +370,8 @@ def get_concept_detail(
                 prerequisite_count=0,
                 satisfied_prerequisite_count=0,
             ),
+            posttest_required=(item.id in posttest_required_concept_ids),
+            latest_posttest_pass=latest_posttest_pass_by_concept.get(item.id),
         )
         for item in prerequisite_concepts
     ]
@@ -348,6 +384,8 @@ def get_concept_detail(
                 prerequisite_count=1,
                 satisfied_prerequisite_count=0,
             ),
+            posttest_required=(item.id in posttest_required_concept_ids),
+            latest_posttest_pass=latest_posttest_pass_by_concept.get(item.id),
         )
         for item in related_concept_models
     ]
@@ -360,6 +398,8 @@ def get_concept_detail(
                 prerequisite_count=1,
                 satisfied_prerequisite_count=0,
             ),
+            posttest_required=(item.id in posttest_required_concept_ids),
+            latest_posttest_pass=latest_posttest_pass_by_concept.get(item.id),
         )
         for item in cross_subject_concepts
     ]
@@ -371,6 +411,8 @@ def get_concept_detail(
             state=concept_state,
             is_personalized=user is not None,
             prerequisite_gate=concept_prerequisite_gate,
+            posttest_required=(concept.id in posttest_required_concept_ids),
+            latest_posttest_pass=latest_posttest_pass_by_concept.get(concept.id),
         ),
         subject=subject_to_schema(concept.subject),
         mastery_confidence=_mastery_confidence_for_detail(
@@ -398,6 +440,8 @@ def _concept_to_node(
     state: LearnerConceptState | None = None,
     is_personalized: bool = False,
     prerequisite_gate: _PrerequisiteGate | None = None,
+    posttest_required: bool = False,
+    latest_posttest_pass: bool | None = None,
 ) -> KnowledgeMapNode:
     metadata: dict[str, Any] = concept.metadata_json or {}
     gate = prerequisite_gate or _PrerequisiteGate(
@@ -409,6 +453,8 @@ def _concept_to_node(
         state=state,
         is_personalized=is_personalized,
         prerequisite_gate=gate,
+        posttest_required=posttest_required,
+        latest_posttest_pass=latest_posttest_pass,
     )
     response_metadata = _node_metadata(
         concept,
@@ -444,6 +490,8 @@ def _concept_relation(
     state: LearnerConceptState | None = None,
     is_personalized: bool = False,
     prerequisite_gate: _PrerequisiteGate | None = None,
+    posttest_required: bool = False,
+    latest_posttest_pass: bool | None = None,
 ) -> ConceptRelation:
     metadata: dict[str, Any] = concept.metadata_json or {}
     gate = prerequisite_gate or _PrerequisiteGate(
@@ -455,6 +503,8 @@ def _concept_relation(
         state=state,
         is_personalized=is_personalized,
         prerequisite_gate=gate,
+        posttest_required=posttest_required,
+        latest_posttest_pass=latest_posttest_pass,
     )
     return ConceptRelation(
         id=concept.code,
@@ -639,12 +689,94 @@ def _learner_states_for_concepts(
     }
 
 
+def _posttest_required_concept_ids(
+    session: Session,
+    *,
+    user: UserAccount | None,
+    concept_ids: list[UUID],
+) -> set[UUID]:
+    if user is None or not concept_ids:
+        return set()
+    concept_id_set = set(concept_ids)
+    required: set[UUID] = set()
+    goals = list(
+        session.scalars(
+            select(LearningGoal)
+            .where(LearningGoal.user_id == user.id)
+            .order_by(LearningGoal.updated_at.desc())
+            .limit(20)
+        )
+    )
+    for goal in goals:
+        diagnosis = (goal.metadata_json or {}).get("diagnosis", {})
+        nodes = diagnosis.get("nodes", []) if isinstance(diagnosis, dict) else []
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            if str(node.get("status")) not in {"gap", "fragile", "partial"}:
+                continue
+            concept_id = node.get("concept_id")
+            try:
+                concept_uuid = UUID(str(concept_id))
+            except (TypeError, ValueError):
+                continue
+            if concept_uuid in concept_id_set:
+                required.add(concept_uuid)
+    return required
+
+
+def _latest_posttest_pass_by_concept(
+    session: Session,
+    *,
+    user: UserAccount | None,
+    concept_ids: list[UUID],
+) -> dict[UUID, bool]:
+    if user is None or not concept_ids:
+        return {}
+    rows = list(
+        session.execute(
+            select(
+                AssessmentQuestion.concept_id,
+                AssessmentAttempt.is_correct,
+                AssessmentAttempt.submitted_at,
+            )
+            .join(AssessmentAttempt, AssessmentAttempt.question_id == AssessmentQuestion.id)
+            .join(AssessmentSession, AssessmentSession.id == AssessmentAttempt.session_id)
+            .where(
+                AssessmentSession.user_id == user.id,
+                AssessmentSession.session_type == "posttest",
+                AssessmentQuestion.concept_id.in_(concept_ids),
+            )
+            .order_by(AssessmentQuestion.concept_id, AssessmentAttempt.submitted_at.desc())
+        )
+    )
+    latest: dict[UUID, dict[str, int]] = {}
+    for concept_id, is_correct, _submitted_at in rows:
+        if concept_id is None:
+            continue
+        payload = latest.setdefault(concept_id, {"answered": 0, "correct": 0})
+        if payload["answered"] >= 3:
+            continue
+        payload["answered"] += 1
+        payload["correct"] += 1 if is_correct else 0
+    result: dict[UUID, bool] = {}
+    for concept_id, payload in latest.items():
+        answered = payload["answered"]
+        if answered <= 0:
+            continue
+        scaled = (payload["correct"] / max(1, answered)) * 10
+        result[concept_id] = scaled >= 7.0 and answered >= 3
+    return result
+
+
 def _status_for_concept(
     concept: KnowledgeConcept,
     *,
     state: LearnerConceptState | None,
     is_personalized: bool,
     prerequisite_gate: _PrerequisiteGate,
+    posttest_required: bool,
+    latest_posttest_pass: bool | None,
 ) -> tuple[str, str]:
     metadata: dict[str, Any] = concept.metadata_json or {}
     curriculum_status = _curriculum_default_status(
@@ -675,6 +807,8 @@ def _status_for_concept(
     if stored_status == "active":
         return "active", "stored_active_status"
     if stored_status == "mastered" or mastery_score >= 0.7:
+        if posttest_required and latest_posttest_pass is not True:
+            return "review", "posttest_mastery_gate_unmet"
         return "mastered", "strong_mastery_score"
     if mastery_score < 0.55:
         return "review", "moderate_low_mastery_score"
@@ -767,6 +901,8 @@ def _concept_detail_metadata(
         state=state,
         is_personalized=True,
         prerequisite_gate=prerequisite_gate,
+        posttest_required=False,
+        latest_posttest_pass=None,
     )
     return {
         "mock_mastery": False,

@@ -1,6 +1,6 @@
 """create question bank tables
 
-Revision ID: 20260516_0009
+Revision ID: 20260516_0010
 Revises: 20260514_0008
 Create Date: 2026-05-16 20:30:00.000000
 """
@@ -11,8 +11,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "20260516_0009"
-down_revision: str | None = "20260514_0008"
+revision: str = "20260516_0010"
+down_revision: str | None = "20260516_0009"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

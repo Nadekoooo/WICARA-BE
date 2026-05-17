@@ -1,7 +1,7 @@
 """add goal resolver and adaptive pretest pack schema
 
-Revision ID: 20260517_0010
-Revises: 20260516_0009
+Revision ID: 20260517_0011
+Revises: 20260516_0010
 Create Date: 2026-05-17 09:00:00.000000
 """
 
@@ -11,8 +11,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "20260517_0010"
-down_revision: str | None = "20260516_0009"
+revision: str = "20260517_0011"
+down_revision: str | None = "20260516_0010"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
