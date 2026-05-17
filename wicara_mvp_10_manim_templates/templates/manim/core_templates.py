@@ -4,23 +4,13 @@ import math
 import re
 import textwrap
 import numpy as np
-from pathlib import Path
 
 try:
     from manim_voiceover import VoiceoverScene
-    from manim_voiceover.helper import remove_bookmarks
-    from manim_voiceover.services.base import SpeechService
     from manim_voiceover.services.gtts import GTTSService
-    try:
-        from openai import OpenAI
-    except ImportError:
-        OpenAI = None
 except ImportError:
     VoiceoverScene = Scene
-    SpeechService = None
-    remove_bookmarks = lambda text: text
     GTTSService = None
-    OpenAI = None
 
 LANGUAGE_ALIASES = {
     "id": "id",
@@ -418,122 +408,14 @@ def _normalize_tts_provider(value) -> str:
     mapping = {
         "gtts": "gtts_voiceover",
         "gtts_voiceover": "gtts_voiceover",
-        "openai": "openai_voiceover",
-        "openai_tts": "openai_voiceover",
-        "openai_voiceover": "openai_voiceover",
+        "openai": "gtts_voiceover",
+        "openai_tts": "gtts_voiceover",
+        "openai_voiceover": "gtts_voiceover",
+        "whisper": "gtts_voiceover",
+        "openai_whisper": "gtts_voiceover",
         "none": "none",
     }
     return mapping.get(normalized, "gtts_voiceover")
-
-
-if SpeechService is not None and OpenAI is not None:
-    class OpenAIFallbackVoiceoverService(SpeechService):
-        def __init__(
-            self,
-            *,
-            api_key: str | None = None,
-            model_primary: str = "gpt-4o-mini-tts",
-            model_fallback: str = "tts-1",
-            voice_primary: str = "marin",
-            voice_fallback: str = "alloy",
-            response_format: str = "mp3",
-            instructions: str = "",
-            language_code: str = "id",
-            **kwargs,
-        ):
-            self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
-            self.model_primary = model_primary
-            self.model_fallback = model_fallback
-            self.voice_primary = voice_primary
-            self.voice_fallback = voice_fallback
-            self.response_format = str(response_format or "wav").lower()
-            self.instructions = " ".join(str(instructions or "").split())
-            self.language_code = str(language_code or "id").strip().lower()
-            super().__init__(**kwargs)
-
-        def _build_effective_instructions(self) -> str:
-            locale_hints = {
-                "id": (
-                    "Speak in natural Bahasa Indonesia. "
-                    "Use clear Indonesian pronunciation and intonation."
-                ),
-                "en": "Speak in natural English with clear pronunciation.",
-                "vi": "Speak naturally in Vietnamese with clear pronunciation.",
-                "ms": "Speak naturally in Malay with clear pronunciation.",
-                "ja": "Speak naturally in Japanese with clear pronunciation.",
-            }
-            base_hint = locale_hints.get(self.language_code, "")
-            if base_hint and self.instructions:
-                return f"{base_hint} {self.instructions}".strip()
-            return base_hint or self.instructions
-
-        def _request_tts(self, *, model: str, voice: str, input_text: str, output_path: Path):
-            payload = {
-                "model": model,
-                "voice": voice,
-                "input": input_text,
-                "response_format": self.response_format,
-            }
-            effective_instructions = self._build_effective_instructions()
-            if effective_instructions and model.startswith("gpt-4o-mini-tts"):
-                payload["instructions"] = effective_instructions
-            with self.client.audio.speech.with_streaming_response.create(**payload) as response:
-                response.stream_to_file(output_path)
-
-        def generate_from_text(self, text: str, cache_dir: str = None, path: str = None, **kwargs) -> dict:
-            cache_root = Path(cache_dir) if cache_dir is not None else Path(self.cache_dir)
-            input_text = remove_bookmarks(text)
-            speed = kwargs.get("speed", 1.0)
-            input_data = {
-                "input_text": input_text,
-                "service": "openai_speech_api",
-                "config": {
-                    "model_primary": self.model_primary,
-                    "model_fallback": self.model_fallback,
-                    "voice_primary": self.voice_primary,
-                    "voice_fallback": self.voice_fallback,
-                    "response_format": self.response_format,
-                    "language_code": self.language_code,
-                    "speed": speed,
-                },
-            }
-            cached_result = self.get_cached_result(input_data, cache_root)
-            if cached_result is not None:
-                return cached_result
-
-            extension = self.response_format if self.response_format != "pcm" else "wav"
-            audio_file = path or f"{self.get_audio_basename(input_data)}.{extension}"
-            output_path = cache_root / audio_file
-
-            used_model = self.model_primary
-            used_voice = self.voice_primary
-            try:
-                self._request_tts(
-                    model=self.model_primary,
-                    voice=self.voice_primary,
-                    input_text=input_text,
-                    output_path=output_path,
-                )
-            except Exception:
-                used_model = self.model_fallback
-                used_voice = self.voice_fallback
-                self._request_tts(
-                    model=self.model_fallback,
-                    voice=self.voice_fallback,
-                    input_text=input_text,
-                    output_path=output_path,
-                )
-
-            return {
-                "input_text": text,
-                "input_data": input_data,
-                "original_audio": audio_file,
-                "tts_engine": "openai_speech_api",
-                "model": used_model,
-                "voice": used_voice,
-            }
-else:
-    OpenAIFallbackVoiceoverService = None
 
 
 def _dedupe_voiceover_segments(segments: list[str]) -> list[str]:
@@ -568,14 +450,6 @@ class WicaraTemplateScene(VoiceoverScene):
         self._segmented_step_queues: dict[int, list[str]] = {}
         self._voiceover_provider = "none"
         self._requested_tts_provider = "gtts_voiceover"
-        self._openai_primary_model = "gpt-4o-mini-tts"
-        self._openai_fallback_model = "tts-1"
-        self._openai_primary_voice = "marin"
-        self._openai_fallback_voice = "alloy"
-        self._openai_response_format = "mp3"
-        self._openai_instructions = ""
-        self._openai_language = "id"
-        self._openai_fallback_attempted = False
 
     # --------------------------------------------------------
     # Layout zones
@@ -803,66 +677,6 @@ class WicaraTemplateScene(VoiceoverScene):
         self._requested_tts_provider = normalized
         return normalized
 
-    def _resolve_openai_voiceover_config(self, spec):
-        self._openai_language = self.resolve_language(spec)
-        self._openai_primary_model = str(
-            spec.get("tts_model_primary")
-            or spec.get("tts_model")
-            or os.getenv("MEDIA_OPENAI_TTS_MODEL_PRIMARY")
-            or "gpt-4o-mini-tts"
-        ).strip()
-        self._openai_fallback_model = str(
-            spec.get("tts_model_fallback")
-            or os.getenv("MEDIA_OPENAI_TTS_MODEL_FALLBACK")
-            or "tts-1"
-        ).strip()
-        self._openai_primary_voice = str(
-            spec.get("tts_voice_primary")
-            or spec.get("tts_voice")
-            or os.getenv("MEDIA_OPENAI_TTS_VOICE_PRIMARY")
-            or "marin"
-        ).strip()
-        self._openai_fallback_voice = str(
-            spec.get("tts_voice_fallback")
-            or os.getenv("MEDIA_OPENAI_TTS_VOICE_FALLBACK")
-            or "alloy"
-        ).strip()
-        self._openai_response_format = str(
-            spec.get("tts_response_format")
-            or os.getenv("MEDIA_OPENAI_TTS_RESPONSE_FORMAT")
-            or "mp3"
-        ).strip().lower()
-        self._openai_instructions = " ".join(
-            str(
-                spec.get("tts_instructions")
-                or os.getenv("MEDIA_OPENAI_TTS_INSTRUCTIONS")
-                or ""
-            ).split()
-        )
-
-    def _configure_openai_voiceover(self, spec):
-        self._resolve_openai_voiceover_config(spec)
-        if OpenAIFallbackVoiceoverService is None:
-            return False
-        api_key = str(os.getenv("OPENAI_API_KEY") or "").strip()
-        if not api_key:
-            return False
-        self.set_speech_service(
-            OpenAIFallbackVoiceoverService(
-                api_key=api_key,
-                model_primary=self._openai_primary_model,
-                model_fallback=self._openai_fallback_model,
-                voice_primary=self._openai_primary_voice,
-                voice_fallback=self._openai_fallback_voice,
-                response_format=self._openai_response_format,
-                instructions=self._openai_instructions,
-                language_code=self._openai_language,
-            )
-        )
-        self._voiceover_provider = "openai_voiceover"
-        self._openai_fallback_attempted = False
-        return True
-
     def _configure_gtts_voiceover(self, spec):
         if GTTSService is None:
             return False
@@ -884,10 +698,7 @@ class WicaraTemplateScene(VoiceoverScene):
         if provider == "none":
             self._voiceover_provider = "none"
             return
-        if provider == "openai_voiceover":
-            configured = self._configure_openai_voiceover(spec)
-        else:
-            configured = self._configure_gtts_voiceover(spec)
+        configured = self._configure_gtts_voiceover(spec)
 
         if not configured:
             self._voiceover_provider = "none"
@@ -930,23 +741,6 @@ class WicaraTemplateScene(VoiceoverScene):
                         updated_kwargs["run_time"] = max(float(run_time), float(tracker.duration))
                 return super().play(*args, **updated_kwargs)
         except Exception:
-            if self._voiceover_provider == "openai_voiceover" and not self._openai_fallback_attempted:
-                self._openai_fallback_attempted = True
-                try:
-                    self.set_speech_service(
-                        OpenAIFallbackVoiceoverService(
-                            api_key=os.getenv("OPENAI_API_KEY"),
-                            model_primary=self._openai_fallback_model,
-                            model_fallback=self._openai_fallback_model,
-                            voice_primary=self._openai_fallback_voice,
-                            voice_fallback=self._openai_fallback_voice,
-                            response_format=self._openai_response_format,
-                            language_code=self._openai_language,
-                        )
-                    )
-                    return self._play_with_voiceover_segment(segment, *args, **kwargs)
-                except Exception:
-                    raise
             self._voiceover_enabled = False
             return super().play(*args, **kwargs)
 
@@ -6016,4 +5810,1249 @@ __all__ = [
 
 # ============================================================
 # END PHASE 5: TEMPLATE 30-60 BUNDLE (MERGED)
+# ============================================================
+# ============================================================
+# PHASE 6: TEMPLATE 61-107 MANIM BUNDLE (MERGED)
+# ============================================================
+
+def _safe_text(value, default="-"):
+    value = default if value is None else value
+    return str(value)
+
+
+def _box(label, detail=None, width=1.7, height=0.76, color=BLUE, font_size=18):
+    rect = RoundedRectangle(
+        width=width,
+        height=height,
+        corner_radius=0.14,
+        color=color,
+        fill_color=color,
+        fill_opacity=0.16,
+        stroke_width=2,
+    )
+    title = Text(_safe_text(label), font_size=font_size, color=color, weight=BOLD)
+    if detail:
+        subtitle = Text(_safe_text(detail), font_size=max(11, font_size - 7), color=WHITE)
+        content = VGroup(title, subtitle).arrange(DOWN, buff=0.05)
+    else:
+        content = title
+    content.move_to(rect.get_center())
+    return VGroup(rect, content)
+
+
+def _chip(label, radius=0.28, color=BLUE, font_size=16, fill_opacity=0.18):
+    circ = Circle(radius=radius, color=color, fill_color=color, fill_opacity=fill_opacity, stroke_width=2)
+    text = Text(_safe_text(label), font_size=font_size, color=color, weight=BOLD).move_to(circ)
+    return VGroup(circ, text)
+
+
+def _mini_dot(label=None, color=BLUE, radius=0.085):
+    dot = Dot(radius=radius, color=color)
+    if label is None:
+        return dot
+    text = Text(str(label), font_size=12, color=color).next_to(dot, DOWN, buff=0.04)
+    return VGroup(dot, text)
+
+
+def _formula(text, font_size=28, color=WHITE):
+    try:
+        return MathTex(str(text), font_size=font_size, color=color)
+    except Exception:
+        return Text(str(text), font_size=max(14, font_size - 6), color=color)
+
+
+def _axes(x_range, y_range, x_length=5.4, y_length=3.0):
+    return Axes(
+        x_range=x_range,
+        y_range=y_range,
+        x_length=x_length,
+        y_length=y_length,
+        axis_config={"include_numbers": True, "font_size": 18, "stroke_width": 2},
+        tips=False,
+    )
+
+
+def _bar(value, max_value, width=0.42, max_height=1.8, color=BLUE):
+    h = 0.12 + (float(value) / max(1.0, float(max_value))) * max_height
+    return Rectangle(width=width, height=h, color=color, fill_color=color, fill_opacity=0.32)
+
+
+# -----------------------------------------------------------------------------
+# Manim-only specs for concept_type_priority rows 61-107
+# Rows skipped intentionally: remotion_svg, remotion_or_rive, remotion_or_manim.
+# -----------------------------------------------------------------------------
+
+TEMPLATE_61_107_MANIM_SPECS = {
+    62: {
+        "id": "sample_equilibrium_shift_62",
+        "node_id": "phase5_chem_equilibrium_shift",
+        "template_id": "manim.chem_equilibrium_shift.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Kesetimbangan Kimia dan Le Chatelier",
+        "subtitle": "Sistem setimbang akan bergeser untuk mengurangi pengaruh perubahan konsentrasi, tekanan, atau suhu.",
+        "equation_latex": r"N_2O_4(g) \rightleftharpoons 2NO_2(g)",
+        "left_label": "reaktan",
+        "right_label": "produk",
+        "stressors": [
+            {"label": "+ reaktan", "shift": "kanan"},
+            {"label": "+ produk", "shift": "kiri"},
+            {"label": "naik suhu", "shift": "tergantung ΔH"},
+        ],
+        "steps": [
+            {"title": "Mulai dari keadaan setimbang", "body": "Laju reaksi maju dan balik sama sehingga komposisi terlihat stabil."},
+            {"title": "Beri gangguan", "body": "Perubahan konsentrasi, tekanan, atau suhu mengganggu keadaan setimbang."},
+            {"title": "Prediksi pergeseran", "body": "Sistem bergeser ke arah yang mengurangi dampak gangguan tersebut."},
+        ],
+        "summary": "Prinsip Le Chatelier membantu memprediksi arah perubahan sistem kesetimbangan secara kualitatif.",
+    },
+    63: {
+        "id": "sample_thermochemistry_energy_profile_63",
+        "node_id": "phase5_thermochemistry_energy_profile",
+        "template_id": "manim.chem_energy_profile.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Profil Energi Termokimia",
+        "subtitle": "Perubahan entalpi dapat dibaca dari posisi energi reaktan dan produk pada diagram energi.",
+        "reaction_type": "eksoterm",
+        "delta_h_label": r"\Delta H < 0",
+        "reactant_energy": 4.0,
+        "product_energy": 1.7,
+        "activation_energy": 6.2,
+        "steps": [
+            {"title": "Tentukan energi awal", "body": "Reaktan memiliki tingkat energi tertentu sebelum reaksi berlangsung."},
+            {"title": "Lewati energi aktivasi", "body": "Reaksi membutuhkan energi aktivasi untuk mencapai keadaan transisi."},
+            {"title": "Baca ΔH", "body": "Selisih energi produk dan reaktan menunjukkan apakah reaksi menyerap atau melepas kalor."},
+        ],
+        "summary": "Diagram profil energi memperjelas hubungan antara energi aktivasi, produk, reaktan, dan entalpi reaksi.",
+    },
+    64: {
+        "id": "sample_pattern_sequence_generalization_64",
+        "node_id": "phase3_pattern_sequence_generalization",
+        "template_id": "manim.sequence_pattern.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Pola, Barisan, dan Generalisasi Awal",
+        "subtitle": "Pola gambar dapat diubah menjadi barisan bilangan lalu digeneralisasi menjadi aturan sederhana.",
+        "terms": [3, 5, 7, 9],
+        "term_labels": ["pola 1", "pola 2", "pola 3", "pola 4"],
+        "rule_text": "tambah 2 setiap langkah",
+        "rule": "Tambah 2 setiap langkah",
+        "table_values": [
+            {"n": 1, "value": 3},
+            {"n": 2, "value": 5},
+            {"n": 3, "value": 7},
+            {"n": 4, "value": 9}
+        ],
+        "target_term": {"n": 5, "value": 11},
+        "steps": [
+            {"title": "Amati pola", "body": "Setiap pola memiliki jumlah benda yang dapat dihitung."},
+            {"title": "Bandingkan antar pola", "body": "Selisih yang tetap menunjukkan aturan pertumbuhan."},
+            {"title": "Buat generalisasi", "body": "Aturan pola membantu memprediksi pola berikutnya tanpa menggambar semuanya."},
+        ],
+        "summary": "Generalisasi pola adalah jembatan awal dari gambar konkret menuju pemikiran aljabar.",
+    },
+    65: {
+        "id": "sample_shape_identification_geometry_65",
+        "node_id": "phase3_shape_identification_geometry",
+        "template_id": "manim.elementary_shapes.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Bangun Datar, Bangun Ruang, dan Komposisi",
+        "subtitle": "Bangun dapat dikenali dari sisi, sudut, permukaan, dan cara beberapa bentuk disusun.",
+        "flat_shapes": ["Segitiga", "Persegi", "Lingkaran"],
+        "solid_shapes": ["Kubus", "Tabung", "Bola"],
+        "composition_label": "rumah = persegi + segitiga",
+        "steps": [
+            {"title": "Kenali ciri", "body": "Bangun datar memiliki sisi dan sudut, sedangkan bangun ruang memiliki volume."},
+            {"title": "Bandingkan bentuk", "body": "Perbedaan jumlah sisi, sudut, dan permukaan membantu klasifikasi."},
+            {"title": "Susun komposisi", "body": "Beberapa bangun sederhana dapat disusun menjadi gambar atau objek baru."},
+        ],
+        "summary": "Identifikasi bentuk membantu siswa membaca struktur geometri di benda sekitar.",
+    },
+    66: {
+        "id": "sample_area_perimeter_volume_66",
+        "node_id": "phase3_area_perimeter_volume",
+        "template_id": "manim.area_volume_decomposition.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Keliling, Luas, Volume, dan Jaring-jaring",
+        "subtitle": "Keliling mengukur batas, luas mengukur daerah, dan volume mengukur ruang yang terisi.",
+        "rectangle": {"width": 4, "height": 3},
+        "cuboid_net_faces": ["atas", "bawah", "depan", "belakang", "kiri", "kanan"],
+        "steps": [
+            {"title": "Keliling", "body": "Keliling didapat dari panjang lintasan di tepi bangun."},
+            {"title": "Luas", "body": "Luas dapat dipahami sebagai banyaknya kotak satuan yang menutupi daerah."},
+            {"title": "Volume dan jaring-jaring", "body": "Bangun ruang dapat dibuka menjadi jaring-jaring untuk memahami permukaannya."},
+        ],
+        "summary": "Pengukuran geometri menjadi jelas jika batas, daerah, ruang, dan jaring-jaring dibedakan.",
+    },
+    72: {
+        "id": "sample_matrix_operation_72",
+        "node_id": "phase5_matrix_operation_model",
+        "template_id": "manim.matrix_operations.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Matriks dan Operasi Data Tersusun",
+        "subtitle": "Matriks menyimpan data dalam baris dan kolom sehingga operasi dapat dilakukan secara terstruktur.",
+        "matrix_a": [[1, 2], [3, 4]],
+        "matrix_b": [[2, 0], [1, 3]],
+        "operation": "addition",
+        "result_matrix": [[3, 2], [4, 7]],
+        "steps": [
+            {"title": "Baca posisi elemen", "body": "Setiap angka memiliki alamat baris dan kolom."},
+            {"title": "Samakan ukuran", "body": "Penjumlahan matriks membutuhkan ukuran baris dan kolom yang sama."},
+            {"title": "Operasikan elemen bersesuaian", "body": "Elemen pada posisi yang sama dijumlahkan untuk membentuk matriks hasil."},
+        ],
+        "summary": "Operasi matriks adalah cara sistematis mengolah data yang tersusun dalam grid angka.",
+    },
+    73: {
+        "id": "sample_geodesic_coordinate_73",
+        "node_id": "phase5_geodesic_coordinate_model",
+        "template_id": "manim.geodesic_coordinate.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Koordinat dan Jarak pada Permukaan Bumi",
+        "subtitle": "Jarak di permukaan Bumi mengikuti lengkungan, bukan garis lurus pada bidang datar.",
+        "points": [{"label": "A", "lat": -6, "lon": 107}, {"label": "B", "lat": -8, "lon": 112}],
+        "arc_label": "jarak lintasan permukaan",
+        "steps": [
+            {"title": "Tandai koordinat", "body": "Lokasi di Bumi dapat dinyatakan dengan lintang dan bujur."},
+            {"title": "Perhatikan kelengkungan", "body": "Permukaan Bumi melengkung sehingga jarak terpendek mengikuti busur."},
+            {"title": "Bandingkan peta dan globe", "body": "Representasi datar dapat mengubah persepsi jarak dan arah."},
+        ],
+        "summary": "Koordinat geografis menghubungkan posisi, arah, dan jarak pada permukaan Bumi yang melengkung.",
+    },
+    75: {
+        "id": "sample_motion_force_pressure_75",
+        "node_id": "phase4_motion_force_pressure",
+        "template_id": "manim.force_motion_pressure.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Gerak, Gaya, Tekanan, dan Mesin Sederhana",
+        "subtitle": "Gaya memengaruhi gerak, sedangkan tekanan bergantung pada besar gaya dan luas bidang tekan.",
+        "force_value": 60,
+        "area_large": 6,
+        "area_small": 2,
+        "machines": ["tuas", "bidang miring", "katrol"],
+        "steps": [
+            {"title": "Gaya mengubah gerak", "body": "Dorongan atau tarikan dapat mempercepat, memperlambat, atau mengubah arah gerak benda."},
+            {"title": "Tekanan", "body": "Tekanan bertambah jika gaya sama diberikan pada luas bidang yang lebih kecil."},
+            {"title": "Mesin sederhana", "body": "Pesawat sederhana membantu mengubah besar atau arah gaya yang diperlukan."},
+        ],
+        "summary": "Gerak, gaya, tekanan, dan mesin sederhana saling terkait dalam banyak kejadian sehari-hari.",
+    },
+    76: {
+        "id": "sample_work_energy_power_76",
+        "node_id": "phase5_work_energy_power",
+        "template_id": "manim.energy_transfer.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Usaha, Energi, dan Daya",
+        "subtitle": "Usaha memindahkan energi, sedangkan daya menyatakan seberapa cepat energi dipindahkan.",
+        "force": 20,
+        "distance": 5,
+        "time": 4,
+        "work_latex": r"W = F \cdot s = 100\ J",
+        "power_latex": r"P = W/t = 25\ W",
+        "steps": [
+            {"title": "Ada gaya dan perpindahan", "body": "Usaha terjadi jika gaya menyebabkan perpindahan searah komponen gaya."},
+            {"title": "Energi berpindah", "body": "Usaha dapat dilihat sebagai proses pemindahan energi ke benda."},
+            {"title": "Hitung daya", "body": "Daya lebih besar jika usaha yang sama dilakukan dalam waktu lebih singkat."},
+        ],
+        "summary": "Usaha, energi, dan daya menjelaskan hubungan antara gaya, perpindahan, waktu, dan transfer energi.",
+    },
+    77: {
+        "id": "sample_scalar_vector_77",
+        "node_id": "phase4_scalar_vector_model",
+        "template_id": "manim.vector_diagram.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Skalar, Vektor, dan Resultan",
+        "subtitle": "Skalar hanya memiliki besar, sedangkan vektor memiliki besar dan arah.",
+        "vectors": [{"label": "A", "x": 3, "y": 1}, {"label": "B", "x": 1, "y": 2}],
+        "resultant": {"label": "R", "x": 4, "y": 3},
+        "steps": [
+            {"title": "Bedakan skalar dan vektor", "body": "Massa dan suhu adalah skalar, sedangkan perpindahan dan gaya adalah vektor."},
+            {"title": "Gambar arah", "body": "Panah menunjukkan besar sekaligus arah suatu vektor."},
+            {"title": "Jumlahkan vektor", "body": "Resultan dapat diperoleh dengan menyambung panah secara kepala-ke-ekor."},
+        ],
+        "summary": "Diagram vektor membantu memahami arah, besar, dan resultan secara visual.",
+    },
+    78: {
+        "id": "sample_force_newton_diagram_78",
+        "node_id": "phase4_force_newton_diagram",
+        "template_id": "manim.force_diagram.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Gaya dan Hukum Newton",
+        "subtitle": "Diagram gaya bebas membantu melihat resultan gaya dan hubungannya dengan percepatan.",
+        "object_label": "balok",
+        "object": {"type": "box", "label": "balok"},
+        "forces": [
+            {"label": "N", "direction": "up", "magnitude": 10},
+            {"label": "W", "direction": "down", "magnitude": 10},
+            {"label": "F", "direction": "right", "magnitude": 6},
+            {"label": "f", "direction": "left", "magnitude": 2},
+        ],
+        "resultant_label": "ΣF = ma",
+        "resultant": {"magnitude": 4, "unit": "N", "direction": "right"},
+        "motion_response": "Balok cenderung dipercepat ke kanan karena resultan gaya ke kanan.",
+        "force_scale": 0.24,
+        "steps": [
+            {"title": "Pisahkan benda", "body": "Diagram gaya bebas menggambar satu benda dan semua gaya yang bekerja padanya."},
+            {"title": "Jumlahkan gaya", "body": "Gaya yang berlawanan arah saling mengurangi untuk menghasilkan resultan."},
+            {"title": "Hubungkan dengan gerak", "body": "Jika resultan gaya tidak nol, benda mengalami percepatan."},
+        ],
+        "summary": "Hukum Newton menjadi lebih mudah dipahami melalui diagram gaya dan resultan gaya.",
+    },
+    79: {
+        "id": "sample_fluid_pressure_79",
+        "node_id": "phase5_fluid_pressure_model",
+        "template_id": "manim.fluid_pressure.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Fluida dan Tekanan Hidrostatis",
+        "subtitle": "Tekanan fluida bertambah seiring kedalaman karena berat kolom fluida di atas titik tersebut.",
+        "depths": [1, 2, 3],
+        "pressure_values": [1, 2, 3],
+        "formula_latex": r"P = \rho g h",
+        "steps": [
+            {"title": "Tentukan kedalaman", "body": "Titik yang lebih dalam menanggung kolom fluida yang lebih tinggi."},
+            {"title": "Tekanan meningkat", "body": "Semakin besar h, semakin besar tekanan hidrostatis."},
+            {"title": "Arah tekanan", "body": "Tekanan fluida bekerja ke segala arah pada titik dalam fluida."},
+        ],
+        "summary": "Model tekanan fluida menjelaskan mengapa benda di tempat lebih dalam menerima tekanan lebih besar.",
+    },
+    80: {
+        "id": "sample_electromagnetism_field_80",
+        "node_id": "phase5_electromagnetism_field_model",
+        "template_id": "manim.electromagnetism_field.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Medan Listrik, Magnet, dan Elektromagnetisme",
+        "subtitle": "Muatan, arus, dan medan saling berhubungan dalam fenomena elektromagnetik.",
+        "charge_label": "+q",
+        "current_label": "I",
+        "field_labels": ["E", "B"],
+        "steps": [
+            {"title": "Medan listrik", "body": "Muatan listrik menghasilkan medan listrik di sekitarnya."},
+            {"title": "Medan magnet", "body": "Arus listrik menghasilkan medan magnet melingkar di sekitar kawat."},
+            {"title": "Elektromagnetisme", "body": "Perubahan dan interaksi medan listrik-magnet menjelaskan banyak teknologi listrik."},
+        ],
+        "summary": "Elektromagnetisme menyatukan konsep muatan, arus, medan listrik, dan medan magnet.",
+    },
+    87: {
+        "id": "sample_inheritance_probability_87",
+        "node_id": "phase5_inheritance_probability_model",
+        "template_id": "manim.bio_genetics_probability.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Pewarisan Sifat dan Peluang Genetika",
+        "subtitle": "Punnett square menunjukkan kemungkinan kombinasi alel dari kedua induk.",
+        "parents": ["Aa", "Aa"],
+        "gametes": [["A", "a"], ["A", "a"]],
+        "offspring": [["AA", "Aa"], ["Aa", "aa"]],
+        "ratio": "3 dominan : 1 resesif",
+        "steps": [
+            {"title": "Tentukan gamet", "body": "Setiap induk menyumbangkan satu alel melalui gamet."},
+            {"title": "Isi kotak Punnett", "body": "Kombinasi alel dibaca dari pertemuan baris dan kolom."},
+            {"title": "Hitung peluang", "body": "Perbandingan genotipe atau fenotipe dihitung dari jumlah kotak yang sesuai."},
+        ],
+        "summary": "Peluang genetika membantu memprediksi variasi sifat keturunan secara sederhana.",
+    },
+    90: {
+        "id": "sample_measurement_unit_conversion_90",
+        "node_id": "phase3_measurement_unit_conversion",
+        "template_id": "manim.measurement_units.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Pengukuran, Satuan, dan Konversi Sederhana",
+        "subtitle": "Satuan dapat dikonversi dengan memahami tangga satuan dan faktor pengali.",
+        "quantity": "panjang",
+        "conversion_chain": ["m", "dm", "cm", "mm"],
+        "example": "2 m = 200 cm",
+        "steps": [
+            {"title": "Kenali besaran", "body": "Panjang, massa, dan waktu diukur dengan satuan yang berbeda."},
+            {"title": "Gunakan tangga satuan", "body": "Berpindah satu langkah pada satuan panjang berarti mengalikan atau membagi 10."},
+            {"title": "Terapkan pada contoh", "body": "Konversi dilakukan dengan menghitung jumlah langkah antar satuan."},
+        ],
+        "summary": "Konversi satuan menjadi mudah jika arah perpindahan dan faktor pengalinya jelas.",
+    },
+    91: {
+        "id": "sample_financial_quantity_91",
+        "node_id": "phase3_financial_quantity_model",
+        "template_id": "manim.elementary_finance_timeline.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Literasi Finansial Dasar",
+        "subtitle": "Uang dapat digunakan, ditabung, dan direncanakan melalui keputusan sederhana sehari-hari.",
+        "timeline": [
+            {"label": "Uang saku", "amount": 20000},
+            {"label": "Jajan", "amount": -8000},
+            {"label": "Tabung", "amount": 12000},
+        ],
+        "goal": "beli buku",
+        "steps": [
+            {"title": "Catat pemasukan", "body": "Uang saku adalah contoh pemasukan sederhana."},
+            {"title": "Bedakan kebutuhan dan keinginan", "body": "Sebagian uang digunakan untuk membeli, sebagian dapat ditabung."},
+            {"title": "Rencanakan tujuan", "body": "Tabungan membantu mencapai tujuan tertentu di masa depan."},
+        ],
+        "summary": "Literasi finansial awal melatih siswa membuat keputusan sederhana tentang penggunaan uang.",
+    },
+    92: {
+        "id": "sample_factor_multiple_divisibility_92",
+        "node_id": "phase3_factor_multiple_divisibility",
+        "template_id": "manim.factor_tree_multiple_grid.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Faktor, Kelipatan, FPB, KPK, dan Keterbagian",
+        "subtitle": "Faktor membagi habis suatu bilangan, sedangkan kelipatan muncul dari perkalian berulang.",
+        "numbers": [12, 18],
+        "factor_tree": {"root": 12, "children": [3, 4], "leafs": [3, 2, 2]},
+        "multiples_a": [12, 24, 36, 48],
+        "multiples_b": [18, 36, 54, 72],
+        "highlight": {"fpb": 6, "kpk": 36},
+        "steps": [
+            {"title": "Cari faktor", "body": "Faktor adalah bilangan yang membagi habis bilangan lain."},
+            {"title": "Cari kelipatan", "body": "Kelipatan diperoleh dari perkalian bilangan dengan 1, 2, 3, dan seterusnya."},
+            {"title": "Temukan FPB dan KPK", "body": "FPB berasal dari faktor bersama terbesar, KPK dari kelipatan bersama terkecil."},
+        ],
+        "summary": "Faktor dan kelipatan adalah dasar untuk memahami FPB, KPK, dan aturan keterbagian.",
+    },
+    93: {
+        "id": "sample_angle_symmetry_transformation_93",
+        "node_id": "phase3_angle_symmetry_transformation",
+        "template_id": "manim.elementary_geometry_transform.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Sudut, Simetri, dan Transformasi Awal",
+        "subtitle": "Bentuk dapat diputar, dicerminkan, dan digeser sambil mempertahankan sifat tertentu.",
+        "angle_degrees": 90,
+        "transformations": ["refleksi", "rotasi", "translasi"],
+        "steps": [
+            {"title": "Ukur sudut", "body": "Sudut menunjukkan besar bukaan antara dua garis."},
+            {"title": "Lihat simetri", "body": "Bentuk simetris dapat dilipat atau dicerminkan sehingga kedua sisi cocok."},
+            {"title": "Coba transformasi", "body": "Translasi, rotasi, dan refleksi mengubah posisi atau arah bentuk."},
+        ],
+        "summary": "Sudut dan transformasi membantu siswa memahami bagaimana bentuk bergerak dan tetap dikenali.",
+    },
+    94: {
+        "id": "sample_chance_probability_informal_94",
+        "node_id": "phase3_chance_probability_informal",
+        "template_id": "manim.elementary_probability.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Peluang Informal dan Peluang Sederhana",
+        "subtitle": "Peluang dapat dikenalkan melalui kata mungkin, mustahil, pasti, dan percobaan sederhana.",
+        "events": [
+            {"label": "Matahari terbit", "chance": "pasti"},
+            {"label": "Koin muncul gambar", "chance": "mungkin"},
+            {"label": "Dadu muncul 7", "chance": "mustahil"},
+        ],
+        "experiment": {"success": 3, "total": 6, "label": "angka genap pada dadu"},
+        "steps": [
+            {"title": "Gunakan bahasa peluang", "body": "Peristiwa dapat disebut pasti, mungkin, kecil peluangnya, atau mustahil."},
+            {"title": "Coba percobaan", "body": "Koin dan dadu memberi contoh hasil yang tidak selalu sama."},
+            {"title": "Hitung peluang sederhana", "body": "Peluang dapat dihitung sebagai hasil yang diinginkan dibanding semua kemungkinan."},
+        ],
+        "summary": "Peluang informal membangun intuisi sebelum siswa memakai pecahan dan rumus peluang formal.",
+    },
+    95: {
+        "id": "sample_ratio_scale_proportion_95",
+        "node_id": "phase3_ratio_scale_proportion",
+        "template_id": "manim.ratio_proportion.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Rasio, Skala, dan Penalaran Proporsional Awal",
+        "subtitle": "Rasio membandingkan dua jumlah, sedangkan skala mempertahankan perbandingan saat ukuran berubah.",
+        "ratio": [2, 3],
+        "labels": ["sirup", "air"],
+        "context": "Membuat minuman dengan perbandingan sirup dan air",
+        "quantities": [
+            {"label": "sirup", "value": 2, "unit": "bagian"},
+            {"label": "air", "value": 3, "unit": "bagian"}
+        ],
+        "ratio_pairs": [["sirup", "air"]],
+        "scale_factor": 2,
+        "scaling_steps": [{"from": "2:3", "to": "4:6", "label": "dikali 2"}],
+        "steps": [
+            {"title": "Bandingkan dua jumlah", "body": "Rasio 2 banding 3 berarti ada dua bagian pertama untuk tiga bagian kedua."},
+            {"title": "Perbesar dengan skala", "body": "Jika kedua bagian dikalikan faktor yang sama, perbandingan tetap sama."},
+            {"title": "Gunakan proporsi", "body": "Penalaran proporsional membantu menyelesaikan masalah resep, peta, dan ukuran."},
+        ],
+        "summary": "Rasio dan skala membantu memahami perbandingan yang tetap walau ukuran berubah.",
+    },
+    97: {
+        "id": "sample_factorization_divisibility_97",
+        "node_id": "phase4_factorization_divisibility_model",
+        "template_id": "manim.factor_tree.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Faktorisasi dan Keterbagian",
+        "subtitle": "Pohon faktor memecah bilangan menjadi faktor prima untuk membaca struktur keterbagian.",
+        "number": 84,
+        "tree_levels": [[84], [2, 42], [2, 2, 21], [2, 2, 3, 7]],
+        "prime_factorization": r"84 = 2^2 \times 3 \times 7",
+        "steps": [
+            {"title": "Pecah bilangan", "body": "Mulai dari bilangan besar lalu pecah menjadi dua faktor."},
+            {"title": "Lanjutkan sampai prima", "body": "Faktor komposit dipecah lagi sampai semua daun adalah bilangan prima."},
+            {"title": "Tulis faktorisasi", "body": "Faktor prima disusun sebagai perkalian yang setara dengan bilangan awal."},
+        ],
+        "summary": "Faktorisasi prima memudahkan analisis keterbagian, FPB, KPK, dan penyederhanaan pecahan.",
+    },
+    98: {
+        "id": "sample_graph_function_98",
+        "node_id": "phase4_graph_function_model",
+        "template_id": "manim.graph_explanation.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Grafik Fungsi dan Interpretasi Kurva",
+        "subtitle": "Grafik fungsi menghubungkan input dan output sehingga perubahan dapat dibaca secara visual.",
+        "function": {"type": "linear", "params": {"m": 2, "b": 1}},
+        "x_range": [-2, 4, 1],
+        "y_range": [-3, 10, 1],
+        "formula_latex": "f(x)=2x+1",
+        "moving_points": [-1, 0, 2, 3],
+        "x_path": [-1, 0, 2, 3],
+        "graph_label": "garis fungsi",
+        "moving_label": "titik input-output",
+        "show_slope": True,
+        "highlight_x": 2,
+        "steps": [
+            {"title": "Input dan output", "body": "Setiap nilai x menghasilkan satu nilai y pada grafik fungsi."},
+            {"title": "Baca kemiringan", "body": "Kemiringan garis menunjukkan laju perubahan output terhadap input."},
+            {"title": "Interpretasi konteks", "body": "Grafik dapat dipakai untuk menjelaskan tren dalam situasi nyata."},
+        ],
+        "summary": "Grafik fungsi membuat hubungan antar variabel lebih mudah diamati dan ditafsirkan.",
+    },
+    99: {
+        "id": "sample_spatial_net_99",
+        "node_id": "phase4_spatial_net_model",
+        "template_id": "manim.spatial_net.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Jaring-jaring dan Representasi 3D",
+        "subtitle": "Bangun ruang dapat dibuka menjadi jaring-jaring untuk memahami susunan permukaannya.",
+        "solid": "kubus",
+        "faces": 6,
+        "net_layout": [[0, 1], [1, 1], [2, 1], [3, 1], [1, 0], [1, 2]],
+        "steps": [
+            {"title": "Kenali sisi bangun", "body": "Kubus memiliki enam sisi berbentuk persegi."},
+            {"title": "Buka permukaan", "body": "Jika beberapa rusuk dipotong, permukaan dapat dibentangkan menjadi jaring-jaring."},
+            {"title": "Lipat kembali", "body": "Jaring-jaring yang benar dapat dilipat kembali menjadi bangun ruang semula."},
+        ],
+        "summary": "Jaring-jaring menghubungkan representasi datar dengan pemahaman bangun ruang 3D.",
+    },
+    100: {
+        "id": "sample_measurement_data_process_100",
+        "node_id": "phase4_measurement_data_process",
+        "template_id": "manim.measurement_data.v1",
+        "phase": "D",
+        "audience_level": "smp",
+        "language": "id",
+        "title": "Pengukuran dan Data IPA",
+        "subtitle": "Data hasil pengukuran perlu dicatat, diplot, dan dianalisis untuk menarik kesimpulan ilmiah.",
+        "measurements": [
+            {"time": 0, "temperature": 25},
+            {"time": 1, "temperature": 32},
+            {"time": 2, "temperature": 38},
+            {"time": 3, "temperature": 43},
+        ],
+        "x_label": "waktu",
+        "y_label": "suhu",
+        "steps": [
+            {"title": "Catat pengukuran", "body": "Setiap data harus memiliki nilai, satuan, dan waktu atau kondisi pengamatan."},
+            {"title": "Ubah ke grafik", "body": "Grafik membantu melihat pola perubahan yang sulit terlihat dari tabel saja."},
+            {"title": "Tarik kesimpulan", "body": "Kesimpulan didukung oleh pola data, bukan hanya dugaan."},
+        ],
+        "summary": "Proses pengukuran IPA mengubah observasi menjadi data yang dapat dianalisis secara ilmiah.",
+    },
+    102: {
+        "id": "sample_momentum_impulse_collision_102",
+        "node_id": "phase5_momentum_impulse_collision",
+        "template_id": "manim.momentum_collision.v1",
+        "phase": "E",
+        "audience_level": "sma",
+        "language": "id",
+        "title": "Momentum, Impuls, dan Tumbukan",
+        "subtitle": "Momentum berubah ketika impuls bekerja, dan total momentum dapat kekal pada sistem tertutup.",
+        "masses": [2, 1],
+        "velocities_before": [3, -1],
+        "velocities_after": [1, 3],
+        "impulse_latex": r"J = \Delta p = F \Delta t",
+        "steps": [
+            {"title": "Hitung momentum", "body": "Momentum bergantung pada massa dan kecepatan benda."},
+            {"title": "Tumbukan", "body": "Saat benda bertumbukan, gaya bekerja selama selang waktu singkat."},
+            {"title": "Impuls dan perubahan", "body": "Impuls sama dengan perubahan momentum benda."},
+        ],
+        "summary": "Momentum dan impuls menjelaskan perubahan gerak pada tumbukan, pantulan, dan interaksi singkat.",
+    },
+    106: {
+        "id": "sample_coordinate_spatial_106",
+        "node_id": "phase3_coordinate_spatial_model",
+        "template_id": "manim.coordinate_grid_elementary.v1",
+        "phase": "C",
+        "audience_level": "sd",
+        "language": "id",
+        "title": "Koordinat dan Posisi Ruang",
+        "subtitle": "Posisi dapat dijelaskan dengan pasangan koordinat dan arah gerak pada grid sederhana.",
+        "points": [{"label": "A", "x": 1, "y": 2}, {"label": "B", "x": 4, "y": 3}, {"label": "C", "x": 2, "y": 5}],
+        "path": ["A", "B", "C"],
+        "steps": [
+            {"title": "Baca sumbu", "body": "Sumbu mendatar dan tegak membantu menentukan posisi titik."},
+            {"title": "Tentukan koordinat", "body": "Koordinat ditulis sebagai pasangan nilai x dan y."},
+            {"title": "Ikuti rute", "body": "Urutan titik dapat membentuk jalur atau pergerakan di bidang."},
+        ],
+        "summary": "Grid koordinat membantu siswa menjelaskan posisi dan arah secara presisi.",
+    },
+}
+
+
+# -----------------------------------------------------------------------------
+# Template implementations
+# -----------------------------------------------------------------------------
+
+class ChemicalEquilibriumShiftTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[62]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Kesetimbangan dinamis", "Laju reaksi maju dan balik sama, tetapi partikel tetap bereaksi.", color=BLUE))
+        eq = _formula(spec["equation_latex"], font_size=32, color=YELLOW).move_to(LEFT * 2.55 + UP * 1.55)
+        left = _box(spec.get("left_label", "reaktan"), width=1.65, color=BLUE).move_to(LEFT * 4.25 + DOWN * 0.25)
+        right = _box(spec.get("right_label", "produk"), width=1.65, color=GREEN).move_to(LEFT * 1.0 + DOWN * 0.25)
+        fwd = Arrow(left.get_right(), right.get_left(), buff=0.10, color=YELLOW)
+        rev = Arrow(right.get_left() + DOWN * 0.28, left.get_right() + DOWN * 0.28, buff=0.10, color=YELLOW)
+        self.play(FadeIn(eq), FadeIn(left), FadeIn(right), Create(fwd), Create(rev), run_time=0.95)
+        stress_boxes = VGroup()
+        for item in spec.get("stressors", [])[:3]:
+            stress_boxes.add(_box(item["label"], detail=f"geser: {item['shift']}", width=2.0, height=0.62, color=ORANGE, font_size=15))
+        stress_boxes.arrange(DOWN, buff=0.12).move_to(RIGHT * 3.85 + DOWN * 0.1)
+        shift_arrow = CurvedArrow(left.get_top(), right.get_top(), angle=-0.4, color=ORANGE)
+        active_card = self.replace_card(active_card, self.make_card("Gangguan sistem", "Arah pergeseran dipilih agar gangguan menjadi lebih kecil.", color=ORANGE))
+        self.play(FadeIn(stress_boxes), Create(shift_arrow), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ThermochemistryEnergyProfileTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[63]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Profil energi", "Diagram energi menunjukkan perubahan energi selama reaksi berlangsung.", color=BLUE))
+        axes = _axes([0, 5, 1], [0, 7, 1], x_length=5.4, y_length=3.2).move_to(LEFT * 2.65 + DOWN * 0.35)
+        re = float(spec.get("reactant_energy", 4))
+        pe = float(spec.get("product_energy", 2))
+        ae = float(spec.get("activation_energy", 6))
+        curve = VMobject(color=YELLOW, stroke_width=4)
+        curve.set_points_smoothly([axes.c2p(0.4, re), axes.c2p(1.5, re + 0.4), axes.c2p(2.4, ae), axes.c2p(3.5, pe + 0.6), axes.c2p(4.6, pe)])
+        r_line = DashedLine(axes.c2p(0.3, re), axes.c2p(4.8, re), color=BLUE)
+        p_line = DashedLine(axes.c2p(0.3, pe), axes.c2p(4.8, pe), color=GREEN)
+        dh = DoubleArrow(axes.c2p(4.95, re), axes.c2p(4.95, pe), color=RED, buff=0)
+        dh_label = _formula(spec.get("delta_h_label", r"\Delta H"), font_size=24, color=RED).next_to(dh, RIGHT, buff=0.08)
+        self.play(Create(axes), Create(curve), FadeIn(r_line), FadeIn(p_line), FadeIn(dh), FadeIn(dh_label), run_time=1.15)
+        labels = VGroup(Text("reaktan", font_size=16, color=BLUE).move_to(axes.c2p(0.7, re + 0.35)), Text("produk", font_size=16, color=GREEN).move_to(axes.c2p(4.2, pe + 0.35)), Text("Ea", font_size=18, color=YELLOW).move_to(axes.c2p(2.6, ae + 0.45)))
+        self.play(FadeIn(labels), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class PatternSequenceGeneralizationConceptTemplate(SequencePatternTemplate):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[64]
+
+
+class ElementaryShapesIdentificationTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[65]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Ciri bentuk", "Bentuk dikenali dari sisi, sudut, bidang, dan ruang yang ditempati.", color=BLUE))
+        tri = Triangle(color=YELLOW, fill_color=YELLOW, fill_opacity=0.18).scale(0.55)
+        sq = Square(side_length=1.0, color=GREEN, fill_color=GREEN, fill_opacity=0.18)
+        circ = Circle(radius=0.52, color=BLUE, fill_color=BLUE, fill_opacity=0.18)
+        flat = VGroup(tri, sq, circ).arrange(RIGHT, buff=0.45).move_to(LEFT * 3.25 + UP * 0.85)
+        labels = VGroup(*[Text(s, font_size=15, color=WHITE).next_to(m, DOWN, buff=0.08) for s, m in zip(spec["flat_shapes"], flat)])
+        cube_front = Square(side_length=0.72, color=PURPLE, fill_color=PURPLE, fill_opacity=0.15)
+        cube_back = cube_front.copy().shift(UP * 0.22 + RIGHT * 0.22)
+        cube_edges = VGroup(*[Line(a, b, color=PURPLE) for a, b in zip(
+            [cube_front.get_corner(UR), cube_front.get_corner(DR), cube_front.get_corner(UL), cube_front.get_corner(DL)],
+            [cube_back.get_corner(UR), cube_back.get_corner(DR), cube_back.get_corner(UL), cube_back.get_corner(DL)]
+        )])
+        cube = VGroup(cube_back, cube_front, cube_edges).move_to(LEFT * 4.2 + DOWN * 1.25)
+        cyl_body = Rectangle(width=0.72, height=0.85, color=ORANGE, fill_color=ORANGE, fill_opacity=0.12)
+        cyl_top = Ellipse(width=0.72, height=0.22, color=ORANGE).next_to(cyl_body, UP, buff=-0.11)
+        cyl_bottom = Ellipse(width=0.72, height=0.22, color=ORANGE).next_to(cyl_body, DOWN, buff=-0.11)
+        cylinder = VGroup(cyl_body, cyl_top, cyl_bottom).move_to(LEFT * 2.9 + DOWN * 1.25)
+        sphere = Circle(radius=0.43, color=TEAL, fill_color=TEAL, fill_opacity=0.18).move_to(LEFT * 1.55 + DOWN * 1.25)
+        sphere.add(Arc(radius=0.33, angle=TAU, color=TEAL).scale([1, 0.35, 1]).move_to(sphere))
+        solids = VGroup(cube, cylinder, sphere)
+        solid_labels = VGroup(*[Text(s, font_size=15, color=WHITE).next_to(m, DOWN, buff=0.10) for s, m in zip(spec["solid_shapes"], solids)])
+        self.play(FadeIn(flat), FadeIn(labels), FadeIn(solids), FadeIn(solid_labels), run_time=1.0)
+        house_base = Square(side_length=0.9, color=GREEN, fill_color=GREEN, fill_opacity=0.2)
+        roof = Triangle(color=YELLOW, fill_color=YELLOW, fill_opacity=0.2).scale(0.52).next_to(house_base, UP, buff=0)
+        house = VGroup(house_base, roof).move_to(RIGHT * 3.75 + DOWN * 0.15)
+        comp = Text(spec.get("composition_label", "komposisi"), font_size=18, color=WHITE).next_to(house, DOWN, buff=0.12)
+        active_card = self.replace_card(active_card, self.make_card("Komposisi", "Bangun sederhana dapat disusun menjadi objek yang lebih kompleks.", color=GREEN))
+        self.play(FadeIn(house), FadeIn(comp), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class AreaVolumeDecompositionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[66]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Keliling dan luas", "Keliling melihat batas; luas melihat daerah yang tertutup.", color=BLUE))
+        w, h = spec.get("rectangle", {}).get("width", 4), spec.get("rectangle", {}).get("height", 3)
+        grid = VGroup()
+        for i in range(w):
+            for j in range(h):
+                grid.add(Square(side_length=0.38, color=BLUE, fill_color=BLUE, fill_opacity=0.10).move_to(LEFT * 4.5 + RIGHT * i * 0.39 + UP * (j * 0.39 - 0.4)))
+        border = SurroundingRectangle(grid, color=YELLOW, buff=0)
+        p_label = Text(f"K = 2({w}+{h})", font_size=18, color=YELLOW).next_to(border, UP, buff=0.10)
+        a_label = Text(f"L = {w}×{h}", font_size=18, color=BLUE).next_to(border, DOWN, buff=0.10)
+        self.play(FadeIn(grid), Create(border), FadeIn(p_label), FadeIn(a_label), run_time=1.0)
+        # Cube net: cross arrangement of six squares.
+        coords = [(0, 0), (1, 0), (2, 0), (3, 0), (1, 1), (1, -1)]
+        net = VGroup()
+        for idx, (x, y) in enumerate(coords):
+            sq = Square(side_length=0.55, color=GREEN, fill_color=GREEN, fill_opacity=0.15).move_to(RIGHT * 2.3 + RIGHT * x * 0.56 + UP * y * 0.56 + DOWN * 0.2)
+            txt = Text(str(idx + 1), font_size=14, color=GREEN).move_to(sq)
+            net.add(VGroup(sq, txt))
+        active_card = self.replace_card(active_card, self.make_card("Jaring-jaring", "Jaring-jaring memperlihatkan semua sisi bangun ruang dalam bentuk datar.", color=GREEN))
+        self.play(FadeIn(net), run_time=0.75)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MatrixOperationModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[72]
+
+    def _matrix_mob(self, data, color=WHITE):
+        entries = [[str(x) for x in row] for row in data]
+        mat = Matrix(entries, element_alignment_corner=ORIGIN).scale(0.78)
+        mat.set_color(color)
+        return mat
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Data tersusun", "Matriks menyimpan angka dalam baris dan kolom.", color=BLUE))
+        A = self._matrix_mob(spec["matrix_a"], BLUE).move_to(LEFT * 4.6 + UP * 0.35)
+        B = self._matrix_mob(spec["matrix_b"], GREEN).move_to(LEFT * 2.35 + UP * 0.35)
+        R = self._matrix_mob(spec["result_matrix"], YELLOW).move_to(RIGHT * 0.05 + UP * 0.35)
+        plus = Text("+", font_size=30, color=WHITE).move_to((A.get_right() + B.get_left()) / 2)
+        eq = Text("=", font_size=30, color=WHITE).move_to((B.get_right() + R.get_left()) / 2)
+        self.play(FadeIn(A), FadeIn(plus), FadeIn(B), FadeIn(eq), FadeIn(R), run_time=0.95)
+        row_col = VGroup(_box("baris", width=1.2, color=TEAL), _box("kolom", width=1.2, color=PURPLE)).arrange(RIGHT, buff=0.2).move_to(RIGHT * 3.9 + DOWN * 0.55)
+        active_card = self.replace_card(active_card, self.make_card("Elemen bersesuaian", "Penjumlahan dilakukan pada elemen dengan posisi baris dan kolom yang sama.", color=YELLOW))
+        self.play(FadeIn(row_col), run_time=0.55)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class GeodesicCoordinateModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[73]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Koordinat Bumi", "Lintang dan bujur menentukan posisi pada permukaan Bumi.", color=BLUE))
+        globe = Circle(radius=1.65, color=BLUE, fill_color=BLUE, fill_opacity=0.08).move_to(LEFT * 3.0 + DOWN * 0.1)
+        meridians = VGroup(*[Ellipse(width=0.35 + i * 0.45, height=3.3, color=BLUE, stroke_opacity=0.45).move_to(globe) for i in range(1, 4)])
+        parallels = VGroup(*[Line(globe.get_left() + UP * y, globe.get_right() + UP * y, color=BLUE, stroke_opacity=0.35) for y in [-0.8, 0, 0.8]])
+        A = Dot(globe.get_center() + LEFT * 0.75 + UP * 0.45, color=YELLOW)
+        B = Dot(globe.get_center() + RIGHT * 0.85 + DOWN * 0.55, color=GREEN)
+        arc = ArcBetweenPoints(A.get_center(), B.get_center(), angle=-1.0, color=YELLOW, stroke_width=4)
+        labels = VGroup(Text("A", font_size=18, color=YELLOW).next_to(A, UP, buff=0.08), Text("B", font_size=18, color=GREEN).next_to(B, DOWN, buff=0.08), Text(spec.get("arc_label", "jarak permukaan"), font_size=16, color=YELLOW).next_to(arc, RIGHT, buff=0.10))
+        self.play(FadeIn(globe), FadeIn(meridians), FadeIn(parallels), FadeIn(A), FadeIn(B), Create(arc), FadeIn(labels), run_time=1.1)
+        flat = _box("peta datar", detail="distorsi jarak", width=2.0, color=PURPLE).move_to(RIGHT * 3.7 + DOWN * 0.15)
+        self.play(FadeIn(flat), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MotionForcePressureModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[75]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Gaya dan gerak", "Gaya dapat mengubah keadaan gerak benda.", color=BLUE))
+        block = Rectangle(width=1.2, height=0.75, color=TEAL, fill_color=TEAL, fill_opacity=0.2).move_to(LEFT * 4.2 + UP * 0.8)
+        force = Arrow(block.get_left() + LEFT * 1.1, block.get_left(), buff=0.08, color=YELLOW, stroke_width=4)
+        motion = Arrow(block.get_right(), block.get_right() + RIGHT * 1.1, buff=0.08, color=GREEN, stroke_width=4)
+        self.play(FadeIn(block), Create(force), Create(motion), run_time=0.75)
+        base_y = -1.15
+        large = Rectangle(width=1.35, height=0.55, color=BLUE, fill_color=BLUE, fill_opacity=0.18).move_to(LEFT * 3.8 + DOWN * 0.85)
+        small = Rectangle(width=0.55, height=0.55, color=RED, fill_color=RED, fill_opacity=0.18).move_to(LEFT * 2.0 + DOWN * 0.85)
+        arrows = VGroup(Arrow(large.get_top() + UP * 0.55, large.get_top(), buff=0.04, color=YELLOW), Arrow(small.get_top() + UP * 0.55, small.get_top(), buff=0.04, color=YELLOW))
+        labels = VGroup(Text("area besar → tekanan kecil", font_size=14, color=BLUE).next_to(large, DOWN, buff=0.08), Text("area kecil → tekanan besar", font_size=14, color=RED).next_to(small, DOWN, buff=0.08))
+        active_card = self.replace_card(active_card, self.make_card("Tekanan", "Untuk gaya yang sama, bidang tekan lebih kecil menghasilkan tekanan lebih besar.", color=RED))
+        self.play(FadeIn(large), FadeIn(small), FadeIn(arrows), FadeIn(labels), run_time=0.8)
+        machines = VGroup(*[_box(m, width=1.45, height=0.55, color=ORANGE, font_size=14) for m in spec.get("machines", [])]).arrange(DOWN, buff=0.10).move_to(RIGHT * 3.9 + DOWN * 0.1)
+        self.play(FadeIn(machines), run_time=0.5)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class WorkEnergyPowerModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[76]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Usaha", "Usaha terjadi saat gaya menyebabkan perpindahan.", color=BLUE))
+        box = Rectangle(width=1.1, height=0.65, color=TEAL, fill_color=TEAL, fill_opacity=0.22).move_to(LEFT * 4.45 + DOWN * 0.25)
+        force = Arrow(box.get_left() + LEFT * 1.0, box.get_left(), buff=0.08, color=YELLOW, stroke_width=4)
+        path = Arrow(box.get_center(), LEFT * 1.5 + DOWN * 0.25, buff=0.6, color=GREEN, stroke_width=4)
+        labels = VGroup(Text(f"F={spec.get('force')} N", font_size=17, color=YELLOW).next_to(force, UP, buff=0.08), Text(f"s={spec.get('distance')} m", font_size=17, color=GREEN).next_to(path, DOWN, buff=0.08))
+        self.play(FadeIn(box), Create(force), Create(path), FadeIn(labels), run_time=0.85)
+        formulas = VGroup(_formula(spec.get("work_latex"), 26, BLUE), _formula(spec.get("power_latex"), 26, PURPLE)).arrange(DOWN, aligned_edge=LEFT, buff=0.18).move_to(RIGHT * 3.55 + DOWN * 0.1)
+        transfer = CurvedArrow(LEFT * 2.5 + UP * 0.9, RIGHT * 2.2 + UP * 0.9, angle=-0.3, color=ORANGE)
+        active_card = self.replace_card(active_card, self.make_card("Energi dan daya", "Usaha memindahkan energi, daya mengukur laju perpindahan energi.", color=PURPLE))
+        self.play(FadeIn(formulas), Create(transfer), run_time=0.8)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ScalarVectorModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[77]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Skalar vs vektor", "Vektor perlu arah, bukan hanya besar.", color=BLUE))
+        axes = _axes([-1, 6, 1], [-1, 5, 1], x_length=5.0, y_length=3.2).move_to(LEFT * 2.9 + DOWN * 0.3)
+        self.play(Create(axes), run_time=0.55)
+        origin = axes.c2p(0, 0)
+        arrows = VGroup()
+        current = origin
+        colors = [YELLOW, GREEN]
+        for idx, v in enumerate(spec.get("vectors", [])):
+            end = current + (axes.c2p(v["x"], v["y"]) - axes.c2p(0, 0))
+            arr = Arrow(current, end, buff=0, color=colors[idx], stroke_width=4)
+            label = Text(v["label"], font_size=18, color=colors[idx]).next_to(arr, UP, buff=0.05)
+            arrows.add(VGroup(arr, label))
+            current = end
+        res = spec.get("resultant", {})
+        r_arrow = Arrow(origin, axes.c2p(res.get("x", 4), res.get("y", 3)), buff=0, color=RED, stroke_width=5)
+        r_label = Text(res.get("label", "R"), font_size=20, color=RED).next_to(r_arrow, RIGHT, buff=0.08)
+        self.play(LaggedStart(*[Create(a) for a in arrows], lag_ratio=0.12), run_time=0.75)
+        active_card = self.replace_card(active_card, self.make_card("Resultan", "Resultan menyatakan gabungan beberapa vektor sebagai satu panah akhir.", color=RED))
+        self.play(Create(r_arrow), FadeIn(r_label), run_time=0.65)
+        scalar = _box("skalar", detail="besar saja", width=1.45, color=BLUE).move_to(RIGHT * 3.55 + UP * 0.55)
+        vector = _box("vektor", detail="besar + arah", width=1.65, color=RED).next_to(scalar, DOWN, buff=0.18)
+        self.play(FadeIn(scalar), FadeIn(vector), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ForceNewtonDiagramConceptTemplate(ForceDiagramTemplate):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[78]
+
+
+class FluidPressureModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[79]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Tekanan fluida", "Semakin dalam titik dalam fluida, semakin besar tekanan yang diterima.", color=BLUE))
+        tank = RoundedRectangle(width=3.0, height=3.0, corner_radius=0.12, color=BLUE).move_to(LEFT * 3.4 + DOWN * 0.15)
+        water = Rectangle(width=2.8, height=2.45, color=BLUE, fill_color=BLUE, fill_opacity=0.18).move_to(tank.get_bottom() + UP * 1.22)
+        self.play(FadeIn(tank), FadeIn(water), run_time=0.7)
+        depths = spec.get("depths", [1, 2, 3])
+        pressures = spec.get("pressure_values", [1, 2, 3])
+        arrows = VGroup()
+        for i, (d, p) in enumerate(zip(depths, pressures)):
+            y = 0.8 - i * 0.75
+            point = Dot(LEFT * 3.95 + UP * y, color=YELLOW)
+            arr = Arrow(point.get_center(), point.get_center() + RIGHT * (0.35 + 0.25 * p), buff=0.04, color=YELLOW, stroke_width=3)
+            label = Text(f"h={d}", font_size=14, color=WHITE).next_to(point, LEFT, buff=0.07)
+            arrows.add(VGroup(point, arr, label))
+        self.play(LaggedStart(*[FadeIn(a) for a in arrows], lag_ratio=0.10), run_time=0.8)
+        formula = _formula(spec.get("formula_latex"), 30, GREEN).move_to(RIGHT * 3.55 + UP * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Rumus", "Tekanan hidrostatis sebanding dengan massa jenis, gravitasi, dan kedalaman.", color=GREEN))
+        self.play(FadeIn(formula), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElectromagnetismFieldModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[80]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Medan listrik", "Muatan menghasilkan medan listrik yang digambarkan dengan panah keluar atau masuk.", color=BLUE))
+        charge = _chip(spec.get("charge_label", "+q"), radius=0.38, color=YELLOW, font_size=18, fill_opacity=0.25).move_to(LEFT * 3.9 + DOWN * 0.05)
+        e_arrows = VGroup()
+        for ang in np.linspace(0, TAU, 8, endpoint=False):
+            start = charge.get_center() + np.array([math.cos(ang), math.sin(ang), 0]) * 0.55
+            end = charge.get_center() + np.array([math.cos(ang), math.sin(ang), 0]) * 1.15
+            e_arrows.add(Arrow(start, end, buff=0, color=BLUE, stroke_width=2.5))
+        self.play(FadeIn(charge), LaggedStart(*[Create(a) for a in e_arrows], lag_ratio=0.04), run_time=0.9)
+        wire = Line(RIGHT * 0.4 + DOWN * 1.4, RIGHT * 0.4 + UP * 1.4, color=WHITE, stroke_width=5)
+        current = Arrow(RIGHT * 0.4 + DOWN * 1.4, RIGHT * 0.4 + UP * 1.4, buff=0.10, color=YELLOW, stroke_width=3)
+        b_loops = VGroup(*[Circle(radius=r, color=PURPLE, stroke_opacity=0.75).move_to(wire.get_center()) for r in [0.45, 0.75, 1.05]])
+        active_card = self.replace_card(active_card, self.make_card("Medan magnet", "Arus listrik pada kawat menimbulkan medan magnet melingkar di sekitarnya.", color=PURPLE))
+        self.play(Create(wire), Create(current), FadeIn(b_loops), run_time=0.85)
+        labels = VGroup(Text("E", font_size=24, color=BLUE).move_to(LEFT * 5.25 + UP * 1.65), Text("B", font_size=24, color=PURPLE).move_to(RIGHT * 1.85 + UP * 1.45), Text(spec.get("current_label", "I"), font_size=22, color=YELLOW).next_to(current, RIGHT, buff=0.08))
+        self.play(FadeIn(labels), run_time=0.35)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class InheritanceProbabilityModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[87]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Punnett square", "Kotak Punnett menampilkan kemungkinan kombinasi alel dari dua induk.", color=BLUE))
+        offspring = spec.get("offspring", [["AA", "Aa"], ["Aa", "aa"]])
+        grid = VGroup()
+        size = 0.72
+        origin = LEFT * 3.7 + DOWN * 0.25
+        for r in range(2):
+            for c in range(2):
+                sq = Square(side_length=size, color=WHITE, fill_color=[GREEN, TEAL, TEAL, RED][r * 2 + c], fill_opacity=0.16).move_to(origin + RIGHT * c * size + DOWN * r * size)
+                txt = Text(offspring[r][c], font_size=18, color=WHITE).move_to(sq)
+                grid.add(VGroup(sq, txt))
+        gametes = spec.get("gametes", [["A", "a"], ["A", "a"]])
+        top = VGroup(*[Text(x, font_size=18, color=YELLOW).move_to(origin + RIGHT * i * size + UP * 0.55) for i, x in enumerate(gametes[0])])
+        left = VGroup(*[Text(x, font_size=18, color=YELLOW).move_to(origin + LEFT * 0.55 + DOWN * i * size) for i, x in enumerate(gametes[1])])
+        self.play(FadeIn(grid), FadeIn(top), FadeIn(left), run_time=0.9)
+        ratio = _box(spec.get("ratio", "rasio"), width=2.4, color=GREEN, font_size=17).move_to(RIGHT * 3.6 + DOWN * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Peluang sifat", "Jumlah kotak dengan sifat tertentu dapat diubah menjadi rasio atau peluang.", color=GREEN))
+        self.play(FadeIn(ratio), run_time=0.55)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MeasurementUnitConversionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[90]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Tangga satuan", "Konversi satuan memakai faktor pengali sesuai jarak antar satuan.", color=BLUE))
+        units = spec.get("conversion_chain", [])
+        boxes = VGroup(*[_box(u, width=0.85, height=0.58, color=BLUE if i % 2 == 0 else TEAL, font_size=17) for i, u in enumerate(units)]).arrange(RIGHT, buff=0.28).move_to(LEFT * 2.75 + UP * 0.55)
+        arrows = VGroup(*[Arrow(boxes[i].get_right(), boxes[i + 1].get_left(), buff=0.08, color=YELLOW) for i in range(len(boxes) - 1)])
+        mults = VGroup(*[Text("×10", font_size=15, color=YELLOW).next_to(a, UP, buff=0.06) for a in arrows])
+        self.play(FadeIn(boxes), Create(arrows), FadeIn(mults), run_time=0.9)
+        example = _box(spec.get("example", "contoh"), width=2.5, color=GREEN, font_size=20).move_to(RIGHT * 3.65 + DOWN * 0.2)
+        active_card = self.replace_card(active_card, self.make_card("Contoh", "Dari meter ke centimeter turun dua langkah, jadi dikali 100.", color=GREEN))
+        self.play(FadeIn(example), run_time=0.55)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElementaryFinanceTimelineTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[91]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Catatan uang", "Uang masuk, uang keluar, dan tabungan bisa dicatat sebagai alur sederhana.", color=BLUE))
+        items = spec.get("timeline", [])
+        nodes = VGroup()
+        for i, item in enumerate(items):
+            color = GREEN if item.get("amount", 0) >= 0 else RED
+            nodes.add(_box(item["label"], detail=f"Rp{abs(item['amount']):,}".replace(",", "."), width=1.65, height=0.82, color=color, font_size=16))
+        nodes.arrange(RIGHT, buff=0.35).move_to(LEFT * 2.8 + DOWN * 0.1)
+        arrows = VGroup(*[Arrow(nodes[i].get_right(), nodes[i + 1].get_left(), buff=0.08, color=WHITE) for i in range(len(nodes) - 1)])
+        self.play(FadeIn(nodes), Create(arrows), run_time=0.9)
+        goal = _box("tujuan", detail=spec.get("goal", "tabungan"), width=1.65, color=YELLOW, font_size=16).move_to(RIGHT * 3.9 + DOWN * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Rencana", "Keputusan finansial sederhana membantu mencapai tujuan yang jelas.", color=YELLOW))
+        self.play(FadeIn(goal), Create(Arrow(nodes[-1].get_right(), goal.get_left(), buff=0.12, color=YELLOW)), run_time=0.6)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class FactorTreeMultipleGridTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[92]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Faktor", "Faktor adalah pembagi habis suatu bilangan.", color=BLUE))
+        root = _chip("12", radius=0.28, color=YELLOW).move_to(LEFT * 4.5 + UP * 1.0)
+        c1 = _chip("3", radius=0.23, color=GREEN).move_to(LEFT * 5.0 + UP * 0.2)
+        c2 = _chip("4", radius=0.23, color=GREEN).move_to(LEFT * 4.0 + UP * 0.2)
+        l1 = _chip("2", radius=0.20, color=TEAL).move_to(LEFT * 4.3 + DOWN * 0.65)
+        l2 = _chip("2", radius=0.20, color=TEAL).move_to(LEFT * 3.7 + DOWN * 0.65)
+        lines = VGroup(Line(root.get_bottom(), c1.get_top(), color=WHITE), Line(root.get_bottom(), c2.get_top(), color=WHITE), Line(c2.get_bottom(), l1.get_top(), color=WHITE), Line(c2.get_bottom(), l2.get_top(), color=WHITE))
+        self.play(FadeIn(root), FadeIn(c1), FadeIn(c2), FadeIn(l1), FadeIn(l2), Create(lines), run_time=0.85)
+        rows = VGroup()
+        for label, vals in [("12", spec.get("multiples_a", [])), ("18", spec.get("multiples_b", []))]:
+            row = VGroup(Text(label, font_size=16, color=YELLOW), *[_box(str(v), width=0.62, height=0.42, color=GREEN if v == spec.get("highlight", {}).get("kpk") else BLUE, font_size=13) for v in vals]).arrange(RIGHT, buff=0.08)
+            rows.add(row)
+        rows.arrange(DOWN, aligned_edge=LEFT, buff=0.16).move_to(RIGHT * 2.6 + DOWN * 0.1)
+        active_card = self.replace_card(active_card, self.make_card("Kelipatan", "KPK adalah kelipatan bersama terkecil yang muncul pada kedua daftar.", color=GREEN))
+        self.play(FadeIn(rows), run_time=0.7)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElementaryGeometryTransformTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[93]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Sudut", "Sudut mengukur besar bukaan dua garis.", color=BLUE))
+        p = LEFT * 4.3 + DOWN * 0.5
+        ray1 = Line(p, p + RIGHT * 1.5, color=YELLOW, stroke_width=4)
+        ray2 = Line(p, p + UP * 1.5, color=YELLOW, stroke_width=4)
+        arc = Arc(radius=0.45, start_angle=0, angle=PI / 2, color=YELLOW).move_to(p + RIGHT * 0.23 + UP * 0.23)
+        label = Text(f"{spec.get('angle_degrees', 90)}°", font_size=18, color=YELLOW).move_to(p + RIGHT * 0.7 + UP * 0.45)
+        self.play(Create(ray1), Create(ray2), Create(arc), FadeIn(label), run_time=0.75)
+        shape = Polygon(LEFT * 1.3 + DOWN * 0.6, LEFT * 0.5 + DOWN * 0.6, LEFT * 0.9 + UP * 0.2, color=GREEN, fill_color=GREEN, fill_opacity=0.18)
+        mirror_line = DashedLine(LEFT * 0.1 + DOWN * 1.1, LEFT * 0.1 + UP * 1.1, color=WHITE)
+        reflected = shape.copy().flip(axis=RIGHT).move_to(RIGHT * 0.7 + DOWN * 0.35).set_color(TEAL)
+        active_card = self.replace_card(active_card, self.make_card("Simetri dan transformasi", "Refleksi, rotasi, dan translasi mengubah posisi bentuk dengan aturan tertentu.", color=GREEN))
+        self.play(FadeIn(shape), Create(mirror_line), FadeIn(reflected), run_time=0.85)
+        badges = VGroup(*[_box(t, width=1.25, height=0.48, color=PURPLE, font_size=13) for t in spec.get("transformations", [])]).arrange(DOWN, buff=0.08).move_to(RIGHT * 3.9 + DOWN * 0.1)
+        self.play(FadeIn(badges), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class ElementaryProbabilityTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[94]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Bahasa peluang", "Peluang dapat dikenalkan dengan kata pasti, mungkin, dan mustahil.", color=BLUE))
+        event_boxes = VGroup()
+        colors = {"pasti": GREEN, "mungkin": YELLOW, "mustahil": RED}
+        for e in spec.get("events", []):
+            event_boxes.add(_box(e["label"], detail=e["chance"], width=2.15, height=0.62, color=colors.get(e["chance"], BLUE), font_size=14))
+        event_boxes.arrange(DOWN, buff=0.12).move_to(LEFT * 3.6 + DOWN * 0.15)
+        self.play(FadeIn(event_boxes), run_time=0.8)
+        exp = spec.get("experiment", {})
+        total = exp.get("total", 6)
+        success = exp.get("success", 3)
+        outcomes = VGroup(*[_chip(str(i + 1), radius=0.20, color=GREEN if i < success else GRAY, font_size=13) for i in range(total)]).arrange(RIGHT, buff=0.12).move_to(RIGHT * 3.0 + UP * 0.35)
+        frac = _formula(rf"P=\frac{{{success}}}{{{total}}}", 28, YELLOW).next_to(outcomes, DOWN, buff=0.20)
+        active_card = self.replace_card(active_card, self.make_card("Peluang sederhana", "Peluang dihitung dari hasil yang diinginkan dibanding seluruh kemungkinan.", color=YELLOW))
+        self.play(FadeIn(outcomes), FadeIn(frac), run_time=0.75)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class RatioScaleProportionConceptTemplate(RatioProportionTemplate):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[95]
+
+
+class FactorizationDivisibilityTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[97]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Pohon faktor", "Bilangan komposit dapat dipecah menjadi faktor sampai tersisa faktor prima.", color=BLUE))
+        levels = spec.get("tree_levels", [])
+        groups = VGroup()
+        for r, vals in enumerate(levels):
+            row = VGroup(*[_chip(str(v), radius=0.22, color=YELLOW if r == 0 else GREEN if r < len(levels) - 1 else TEAL, font_size=14) for v in vals]).arrange(RIGHT, buff=0.35)
+            row.move_to(LEFT * 3.1 + UP * (1.25 - r * 0.65))
+            groups.add(row)
+        lines = VGroup()
+        for i in range(len(groups) - 1):
+            for a in groups[i]:
+                for b in groups[i + 1]:
+                    if abs(a.get_center()[0] - b.get_center()[0]) < 0.75:
+                        lines.add(Line(a.get_bottom(), b.get_top(), color=WHITE, stroke_opacity=0.45))
+        self.play(FadeIn(groups), FadeIn(lines), run_time=1.0)
+        result = _formula(spec.get("prime_factorization"), 28, YELLOW).move_to(RIGHT * 3.35 + DOWN * 0.15)
+        active_card = self.replace_card(active_card, self.make_card("Faktorisasi prima", "Daun pohon faktor disusun sebagai perkalian faktor prima.", color=YELLOW))
+        self.play(FadeIn(result), run_time=0.55)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class GraphFunctionConceptTemplate(GraphExplanationTemplate):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[98]
+
+
+class SpatialNetModelTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[99]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Dari 3D ke jaring-jaring", "Bangun ruang dapat dibayangkan sebagai permukaan yang dibuka.", color=BLUE))
+        cube_front = Square(side_length=1.0, color=BLUE, fill_color=BLUE, fill_opacity=0.14)
+        cube_back = cube_front.copy().shift(UP * 0.30 + RIGHT * 0.30)
+        cube_edges = VGroup(*[Line(a, b, color=BLUE) for a, b in zip(
+            [cube_front.get_corner(UR), cube_front.get_corner(DR), cube_front.get_corner(UL), cube_front.get_corner(DL)],
+            [cube_back.get_corner(UR), cube_back.get_corner(DR), cube_back.get_corner(UL), cube_back.get_corner(DL)]
+        )])
+        cube = VGroup(cube_back, cube_front, cube_edges).move_to(LEFT * 4.0 + DOWN * 0.15)
+        cube_label = Text(spec.get("solid", "kubus"), font_size=18, color=BLUE).next_to(cube, DOWN, buff=0.10)
+        self.play(FadeIn(cube), FadeIn(cube_label), run_time=0.6)
+        coords = spec.get("net_layout", [])
+        net = VGroup()
+        for i, (x, y) in enumerate(coords):
+            sq = Square(side_length=0.52, color=GREEN, fill_color=GREEN, fill_opacity=0.15).move_to(RIGHT * 1.2 + RIGHT * x * 0.54 + UP * y * 0.54 + DOWN * 0.2)
+            text = Text(str(i + 1), font_size=13, color=GREEN).move_to(sq)
+            net.add(VGroup(sq, text))
+        arrow = Arrow(cube.get_right(), net.get_left(), buff=0.2, color=YELLOW)
+        active_card = self.replace_card(active_card, self.make_card("Jaring-jaring", "Susunan enam persegi tertentu dapat dilipat kembali menjadi kubus.", color=GREEN))
+        self.play(Create(arrow), FadeIn(net), run_time=0.85)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MeasurementDataProcessTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[100]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Tabel pengukuran", "Data IPA harus dicatat dengan pasangan nilai dan satuan yang jelas.", color=BLUE))
+        data = spec.get("measurements", [])
+        table_rows = VGroup()
+        for d in data:
+            table_rows.add(VGroup(_box(str(d["time"]), width=0.65, height=0.42, color=BLUE, font_size=13), _box(str(d["temperature"]), width=0.85, height=0.42, color=TEAL, font_size=13)).arrange(RIGHT, buff=0.06))
+        table_rows.arrange(DOWN, buff=0.06).move_to(LEFT * 4.45 + DOWN * 0.1)
+        self.play(FadeIn(table_rows), run_time=0.7)
+        axes = _axes([0, 4, 1], [20, 50, 10], x_length=3.5, y_length=2.35).move_to(LEFT * 1.4 + DOWN * 0.15)
+        points = [axes.c2p(d["time"], d["temperature"]) for d in data]
+        dots = VGroup(*[Dot(p, color=YELLOW) for p in points])
+        line = VMobject(color=YELLOW, stroke_width=3)
+        line.set_points_as_corners(points)
+        active_card = self.replace_card(active_card, self.make_card("Grafik data", "Grafik memperlihatkan pola perubahan dari waktu ke waktu.", color=YELLOW))
+        self.play(Create(axes), FadeIn(dots), Create(line), run_time=0.9)
+        conclusion = _box("kesimpulan", detail="suhu meningkat", width=2.0, color=GREEN, font_size=16).move_to(RIGHT * 3.9 + DOWN * 0.2)
+        self.play(FadeIn(conclusion), run_time=0.45)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class MomentumImpulseCollisionTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[102]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Momentum", "Momentum bergantung pada massa dan kecepatan benda.", color=BLUE))
+        track = Line(LEFT * 5.2 + DOWN * 0.4, LEFT * 0.9 + DOWN * 0.4, color=WHITE)
+        ball1 = Circle(radius=0.32, color=BLUE, fill_color=BLUE, fill_opacity=0.22).move_to(LEFT * 4.6 + DOWN * 0.1)
+        ball2 = Circle(radius=0.24, color=GREEN, fill_color=GREEN, fill_opacity=0.22).move_to(LEFT * 1.55 + DOWN * 0.1)
+        v1 = Arrow(ball1.get_right(), ball1.get_right() + RIGHT * 0.8, buff=0.05, color=YELLOW)
+        v2 = Arrow(ball2.get_left(), ball2.get_left() + LEFT * 0.45, buff=0.05, color=YELLOW)
+        self.play(Create(track), FadeIn(ball1), FadeIn(ball2), Create(v1), Create(v2), run_time=0.8)
+        collision = Star(n=8, outer_radius=0.26, color=RED, fill_color=RED, fill_opacity=0.75).move_to((ball1.get_center() + ball2.get_center()) / 2)
+        active_card = self.replace_card(active_card, self.make_card("Tumbukan", "Pada tumbukan, gaya bekerja besar dalam waktu singkat.", color=RED))
+        self.play(FadeIn(collision), run_time=0.45)
+        after1 = Arrow(LEFT * 3.1 + UP * 0.8, LEFT * 3.8 + UP * 0.8, buff=0.05, color=BLUE)
+        after2 = Arrow(LEFT * 2.2 + UP * 0.8, LEFT * 1.1 + UP * 0.8, buff=0.05, color=GREEN)
+        formula = _formula(spec.get("impulse_latex"), 27, YELLOW).move_to(RIGHT * 3.45 + DOWN * 0.15)
+        active_card = self.replace_card(active_card, self.make_card("Impuls", "Impuls sama dengan perubahan momentum.", color=YELLOW))
+        self.play(Create(after1), Create(after2), FadeIn(formula), run_time=0.75)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+class CoordinateGridElementaryTemplate(WicaraTemplateScene):
+    SPEC = TEMPLATE_61_107_MANIM_SPECS[106]
+
+    def construct(self):
+        spec = self.SPEC
+        self.play(FadeIn(self.make_title_block(spec), shift=DOWN * 0.08), run_time=0.6)
+        active_card = self.replace_card(None, self.make_card("Grid koordinat", "Posisi titik dapat dijelaskan dengan pasangan x dan y.", color=BLUE))
+        axes = _axes([0, 6, 1], [0, 6, 1], x_length=4.5, y_length=3.0).move_to(LEFT * 2.85 + DOWN * 0.35)
+        self.play(Create(axes), run_time=0.65)
+        point_lookup = {}
+        mobs = VGroup()
+        for p in spec.get("points", []):
+            dot = Dot(axes.c2p(p["x"], p["y"]), color=YELLOW)
+            label = Text(f"{p['label']}({p['x']},{p['y']})", font_size=14, color=YELLOW).next_to(dot, UP, buff=0.06)
+            mobs.add(VGroup(dot, label))
+            point_lookup[p["label"]] = dot
+        self.play(FadeIn(mobs), run_time=0.7)
+        path_labels = spec.get("path", [])
+        path_lines = VGroup()
+        for a, b in zip(path_labels, path_labels[1:]):
+            path_lines.add(Arrow(point_lookup[a].get_center(), point_lookup[b].get_center(), buff=0.08, color=GREEN, stroke_width=3))
+        active_card = self.replace_card(active_card, self.make_card("Rute", "Urutan titik pada grid dapat membentuk jalur perjalanan.", color=GREEN))
+        self.play(Create(path_lines), run_time=0.65)
+        active_card = self.render_step_cards(spec, active_card=active_card)
+        self.clean_summary(spec, active_card=active_card)
+
+
+TEMPLATE_61_107_MANIM_REGISTRY = {
+    62: {"class_name": "ChemicalEquilibriumShiftTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[62]["template_id"], "status": "new_distinct"},
+    63: {"class_name": "ThermochemistryEnergyProfileTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[63]["template_id"], "status": "new_distinct"},
+    64: {"class_name": "PatternSequenceGeneralizationConceptTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[64]["template_id"], "status": "wrapper_existing"},
+    65: {"class_name": "ElementaryShapesIdentificationTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[65]["template_id"], "status": "new_distinct"},
+    66: {"class_name": "AreaVolumeDecompositionTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[66]["template_id"], "status": "new_distinct"},
+    72: {"class_name": "MatrixOperationModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[72]["template_id"], "status": "new_distinct"},
+    73: {"class_name": "GeodesicCoordinateModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[73]["template_id"], "status": "new_distinct"},
+    75: {"class_name": "MotionForcePressureModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[75]["template_id"], "status": "new_distinct"},
+    76: {"class_name": "WorkEnergyPowerModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[76]["template_id"], "status": "new_distinct"},
+    77: {"class_name": "ScalarVectorModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[77]["template_id"], "status": "new_distinct"},
+    78: {"class_name": "ForceNewtonDiagramConceptTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[78]["template_id"], "status": "wrapper_existing"},
+    79: {"class_name": "FluidPressureModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[79]["template_id"], "status": "new_distinct"},
+    80: {"class_name": "ElectromagnetismFieldModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[80]["template_id"], "status": "new_distinct"},
+    87: {"class_name": "InheritanceProbabilityModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[87]["template_id"], "status": "new_distinct"},
+    90: {"class_name": "MeasurementUnitConversionTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[90]["template_id"], "status": "new_distinct"},
+    91: {"class_name": "ElementaryFinanceTimelineTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[91]["template_id"], "status": "new_distinct"},
+    92: {"class_name": "FactorTreeMultipleGridTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[92]["template_id"], "status": "new_distinct"},
+    93: {"class_name": "ElementaryGeometryTransformTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[93]["template_id"], "status": "new_distinct"},
+    94: {"class_name": "ElementaryProbabilityTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[94]["template_id"], "status": "new_distinct"},
+    95: {"class_name": "RatioScaleProportionConceptTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[95]["template_id"], "status": "wrapper_existing"},
+    97: {"class_name": "FactorizationDivisibilityTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[97]["template_id"], "status": "new_distinct"},
+    98: {"class_name": "GraphFunctionConceptTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[98]["template_id"], "status": "wrapper_existing"},
+    99: {"class_name": "SpatialNetModelTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[99]["template_id"], "status": "new_distinct"},
+    100: {"class_name": "MeasurementDataProcessTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[100]["template_id"], "status": "new_distinct"},
+    102: {"class_name": "MomentumImpulseCollisionTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[102]["template_id"], "status": "new_distinct"},
+    106: {"class_name": "CoordinateGridElementaryTemplate", "template_id": TEMPLATE_61_107_MANIM_SPECS[106]["template_id"], "status": "new_distinct"},
+}
+
+
+__all__ = [
+    "TEMPLATE_61_107_MANIM_SPECS",
+    "TEMPLATE_61_107_MANIM_REGISTRY",
+    *[item["class_name"] for item in TEMPLATE_61_107_MANIM_REGISTRY.values()],
+]
+
+# ============================================================
+# END PHASE 6: TEMPLATE 61-107 MANIM BUNDLE (MERGED)
 # ============================================================

@@ -1,0 +1,108 @@
+{
+  "id": "remotion_v2_019_human_body_system_flow",
+  "row_index": 19,
+  "concept_type": "human_body_system_flow",
+  "concept_type_label_id": "Sistem organ manusia",
+  "template_id": "remotion.bio_flow_system.v1",
+  "component": "HumanBodyFlowVideo",
+  "archetype": "human_body_flow",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Sistem organ manusia",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `human_body_system_flow`.",
+  "keyIdea": "Aktivitas harian melibatkan beberapa sistem tubuh sekaligus.",
+  "steps": [
+    {
+      "id": "body",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Kenali sistem utama",
+      "narration": "Tubuh memiliki beberapa sistem yang bekerja bersama agar kita bisa hidup dan bergerak."
+    },
+    {
+      "id": "food",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Makanan menjadi nutrisi",
+      "narration": "Sistem pencernaan memecah makanan menjadi nutrisi yang dapat diserap."
+    },
+    {
+      "id": "oxygen",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Oksigen masuk lewat pernapasan",
+      "narration": "Sistem pernapasan membawa oksigen ke tubuh."
+    },
+    {
+      "id": "blood",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Darah mengirim bahan",
+      "narration": "Darah membawa oksigen dan nutrisi menuju sel."
+    },
+    {
+      "id": "muscle",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Otot memakai energi",
+      "narration": "Otot menggunakan energi untuk bergerak dan melakukan aktivitas."
+    },
+    {
+      "id": "health",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Kesehatan menjaga aliran",
+      "narration": "Kebiasaan sehat membantu sistem tubuh bekerja optimal."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Sistem tubuh saling mendukung",
+      "narration": "Satu aktivitas sederhana bisa melibatkan banyak sistem organ sekaligus."
+    }
+  ],
+  "visual": {
+    "systems": [
+      "Pencernaan",
+      "Pernapasan",
+      "Darah",
+      "Otot"
+    ],
+    "outputs": [
+      "nutrisi",
+      "oksigen",
+      "energi"
+    ]
+  },
+  "summarySequence": [
+    "Makan",
+    "Bernapas",
+    "Darah mengalir",
+    "Energi",
+    "Gerak",
+    "Kesehatan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

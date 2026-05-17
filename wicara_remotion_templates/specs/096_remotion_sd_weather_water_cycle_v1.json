@@ -1,0 +1,109 @@
+{
+  "id": "remotion_v2_096_earth_weather_water_cycle",
+  "row_index": 96,
+  "concept_type": "earth_weather_water_cycle",
+  "concept_type_label_id": "Cuaca, musim, daur air, dan peristiwa alam",
+  "template_id": "remotion.sd_weather_water_cycle.v1",
+  "component": "WeatherWaterCycleVideo",
+  "archetype": "water_cycle",
+  "domain": "sd_science",
+  "media_engine_family": "remotion_or_rive",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Cuaca, musim, daur air, dan peristiwa alam",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `earth_weather_water_cycle`.",
+  "keyIdea": "Daur air menjelaskan hubungan panas matahari, awan, hujan, dan aliran air.",
+  "steps": [
+    {
+      "id": "sun",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Matahari memanaskan air",
+      "narration": "Panas matahari membuat air di permukaan menguap."
+    },
+    {
+      "id": "evaporation",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Uap air naik",
+      "narration": "Air berubah menjadi uap dan naik ke udara."
+    },
+    {
+      "id": "condensation",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Awan terbentuk",
+      "narration": "Uap air mendingin dan berkumpul menjadi awan."
+    },
+    {
+      "id": "rain",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Hujan turun",
+      "narration": "Saat awan jenuh, air jatuh kembali sebagai hujan."
+    },
+    {
+      "id": "runoff",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Air mengalir kembali",
+      "narration": "Air mengalir ke sungai, danau, atau laut."
+    },
+    {
+      "id": "weather",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Cuaca bisa berubah",
+      "narration": "Daur air berkaitan dengan cuaca seperti cerah, berawan, dan hujan."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Air terus berputar",
+      "narration": "Daur air menunjukkan bahwa air berpindah tempat dan berubah wujud terus-menerus."
+    }
+  ],
+  "visual": {
+    "cycle": [
+      "Penguapan",
+      "Kondensasi",
+      "Hujan",
+      "Aliran"
+    ],
+    "weather": [
+      "Cerah",
+      "Berawan",
+      "Hujan",
+      "Berangin"
+    ]
+  },
+  "summarySequence": [
+    "Matahari",
+    "Penguapan",
+    "Awan",
+    "Hujan",
+    "Aliran",
+    "Cuaca"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

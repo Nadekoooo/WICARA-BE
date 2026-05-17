@@ -1,0 +1,30 @@
+{
+  "id": "sample_work_energy_power_76",
+  "node_id": "phase5_work_energy_power",
+  "template_id": "manim.energy_transfer.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Usaha, Energi, dan Daya",
+  "subtitle": "Usaha memindahkan energi, sedangkan daya menyatakan seberapa cepat energi dipindahkan.",
+  "force": 20,
+  "distance": 5,
+  "time": 4,
+  "work_latex": "W = F \\cdot s = 100\\ J",
+  "power_latex": "P = W/t = 25\\ W",
+  "steps": [
+    {
+      "title": "Ada gaya dan perpindahan",
+      "body": "Usaha terjadi jika gaya menyebabkan perpindahan searah komponen gaya."
+    },
+    {
+      "title": "Energi berpindah",
+      "body": "Usaha dapat dilihat sebagai proses pemindahan energi ke benda."
+    },
+    {
+      "title": "Hitung daya",
+      "body": "Daya lebih besar jika usaha yang sama dilakukan dalam waktu lebih singkat."
+    }
+  ],
+  "summary": "Usaha, energi, dan daya menjelaskan hubungan antara gaya, perpindahan, waktu, dan transfer energi."
+}

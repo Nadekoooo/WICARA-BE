@@ -1,0 +1,112 @@
+{
+  "id": "remotion_v2_089_materials_nanotech_environment",
+  "row_index": 89,
+  "concept_type": "materials_nanotech_environment",
+  "concept_type_label_id": "Material, nanoteknologi, dan kimia lingkungan",
+  "template_id": "remotion.chem_material_environment.v1",
+  "component": "MaterialsEnvironmentVideo",
+  "archetype": "material_environment",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Material, nanoteknologi, dan kimia lingkungan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `materials_nanotech_environment`.",
+  "keyIdea": "Material modern bermanfaat, tetapi dampaknya terhadap lingkungan harus dinilai.",
+  "steps": [
+    {
+      "id": "material",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Material punya struktur berbeda",
+      "narration": "Sifat material ditentukan oleh struktur dan komposisinya."
+    },
+    {
+      "id": "nano",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Skala nano mengubah sifat",
+      "narration": "Pada skala sangat kecil, sifat material bisa berubah signifikan."
+    },
+    {
+      "id": "application",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Aplikasi teknologi muncul",
+      "narration": "Material modern digunakan pada sensor, medis, pelapis, dan banyak bidang lain."
+    },
+    {
+      "id": "benefit",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Manfaat perlu dibandingkan",
+      "narration": "Manfaat material dilihat dari fungsi, efisiensi, dan ketahanannya."
+    },
+    {
+      "id": "impact",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Dampak lingkungan diperhitungkan",
+      "narration": "Limbah, toksisitas, dan proses produksi perlu diperhatikan."
+    },
+    {
+      "id": "sustain",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Keberlanjutan menjadi tujuan",
+      "narration": "Daur ulang dan desain ramah lingkungan penting dalam pengembangan material."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Material harus dinilai menyeluruh",
+      "narration": "Teknologi material perlu menyeimbangkan fungsi dan tanggung jawab lingkungan."
+    }
+  ],
+  "visual": {
+    "materials": [
+      "Polimer",
+      "Komposit",
+      "Nanopartikel"
+    ],
+    "applications": [
+      "Sensor",
+      "Medis",
+      "Pelapis"
+    ],
+    "impacts": [
+      "Limbah",
+      "Daur ulang",
+      "Toksisitas"
+    ]
+  },
+  "summarySequence": [
+    "Struktur",
+    "Nano",
+    "Aplikasi",
+    "Manfaat",
+    "Dampak",
+    "Keberlanjutan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

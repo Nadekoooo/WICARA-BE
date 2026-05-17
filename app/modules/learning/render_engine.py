@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -11,6 +10,11 @@ from typing import Any
 from uuid import UUID
 
 from app.core.config import Settings, get_settings, resolve_project_path
+from app.modules.learning.remotion_render_engine import (
+    RemotionRenderError,
+    render_template_scene_remotion,
+)
+from app.modules.learning.template_registry import TemplateRegistryError, resolve_template_entry
 
 
 @dataclass(frozen=True)
@@ -52,17 +56,95 @@ def render_template_scene(
     quality_profile: str,
     timeout_seconds: int | None = None,
     settings: Settings | None = None,
+    template_id: str | None = None,
+    render_engine: str | None = None,
+    runtime: dict[str, Any] | None = None,
 ) -> RenderOutput:
     resolved_settings = settings or get_settings()
-    output_root = resolve_project_path(resolved_settings.media_render_output_dir)
+    resolved_template_id = _normalize_token(template_id) or _normalize_token(
+        spec_json.get("template_id")
+    )
+    selected_engine = _normalize_token(render_engine)
+    runtime_payload = dict(runtime or {})
+    resolved_template_path = template_path
+
+    if resolved_template_id:
+        try:
+            resolved_entry = resolve_template_entry(resolved_template_id)
+        except TemplateRegistryError:
+            resolved_entry = None
+        if resolved_entry is not None:
+            if not selected_engine:
+                selected_engine = _normalize_token(resolved_entry.entry.render_engine) or ""
+            if not runtime_payload:
+                runtime_payload = dict(resolved_entry.entry.runtime or {})
+            if not resolved_template_path:
+                resolved_template_path = resolved_entry.entry.template_path
+
+    if not selected_engine:
+        selected_engine = "remotion" if (resolved_template_id or "").startswith("remotion.") else "manim"
+
+    if selected_engine == "remotion":
+        try:
+            remotion_output = render_template_scene_remotion(
+                job_id=job_id,
+                template_id=resolved_template_id
+                or _normalize_token(spec_json.get("template_id"))
+                or "remotion.unknown.v1",
+                template_path=resolved_template_path,
+                spec_json=spec_json,
+                language=language,
+                quality_profile=quality_profile,
+                runtime=runtime_payload,
+                timeout_seconds=timeout_seconds,
+                settings=resolved_settings,
+            )
+        except RemotionRenderError as exc:
+            raise RenderEngineError(
+                code=exc.code,
+                message=exc.message,
+                details=exc.details,
+            ) from exc
+
+        return RenderOutput(
+            video_path=remotion_output.video_path,
+            relative_video_path=remotion_output.relative_video_path,
+            stdout=remotion_output.stdout,
+            stderr=remotion_output.stderr,
+        )
+
+    return _render_template_scene_manim(
+        job_id=job_id,
+        template_path=resolved_template_path,
+        scene_class=scene_class,
+        spec_json=spec_json,
+        language=language,
+        quality_profile=quality_profile,
+        timeout_seconds=timeout_seconds,
+        settings=resolved_settings,
+    )
+
+
+def _render_template_scene_manim(
+    *,
+    job_id: UUID,
+    template_path: str,
+    scene_class: str,
+    spec_json: dict[str, Any],
+    language: str | None = None,
+    quality_profile: str,
+    timeout_seconds: int | None = None,
+    settings: Settings,
+) -> RenderOutput:
+    output_root = resolve_project_path(settings.media_render_output_dir)
     workspace_dir = output_root / str(job_id)
     render_workdir = workspace_dir / "work"
     media_dir = workspace_dir / "media"
     render_workdir.mkdir(parents=True, exist_ok=True)
     media_dir.mkdir(parents=True, exist_ok=True)
 
-    _project_root = Path(__file__).resolve().parent.parent.parent.parent
-    template_file = (_project_root / template_path).resolve()
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    template_file = (project_root / template_path).resolve()
     if not template_file.exists():
         raise RenderEngineError(
             code="render_error",
@@ -100,14 +182,14 @@ def render_template_scene(
     shutil.copyfile(base_scene, render_workdir / "base_scene.py")
     shutil.copyfile(template_file, render_workdir / "generated_template.py")
 
-    normalized_language = str(language or "").strip().lower()
+    normalized_language = _normalize_token(language)
     spec_payload = dict(spec_json)
     if normalized_language and not spec_payload.get("language"):
         spec_payload["language"] = normalized_language
         spec_payload.setdefault("locale", normalized_language)
     spec_payload = _inject_runtime_tts_spec(
         spec_payload=spec_payload,
-        settings=resolved_settings,
+        settings=settings,
     )
 
     render_scene_path = render_workdir / "render_scene.py"
@@ -121,7 +203,7 @@ def render_template_scene(
         encoding="utf-8",
     )
 
-    timeout = timeout_seconds or resolved_settings.media_render_timeout_seconds
+    timeout = timeout_seconds or settings.media_render_timeout_seconds
     manim_quality_flag = _quality_profile_to_manim_flag(quality_profile)
     cmd = [
         sys.executable,
@@ -134,7 +216,7 @@ def render_template_scene(
         str(media_dir),
         "--disable_caching",
     ]
-    render_env = _build_render_env(resolved_settings)
+    render_env = _build_manim_render_env(settings)
     try:
         completed = subprocess.run(
             cmd,
@@ -188,43 +270,26 @@ def render_template_scene(
 
 def _inject_runtime_tts_spec(*, spec_payload: dict[str, Any], settings: Settings) -> dict[str, Any]:
     payload = dict(spec_payload)
-    explicit_provider = str(
-        payload.get("tts_provider") or payload.get("voiceover_provider") or ""
-    ).strip()
-    if not explicit_provider:
-        provider_from_settings = str(settings.media_tts_provider or "").strip().lower()
-        if provider_from_settings == "gtts_voiceover" and settings.openai_api_key:
-            payload["tts_provider"] = "openai_voiceover"
-        else:
-            payload["tts_provider"] = settings.media_tts_provider
-
-    provider = str(payload.get("tts_provider") or "").strip().lower()
-    if provider == "openai_voiceover":
-        payload.setdefault("tts_model_primary", settings.media_openai_tts_model_primary)
-        payload.setdefault("tts_model_fallback", settings.media_openai_tts_model_fallback)
-        payload.setdefault("tts_voice_primary", settings.media_openai_tts_voice_primary)
-        payload.setdefault("tts_voice_fallback", settings.media_openai_tts_voice_fallback)
-        payload.setdefault("tts_response_format", settings.media_openai_tts_response_format)
-        payload.setdefault("tts_instructions", settings.media_openai_tts_instructions)
+    explicit_provider = str(payload.get("tts_provider") or payload.get("voiceover_provider") or "").strip()
+    provider = (explicit_provider or str(settings.media_tts_provider or "")).strip().lower()
+    if provider in {"openai", "openai_tts", "openai_voiceover", "whisper", "openai_whisper"}:
+        provider = "gtts_voiceover"
+    if not provider:
+        provider = "gtts_voiceover"
+    if provider not in {"gtts_voiceover", "none"}:
+        provider = "gtts_voiceover"
+    payload["tts_provider"] = provider
     return payload
 
 
-def _build_render_env(settings: Settings) -> dict[str, str]:
+def _build_manim_render_env(settings: Settings) -> dict[str, str]:
     env = dict(os.environ)
     env["MEDIA_TTS_PROVIDER"] = settings.media_tts_provider
-    env["MEDIA_OPENAI_TTS_MODEL_PRIMARY"] = settings.media_openai_tts_model_primary
-    env["MEDIA_OPENAI_TTS_MODEL_FALLBACK"] = settings.media_openai_tts_model_fallback
-    env["MEDIA_OPENAI_TTS_VOICE_PRIMARY"] = settings.media_openai_tts_voice_primary
-    env["MEDIA_OPENAI_TTS_VOICE_FALLBACK"] = settings.media_openai_tts_voice_fallback
-    env["MEDIA_OPENAI_TTS_RESPONSE_FORMAT"] = settings.media_openai_tts_response_format
-    env["MEDIA_OPENAI_TTS_INSTRUCTIONS"] = settings.media_openai_tts_instructions or ""
-    if settings.openai_api_key:
-        env["OPENAI_API_KEY"] = settings.openai_api_key
     return env
 
 
 def _quality_profile_to_manim_flag(profile: str) -> str:
-    normalized = profile.strip().lower()
+    normalized = _normalize_token(profile)
     mapping = {
         "low": "-ql",
         "standard": "-qm",
@@ -257,6 +322,12 @@ def _find_rendered_video(*, media_dir: Path) -> Path | None:
         reverse=True,
     )
     return any_mp4[0] if any_mp4 else None
+
+
+def _normalize_token(value: object) -> str:
+    if value is None:
+        return ""
+    return str(value).strip().lower()
 
 
 def _tail_text(value: str, max_chars: int = 2000) -> str:

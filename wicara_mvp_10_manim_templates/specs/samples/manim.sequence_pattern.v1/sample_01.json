@@ -1,74 +1,55 @@
 {
-  "id": "sample_sequence_pattern",
-  "node_id": "km_c_matematika_pola_bilangan_perkalian_dan_pembagian",
+  "id": "ct_008_sequence_pattern_generalization",
+  "node_id": "sequence_pattern_generalization",
   "template_id": "manim.sequence_pattern.v1",
-  "phase": "C",
-  "audience_level": "sd",
+  "phase": "D",
+  "audience_level": "smp",
   "language": "id",
-  "title": "Pola Bilangan",
-  "subtitle": "Cari aturan dari perubahan suku.",
+  "title": "Pola, Barisan, dan Generalisasi",
+  "subtitle": "Dari beberapa suku awal, kita bisa menemukan aturan lalu memprediksi suku berikutnya.",
   "terms": [
-    2,
-    4,
+    3,
     6,
-    8
+    9,
+    12
   ],
   "visual_pattern_type": "growing_dots",
-  "rule": "Tambah 2 setiap langkah",
+  "rule": "Tambah 3 setiap langkah",
   "table_values": [
     {
       "n": 1,
-      "value": 2
+      "value": 3
     },
     {
       "n": 2,
-      "value": 4
+      "value": 6
     },
     {
       "n": 3,
-      "value": 6
+      "value": 9
+    },
+    {
+      "n": 4,
+      "value": 12
     }
   ],
   "target_term": {
     "n": 5,
-    "value": 10
+    "value": 15
   },
   "steps": [
     {
-      "title": "Amati suku",
-      "body": "Setiap suku bertambah dua dari suku sebelumnya.",
-      "narration": "Perhatikan selisih antar suku: dari 2 ke 4, dari 4 ke 6, dan dari 6 ke 8 semuanya bertambah dua."
+      "title": "Amati suku-suku awal",
+      "body": "Perhatikan bagaimana nilai berubah dari satu suku ke suku berikutnya."
     },
     {
-      "title": "Terapkan aturan",
-      "body": "Suku berikutnya adalah 10.",
-      "narration": "Karena aturan polanya tambah dua setiap langkah, suku ke-5 didapat dari 8 ditambah 2 sehingga hasilnya 10."
+      "title": "Temukan aturan",
+      "body": "Perubahan tetap memungkinkan kita membuat aturan umum pola."
+    },
+    {
+      "title": "Generalisasi",
+      "body": "Setelah aturan ditemukan, suku berikutnya dapat diprediksi tanpa menebak."
     }
   ],
-  "summary": "Pola dapat diteruskan jika aturan perubahannya diketahui.",
-  "voiceover_script": "Lihat deret dua, empat, enam, delapan. Setiap langkah bertambah dua.",
-  "intro_narration": "Lihat deret dua, empat, enam, delapan. Setiap langkah bertambah dua.",
-  "summary_narration": "Pola dapat diteruskan jika aturan perubahannya diketahui.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Lihat deret dua, empat, enam, delapan. Setiap langkah bertambah dua."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Perhatikan selisih antar suku: dari 2 ke 4, dari 4 ke 6, dan dari 6 ke 8 semuanya bertambah dua."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Karena aturan polanya tambah dua setiap langkah, suku ke-5 didapat dari 8 ditambah 2 sehingga hasilnya 10."
-    },
-    {
-      "slot": "summary",
-      "text": "Pola dapat diteruskan jika aturan perubahannya diketahui."
-    }
-  ]
+  "summary": "Generalisasi pola mengubah pengamatan beberapa contoh menjadi aturan yang bisa dipakai lebih luas."
 }
-
-

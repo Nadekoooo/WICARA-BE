@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -13,6 +14,9 @@ class TemplateRegistryEntry:
     scene_class: str
     schema_id: str
     aliases: tuple[str, ...]
+    render_engine: str
+    engine_family: str | None
+    runtime: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -64,6 +68,24 @@ def _registry_by_template_id() -> dict[str, TemplateRegistryEntry]:
         template_path = str(row.get("template_path", "")).strip()
         scene_class = str(row.get("scene_class", "")).strip()
         schema_id = _normalize_template_token(row.get("schema_id"))
+        render_engine = _normalize_template_token(row.get("render_engine"))
+        if not render_engine:
+            render_engine = "remotion" if template_id.startswith("remotion.") else "manim"
+        if render_engine not in {"manim", "remotion"}:
+            raise TemplateRegistryError(
+                f"Invalid render_engine '{render_engine}' for template_id '{template_id}'."
+            )
+        raw_engine_family = str(row.get("engine_family", "")).strip().lower()
+        engine_family = raw_engine_family or None
+        runtime_raw = row.get("runtime")
+        if runtime_raw is None:
+            runtime: dict[str, Any] = {}
+        elif isinstance(runtime_raw, dict):
+            runtime = runtime_raw
+        else:
+            raise TemplateRegistryError(
+                f"Invalid runtime metadata for template_id '{template_id}': expected object."
+            )
 
         if not template_id or not template_path or not scene_class or not schema_id:
             raise TemplateRegistryError(
@@ -86,6 +108,9 @@ def _registry_by_template_id() -> dict[str, TemplateRegistryEntry]:
             scene_class=scene_class,
             schema_id=schema_id,
             aliases=tuple(sorted(set(aliases))),
+            render_engine=render_engine,
+            engine_family=engine_family,
+            runtime=runtime,
         )
     return result
 

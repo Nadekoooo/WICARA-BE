@@ -1,74 +1,43 @@
 {
-  "id": "sample_statistics_center_spread_distinct",
-  "node_id": "phase4_statistics_center_spread",
+  "id": "ct_004_center_spread_statistics",
+  "node_id": "center_spread_statistics",
   "template_id": "manim.statistics_center_spread.v1",
   "phase": "D",
   "audience_level": "smp",
   "language": "id",
-  "title": "Pemusatan dan Penyebaran Data",
-  "subtitle": "Nilai tengah dan rentang memberi dua informasi berbeda.",
+  "title": "Ukuran Pemusatan dan Penyebaran",
+  "subtitle": "Data perlu dibaca tidak hanya dari nilai tengahnya, tetapi juga dari sebarannya.",
   "data_values": [
-    4,
-    5,
-    5,
-    6,
-    7,
-    8,
-    10
+    60,
+    65,
+    65,
+    70,
+    72,
+    75,
+    80
   ],
   "center_metrics": {
-    "mean": 6.4,
-    "median": 6
+    "mean": 69.6,
+    "median": 70
   },
   "spread_metrics": {
-    "range": 6,
-    "min": 4,
-    "max": 10
+    "range": 20,
+    "min": 60,
+    "max": 80
   },
   "steps": [
     {
-      "title": "Susun data",
-      "body": "Dot plot menempatkan setiap nilai pada garis bilangan.",
-      "narration": "Susun data. Dot plot menempatkan setiap nilai pada garis bilangan."
+      "title": "Susun data pada garis nilai",
+      "body": "Dot plot memudahkan kita melihat posisi setiap data."
     },
     {
-      "title": "Cari pusat",
-      "body": "Mean dan median menjelaskan nilai yang mewakili tengah data.",
-      "narration": "Cari pusat. Mean dan median menjelaskan nilai yang mewakili tengah data."
+      "title": "Cari nilai pusat",
+      "body": "Mean dan median memberikan gambaran pusat data dari dua sudut pandang berbeda."
     },
     {
-      "title": "Lihat sebaran",
-      "body": "Range menunjukkan jarak dari nilai terkecil sampai terbesar.",
-      "narration": "Lihat sebaran. Range menunjukkan jarak dari nilai terkecil sampai terbesar."
+      "title": "Periksa penyebaran",
+      "body": "Range menunjukkan lebar variasi data dari nilai terkecil hingga terbesar."
     }
   ],
-  "summary": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data.",
-  "intro_narration": "Nilai tengah dan rentang memberi dua informasi berbeda.",
-  "summary_narration": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data.",
-  "voiceover_script": "Nilai tengah dan rentang memberi dua informasi berbeda.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Nilai tengah dan rentang memberi dua informasi berbeda."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Susun data. Dot plot menempatkan setiap nilai pada garis bilangan."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Cari pusat. Mean dan median menjelaskan nilai yang mewakili tengah data."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Lihat sebaran. Range menunjukkan jarak dari nilai terkecil sampai terbesar."
-    },
-    {
-      "slot": "summary",
-      "text": "Pusat data menjelaskan nilai representatif, sedangkan penyebaran menjelaskan variasi data."
-    }
-  ]
+  "summary": "Pemusatan menjelaskan nilai representatif, sedangkan penyebaran menunjukkan seberapa bervariasi data itu."
 }

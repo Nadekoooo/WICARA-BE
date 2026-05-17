@@ -1,0 +1,37 @@
+{
+  "id": "sample_area_perimeter_volume_66",
+  "node_id": "phase3_area_perimeter_volume",
+  "template_id": "manim.area_volume_decomposition.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Keliling, Luas, Volume, dan Jaring-jaring",
+  "subtitle": "Keliling mengukur batas, luas mengukur daerah, dan volume mengukur ruang yang terisi.",
+  "rectangle": {
+    "width": 4,
+    "height": 3
+  },
+  "cuboid_net_faces": [
+    "atas",
+    "bawah",
+    "depan",
+    "belakang",
+    "kiri",
+    "kanan"
+  ],
+  "steps": [
+    {
+      "title": "Keliling",
+      "body": "Keliling didapat dari panjang lintasan di tepi bangun."
+    },
+    {
+      "title": "Luas",
+      "body": "Luas dapat dipahami sebagai banyaknya kotak satuan yang menutupi daerah."
+    },
+    {
+      "title": "Volume dan jaring-jaring",
+      "body": "Bangun ruang dapat dibuka menjadi jaring-jaring untuk memahami permukaannya."
+    }
+  ],
+  "summary": "Pengukuran geometri menjadi jelas jika batas, daerah, ruang, dan jaring-jaring dibedakan."
+}

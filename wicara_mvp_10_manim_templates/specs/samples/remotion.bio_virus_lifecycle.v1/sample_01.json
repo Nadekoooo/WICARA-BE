@@ -1,0 +1,109 @@
+{
+  "id": "remotion_v2_038_virus_structure_lifecycle_health",
+  "row_index": 38,
+  "concept_type": "virus_structure_lifecycle_health",
+  "concept_type_label_id": "Virus, siklus replikasi, dan kesehatan",
+  "template_id": "remotion.bio_virus_lifecycle.v1",
+  "component": "BioVirusLifecycleVideo",
+  "archetype": "virus_lifecycle",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Virus, siklus replikasi, dan kesehatan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `virus_structure_lifecycle_health`.",
+  "keyIdea": "Virus memperbanyak diri dengan memanfaatkan sel inang.",
+  "steps": [
+    {
+      "id": "entry",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Virus mendekati sel inang",
+      "narration": "Virus mencari sel yang memiliki reseptor yang sesuai."
+    },
+    {
+      "id": "attach",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Virus menempel pada reseptor",
+      "narration": "Penempelan membuat virus dapat memasukkan materi genetik."
+    },
+    {
+      "id": "inject",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Materi genetik masuk",
+      "narration": "Instruksi virus masuk ke dalam sel inang."
+    },
+    {
+      "id": "replicate",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Komponen virus digandakan",
+      "narration": "Sel inang dipakai untuk membuat salinan bagian-bagian virus."
+    },
+    {
+      "id": "assemble",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Virus baru dirakit",
+      "narration": "Bagian-bagian virus disusun menjadi partikel baru."
+    },
+    {
+      "id": "release",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Virus keluar dari sel",
+      "narration": "Virus baru keluar dan dapat menginfeksi sel lain."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Pencegahan memutus siklus",
+      "narration": "Perilaku sehat dan vaksin membantu mengurangi penyebaran virus."
+    }
+  ],
+  "visual": {
+    "stages": [
+      "Menempel",
+      "Masuk",
+      "Replikasi",
+      "Perakitan",
+      "Keluar"
+    ],
+    "prevention": [
+      "Vaksin",
+      "Cuci tangan",
+      "Masker"
+    ]
+  },
+  "summarySequence": [
+    "Menempel",
+    "Masuk",
+    "Replikasi",
+    "Perakitan",
+    "Keluar",
+    "Pencegahan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

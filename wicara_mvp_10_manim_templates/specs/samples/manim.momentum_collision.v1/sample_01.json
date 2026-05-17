@@ -1,0 +1,38 @@
+{
+  "id": "sample_momentum_impulse_collision_102",
+  "node_id": "phase5_momentum_impulse_collision",
+  "template_id": "manim.momentum_collision.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Momentum, Impuls, dan Tumbukan",
+  "subtitle": "Momentum berubah ketika impuls bekerja, dan total momentum dapat kekal pada sistem tertutup.",
+  "masses": [
+    2,
+    1
+  ],
+  "velocities_before": [
+    3,
+    -1
+  ],
+  "velocities_after": [
+    1,
+    3
+  ],
+  "impulse_latex": "J = \\Delta p = F \\Delta t",
+  "steps": [
+    {
+      "title": "Hitung momentum",
+      "body": "Momentum bergantung pada massa dan kecepatan benda."
+    },
+    {
+      "title": "Tumbukan",
+      "body": "Saat benda bertumbukan, gaya bekerja selama selang waktu singkat."
+    },
+    {
+      "title": "Impuls dan perubahan",
+      "body": "Impuls sama dengan perubahan momentum benda."
+    }
+  ],
+  "summary": "Momentum dan impuls menjelaskan perubahan gerak pada tumbukan, pantulan, dan interaksi singkat."
+}

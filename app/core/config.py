@@ -62,6 +62,52 @@ class Settings(BaseSettings):
             "MEDIA_RENDER_MAX_ATTEMPTS",
         ),
     )
+    media_remotion_project_dir: str = Field(
+        default="wicara_remotion_templates",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_PROJECT_DIR",
+            "MEDIA_REMOTION_PROJECT_DIR",
+        ),
+    )
+    media_remotion_entry: str = Field(
+        default="src/index.ts",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_ENTRY",
+            "MEDIA_REMOTION_ENTRY",
+        ),
+    )
+    media_remotion_timeout_seconds: int = Field(
+        default=600,
+        ge=60,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_TIMEOUT_SECONDS",
+            "MEDIA_REMOTION_TIMEOUT_SECONDS",
+        ),
+    )
+    media_npx_binary: str = Field(
+        default="npx",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_NPX_BINARY",
+            "MEDIA_NPX_BINARY",
+        ),
+    )
+    media_node_binary: str = Field(
+        default="node",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_NODE_BINARY",
+            "MEDIA_NODE_BINARY",
+        ),
+    )
+    media_remotion_concurrency: int = Field(
+        default=2,
+        ge=1,
+        le=16,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_CONCURRENCY",
+            "MEDIA_REMOTION_CONCURRENCY",
+        ),
+    )
     media_tts_provider: str = Field(
         default="gtts_voiceover",
         validation_alias=AliasChoices(
@@ -74,52 +120,6 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "WICARA_MEDIA_TTS_REQUIRED",
             "MEDIA_TTS_REQUIRED",
-        ),
-    )
-    openai_api_key: str = Field(
-        default="",
-        validation_alias=AliasChoices("WICARA_OPENAI_API_KEY", "OPENAI_API_KEY"),
-    )
-    media_openai_tts_model_primary: str = Field(
-        default="gpt-4o-mini-tts",
-        validation_alias=AliasChoices(
-            "WICARA_MEDIA_OPENAI_TTS_MODEL_PRIMARY",
-            "MEDIA_OPENAI_TTS_MODEL_PRIMARY",
-        ),
-    )
-    media_openai_tts_model_fallback: str = Field(
-        default="tts-1",
-        validation_alias=AliasChoices(
-            "WICARA_MEDIA_OPENAI_TTS_MODEL_FALLBACK",
-            "MEDIA_OPENAI_TTS_MODEL_FALLBACK",
-        ),
-    )
-    media_openai_tts_voice_primary: str = Field(
-        default="alloy",
-        validation_alias=AliasChoices(
-            "WICARA_MEDIA_OPENAI_TTS_VOICE_PRIMARY",
-            "MEDIA_OPENAI_TTS_VOICE_PRIMARY",
-        ),
-    )
-    media_openai_tts_voice_fallback: str = Field(
-        default="alloy",
-        validation_alias=AliasChoices(
-            "WICARA_MEDIA_OPENAI_TTS_VOICE_FALLBACK",
-            "MEDIA_OPENAI_TTS_VOICE_FALLBACK",
-        ),
-    )
-    media_openai_tts_response_format: str = Field(
-        default="mp3",
-        validation_alias=AliasChoices(
-            "WICARA_MEDIA_OPENAI_TTS_RESPONSE_FORMAT",
-            "MEDIA_OPENAI_TTS_RESPONSE_FORMAT",
-        ),
-    )
-    media_openai_tts_instructions: str = Field(
-        default="",
-        validation_alias=AliasChoices(
-            "WICARA_MEDIA_OPENAI_TTS_INSTRUCTIONS",
-            "MEDIA_OPENAI_TTS_INSTRUCTIONS",
         ),
     )
     media_ffmpeg_binary: str = Field(
@@ -315,15 +315,16 @@ class Settings(BaseSettings):
             text = "gtts_voiceover"
         aliases = {
             "gtts": "gtts_voiceover",
-            "openai": "openai_voiceover",
-            "openai_tts": "openai_voiceover",
-            "whisper": "openai_voiceover",
-            "openai_whisper": "openai_voiceover",
+            "openai": "gtts_voiceover",
+            "openai_tts": "gtts_voiceover",
+            "whisper": "gtts_voiceover",
+            "openai_whisper": "gtts_voiceover",
+            "openai_voiceover": "gtts_voiceover",
         }
         text = aliases.get(text, text)
-        if text not in {"gtts_voiceover", "openai_voiceover", "none"}:
+        if text not in {"gtts_voiceover", "none"}:
             raise ValueError(
-                "MEDIA_TTS_PROVIDER must be one of: 'gtts_voiceover', 'openai_voiceover', or 'none'."
+                "MEDIA_TTS_PROVIDER must be one of: 'gtts_voiceover' or 'none'."
             )
         return text
 

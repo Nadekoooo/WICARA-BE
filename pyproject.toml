@@ -28,8 +28,7 @@ test = [
 ]
 render = [
   "manim>=0.18",
-  "manim-voiceover[gtts,openai]>=0.3.7",
-  "openai>=1.30",
+  "manim-voiceover[gtts]>=0.3.7",
   "setuptools<81",
 ]
 

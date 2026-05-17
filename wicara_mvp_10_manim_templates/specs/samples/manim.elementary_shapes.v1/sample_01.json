@@ -1,0 +1,36 @@
+{
+  "id": "sample_shape_identification_geometry_65",
+  "node_id": "phase3_shape_identification_geometry",
+  "template_id": "manim.elementary_shapes.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Bangun Datar, Bangun Ruang, dan Komposisi",
+  "subtitle": "Bangun dapat dikenali dari sisi, sudut, permukaan, dan cara beberapa bentuk disusun.",
+  "flat_shapes": [
+    "Segitiga",
+    "Persegi",
+    "Lingkaran"
+  ],
+  "solid_shapes": [
+    "Kubus",
+    "Tabung",
+    "Bola"
+  ],
+  "composition_label": "rumah = persegi + segitiga",
+  "steps": [
+    {
+      "title": "Kenali ciri",
+      "body": "Bangun datar memiliki sisi dan sudut, sedangkan bangun ruang memiliki volume."
+    },
+    {
+      "title": "Bandingkan bentuk",
+      "body": "Perbedaan jumlah sisi, sudut, dan permukaan membantu klasifikasi."
+    },
+    {
+      "title": "Susun komposisi",
+      "body": "Beberapa bangun sederhana dapat disusun menjadi gambar atau objek baru."
+    }
+  ],
+  "summary": "Identifikasi bentuk membantu siswa membaca struktur geometri di benda sekitar."
+}

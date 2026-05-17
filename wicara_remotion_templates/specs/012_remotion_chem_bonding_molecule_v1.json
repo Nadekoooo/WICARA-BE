@@ -1,0 +1,107 @@
+{
+  "id": "remotion_v2_012_chemical_bonding_molecular_structure",
+  "row_index": 12,
+  "concept_type": "chemical_bonding_molecular_structure",
+  "concept_type_label_id": "Ikatan kimia, bentuk molekul, dan gaya antarmolekul",
+  "template_id": "remotion.chem_bonding_molecule.v1",
+  "component": "ChemBondingMoleculeVideo",
+  "archetype": "bonding_molecule",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Ikatan kimia, bentuk molekul, dan gaya antarmolekul",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `chemical_bonding_molecular_structure`.",
+  "keyIdea": "Ikatan terbentuk melalui interaksi elektron dan menentukan bentuk molekul.",
+  "steps": [
+    {
+      "id": "atoms",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Atom memiliki elektron valensi",
+      "narration": "Atom bereaksi melalui elektron terluar yang menentukan kecenderungan ikatan."
+    },
+    {
+      "id": "approach",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Atom saling mendekat",
+      "narration": "Ketika atom mendekat, elektron dan inti saling berinteraksi."
+    },
+    {
+      "id": "bond",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Ikatan terbentuk",
+      "narration": "Ikatan dapat terjadi karena elektron dibagi bersama atau berpindah."
+    },
+    {
+      "id": "shape",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Pasangan elektron menentukan bentuk",
+      "narration": "Tolak-menolak pasangan elektron membuat molekul memiliki geometri tertentu."
+    },
+    {
+      "id": "polarity",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Bentuk memengaruhi sifat",
+      "narration": "Bentuk dan kepolaran molekul ikut menentukan sifat fisik zat."
+    },
+    {
+      "id": "compare",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Bandingkan jenis ikatan",
+      "narration": "Ikatan ionik, kovalen, dan polar memiliki ciri yang berbeda."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Hubungkan mikro ke sifat zat",
+      "narration": "Struktur molekul membantu menjelaskan sifat zat yang kita amati."
+    }
+  ],
+  "visual": {
+    "atoms": [
+      "H",
+      "O",
+      "H"
+    ],
+    "bondTypes": [
+      "ionik",
+      "kovalen",
+      "polar"
+    ],
+    "geometry": "bengkok"
+  },
+  "summarySequence": [
+    "Elektron valensi",
+    "Atom mendekat",
+    "Ikatan",
+    "Bentuk molekul",
+    "Sifat zat"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

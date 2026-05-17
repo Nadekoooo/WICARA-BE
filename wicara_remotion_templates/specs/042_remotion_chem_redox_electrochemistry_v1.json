@@ -1,0 +1,104 @@
+{
+  "id": "remotion_v2_042_redox_electrochemistry_model",
+  "row_index": 42,
+  "concept_type": "redox_electrochemistry_model",
+  "concept_type_label_id": "Redoks, sel volta, elektrolisis, dan korosi",
+  "template_id": "remotion.chem_redox_electrochemistry.v1",
+  "component": "ElectrochemicalCellVideo",
+  "archetype": "electrochemical_cell",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Redoks, sel volta, elektrolisis, dan korosi",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `redox_electrochemistry_model`.",
+  "keyIdea": "Redoks menghasilkan aliran elektron dan perpindahan ion yang saling menyeimbangkan.",
+  "steps": [
+    {
+      "id": "setup",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Dua setengah sel disiapkan",
+      "narration": "Sel elektrokimia terdiri dari anoda, katoda, elektrolit, dan rangkaian luar."
+    },
+    {
+      "id": "oxidation",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Oksidasi terjadi di anoda",
+      "narration": "Logam pada anoda melepaskan elektron."
+    },
+    {
+      "id": "electron",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Elektron mengalir di kawat",
+      "narration": "Elektron bergerak melalui rangkaian luar menuju katoda."
+    },
+    {
+      "id": "reduction",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Reduksi terjadi di katoda",
+      "narration": "Ion menerima elektron dan berubah menjadi zat yang lebih netral."
+    },
+    {
+      "id": "salt",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Ion bergerak lewat jembatan garam",
+      "narration": "Perpindahan ion menjaga muatan larutan tetap seimbang."
+    },
+    {
+      "id": "voltage",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Beda potensial muncul",
+      "narration": "Aliran elektron dapat dimanfaatkan sebagai energi listrik."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Redoks menghubungkan kimia dan listrik",
+      "narration": "Sel elektrokimia menunjukkan reaksi kimia yang menghasilkan arus."
+    }
+  ],
+  "visual": {
+    "anode": "Zn",
+    "cathode": "Cu",
+    "ions": [
+      "Zn²⁺",
+      "Cu²⁺",
+      "SO₄²⁻"
+    ]
+  },
+  "summarySequence": [
+    "Anoda",
+    "Oksidasi",
+    "Elektron",
+    "Katoda",
+    "Ion",
+    "Arus listrik"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

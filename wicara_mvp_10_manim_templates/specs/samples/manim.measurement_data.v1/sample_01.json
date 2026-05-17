@@ -1,0 +1,45 @@
+{
+  "id": "sample_measurement_data_process_100",
+  "node_id": "phase4_measurement_data_process",
+  "template_id": "manim.measurement_data.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pengukuran dan Data IPA",
+  "subtitle": "Data hasil pengukuran perlu dicatat, diplot, dan dianalisis untuk menarik kesimpulan ilmiah.",
+  "measurements": [
+    {
+      "time": 0,
+      "temperature": 25
+    },
+    {
+      "time": 1,
+      "temperature": 32
+    },
+    {
+      "time": 2,
+      "temperature": 38
+    },
+    {
+      "time": 3,
+      "temperature": 43
+    }
+  ],
+  "x_label": "waktu",
+  "y_label": "suhu",
+  "steps": [
+    {
+      "title": "Catat pengukuran",
+      "body": "Setiap data harus memiliki nilai, satuan, dan waktu atau kondisi pengamatan."
+    },
+    {
+      "title": "Ubah ke grafik",
+      "body": "Grafik membantu melihat pola perubahan yang sulit terlihat dari tabel saja."
+    },
+    {
+      "title": "Tarik kesimpulan",
+      "body": "Kesimpulan didukung oleh pola data, bukan hanya dugaan."
+    }
+  ],
+  "summary": "Proses pengukuran IPA mengubah observasi menjadi data yang dapat dianalisis secara ilmiah."
+}

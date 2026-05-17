@@ -1,0 +1,109 @@
+{
+  "id": "remotion_v2_006_organ_system_flow_regulation",
+  "row_index": 6,
+  "concept_type": "organ_system_flow_regulation",
+  "concept_type_label_id": "Sistem organ, aliran, dan regulasi tubuh",
+  "template_id": "remotion.bio_organ_system_flow.v1",
+  "component": "OrganSystemFlowVideo",
+  "archetype": "organ_flow",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Sistem organ, aliran, dan regulasi tubuh",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `organ_system_flow_regulation`.",
+  "keyIdea": "Tubuh bekerja lewat aliran zat dan koordinasi antar sistem organ.",
+  "steps": [
+    {
+      "id": "body",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Tubuh sebagai sistem terpadu",
+      "narration": "Tubuh manusia tersusun dari sistem organ yang saling terhubung."
+    },
+    {
+      "id": "input",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Bahan masuk ke tubuh",
+      "narration": "Makanan dan oksigen masuk melalui sistem yang berbeda."
+    },
+    {
+      "id": "transport",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Darah mengangkut zat penting",
+      "narration": "Sistem peredaran darah mendistribusikan nutrisi dan oksigen ke seluruh tubuh."
+    },
+    {
+      "id": "use",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Sel memakai bahan",
+      "narration": "Sel menggunakan bahan tersebut untuk menghasilkan energi dan menjalankan fungsi hidup."
+    },
+    {
+      "id": "waste",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Zat sisa dikeluarkan",
+      "narration": "Sistem ekskresi membantu mengeluarkan zat sisa agar tubuh tetap seimbang."
+    },
+    {
+      "id": "regulate",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Regulasi menjaga koordinasi",
+      "narration": "Sistem saraf dan hormon mengatur kerja organ agar tetap sesuai kebutuhan."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Sistem tubuh bekerja bersama",
+      "narration": "Aliran dan regulasi menjelaskan mengapa organ tidak bekerja sendiri-sendiri."
+    }
+  ],
+  "visual": {
+    "systems": [
+      "Pencernaan",
+      "Pernapasan",
+      "Peredaran darah",
+      "Ekskresi"
+    ],
+    "flows": [
+      "nutrisi",
+      "oksigen",
+      "darah",
+      "zat sisa"
+    ]
+  },
+  "summarySequence": [
+    "Input",
+    "Transport",
+    "Pemakaian",
+    "Zat sisa",
+    "Regulasi",
+    "Homeostasis"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

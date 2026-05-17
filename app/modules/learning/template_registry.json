@@ -15,6 +15,20 @@
       "source": "templates_30_60_bundle"
     },
     {
+      "template_id": "manim.area_volume_decomposition.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/area_volume_decomposition_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.area_volume_decomposition",
+        "area_volume_decomposition_v1",
+        "area_volume_decomposition"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.bio_evolution_selection.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/bio_evolution_selection_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -27,6 +41,20 @@
       "phase": "phase5_expansion",
       "family": "phase5_distinct_family",
       "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.bio_genetics_probability.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/bio_genetics_probability_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.bio_genetics_probability",
+        "bio_genetics_probability_v1",
+        "bio_genetics_probability"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.bio_structure_labeling.v1",
@@ -69,6 +97,34 @@
       "phase": "phase5_expansion",
       "family": "phase5_distinct_family",
       "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.chem_energy_profile.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_energy_profile_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_energy_profile",
+        "chem_energy_profile_v1",
+        "chem_energy_profile"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
+      "template_id": "manim.chem_equilibrium_shift.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/chem_equilibrium_shift_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.chem_equilibrium_shift",
+        "chem_equilibrium_shift_v1",
+        "chem_equilibrium_shift"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.chem_lab_safety.v1",
@@ -142,6 +198,20 @@
       "source": "templates_30_60_bundle"
     },
     {
+      "template_id": "manim.coordinate_grid_elementary.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/coordinate_grid_elementary_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.coordinate_grid_elementary",
+        "coordinate_grid_elementary_v1",
+        "coordinate_grid_elementary"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.data_representation.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/data_representation_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -154,7 +224,11 @@
       ],
       "family": "graph_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.graph_explanation.v1"
+      "base_family_template_id": "manim.graph_explanation.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
     },
     {
       "template_id": "manim.electric_circuit.v1",
@@ -200,6 +274,20 @@
       "source": "templates_30_60_bundle"
     },
     {
+      "template_id": "manim.electromagnetism_field.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/electromagnetism_field_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.electromagnetism_field",
+        "electromagnetism_field_v1",
+        "electromagnetism_field"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.elementary_arithmetic_blocks.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_arithmetic_blocks_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -226,6 +314,34 @@
       "source": "templates_30_60_bundle"
     },
     {
+      "template_id": "manim.elementary_finance_timeline.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_finance_timeline_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.elementary_finance_timeline",
+        "elementary_finance_timeline_v1",
+        "elementary_finance_timeline"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
+      "template_id": "manim.elementary_geometry_transform.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_geometry_transform_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.elementary_geometry_transform",
+        "elementary_geometry_transform_v1",
+        "elementary_geometry_transform"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.elementary_number_line_place_value.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_number_line_place_value_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -241,6 +357,34 @@
       "base_family_template_id": "manim.number_line_quantity.v1"
     },
     {
+      "template_id": "manim.elementary_probability.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_probability_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.elementary_probability",
+        "elementary_probability_v1",
+        "elementary_probability"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
+      "template_id": "manim.elementary_shapes.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/elementary_shapes_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.elementary_shapes",
+        "elementary_shapes_v1",
+        "elementary_shapes"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.energy_environment_system.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/energy_environment_system_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -254,6 +398,20 @@
       "family": "graph_family",
       "phase": "phase4_expansion",
       "base_family_template_id": "manim.graph_explanation.v1"
+    },
+    {
+      "template_id": "manim.energy_transfer.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/energy_transfer_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.energy_transfer",
+        "energy_transfer_v1",
+        "energy_transfer"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.equation_balance.v1",
@@ -280,7 +438,39 @@
       ],
       "family": "sequence_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.sequence_pattern.v1"
+      "base_family_template_id": "manim.sequence_pattern.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
+    },
+    {
+      "template_id": "manim.factor_tree.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/factor_tree_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.factor_tree",
+        "factor_tree_v1",
+        "factor_tree"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
+      "template_id": "manim.factor_tree_multiple_grid.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/factor_tree_multiple_grid_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.factor_tree_multiple_grid",
+        "factor_tree_multiple_grid_v1",
+        "factor_tree_multiple_grid"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.financial_growth.v1",
@@ -295,7 +485,25 @@
       ],
       "family": "sequence_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.sequence_pattern.v1"
+      "base_family_template_id": "manim.sequence_pattern.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
+    },
+    {
+      "template_id": "manim.fluid_pressure.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/fluid_pressure_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.fluid_pressure",
+        "fluid_pressure_v1",
+        "fluid_pressure"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.force_diagram.v1",
@@ -308,6 +516,20 @@
         "force_diagram_v1",
         "force_diagram"
       ]
+    },
+    {
+      "template_id": "manim.force_motion_pressure.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/force_motion_pressure_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.force_motion_pressure",
+        "force_motion_pressure_v1",
+        "force_motion_pressure"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.fraction_bar_partition.v1",
@@ -349,6 +571,20 @@
       "family": "graph_family",
       "phase": "phase4_expansion",
       "base_family_template_id": "manim.graph_explanation.v1"
+    },
+    {
+      "template_id": "manim.geodesic_coordinate.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/geodesic_coordinate_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.geodesic_coordinate",
+        "geodesic_coordinate_v1",
+        "geodesic_coordinate"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.geometry_area_volume.v1",
@@ -405,7 +641,11 @@
       ],
       "family": "geometry_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.geometry_area_volume.v1"
+      "base_family_template_id": "manim.geometry_area_volume.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
     },
     {
       "template_id": "manim.graph_explanation.v1",
@@ -463,6 +703,34 @@
       "source": "templates_30_60_bundle"
     },
     {
+      "template_id": "manim.matrix_operations.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/matrix_operations_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.matrix_operations",
+        "matrix_operations_v1",
+        "matrix_operations"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
+      "template_id": "manim.measurement_data.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/measurement_data_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.measurement_data",
+        "measurement_data_v1",
+        "measurement_data"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.measurement_uncertainty.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/measurement_uncertainty_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -475,6 +743,20 @@
       "phase": "phase5_expansion",
       "family": "phase5_distinct_family",
       "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "manim.measurement_units.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/measurement_units_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.measurement_units",
+        "measurement_units_v1",
+        "measurement_units"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.modern_atomic_nuclear.v1",
@@ -490,6 +772,20 @@
       "family": "graph_family",
       "phase": "phase4_expansion",
       "base_family_template_id": "manim.graph_explanation.v1"
+    },
+    {
+      "template_id": "manim.momentum_collision.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/momentum_collision_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.momentum_collision",
+        "momentum_collision_v1",
+        "momentum_collision"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.motion_kinematics.v1",
@@ -528,7 +824,11 @@
       ],
       "family": "graph_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.graph_explanation.v1"
+      "base_family_template_id": "manim.graph_explanation.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
     },
     {
       "template_id": "manim.quadratic_model.v1",
@@ -555,6 +855,10 @@
         "manim.ratio_proportion_v1",
         "ratio_proportion_v1",
         "ratio_proportion"
+      ],
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
       ]
     },
     {
@@ -585,7 +889,11 @@
       ],
       "family": "graph_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.graph_explanation.v1"
+      "base_family_template_id": "manim.graph_explanation.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
     },
     {
       "template_id": "manim.sd_body_senses_health.v1",
@@ -667,7 +975,25 @@
         "manim.sequence_pattern_v1",
         "sequence_pattern_v1",
         "sequence_pattern"
+      ],
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
       ]
+    },
+    {
+      "template_id": "manim.spatial_net.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/spatial_net_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.spatial_net",
+        "spatial_net_v1",
+        "spatial_net"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
     },
     {
       "template_id": "manim.statistics_center_spread.v1",
@@ -682,7 +1008,11 @@
       ],
       "family": "graph_family",
       "phase": "phase4_expansion",
-      "base_family_template_id": "manim.graph_explanation.v1"
+      "base_family_template_id": "manim.graph_explanation.v1",
+      "source": "templates_0_10_manim_bundle",
+      "tags": [
+        "bundle_0_10"
+      ]
     },
     {
       "template_id": "manim.stoichiometry_board.v1",
@@ -714,6 +1044,20 @@
       "source": "templates_30_60_bundle"
     },
     {
+      "template_id": "manim.vector_diagram.v1",
+      "template_path": "wicara_mvp_10_manim_templates/templates/manim/vector_diagram_v1.py",
+      "scene_class": "GeneratedTemplate",
+      "schema_id": "manim.generic_explanation.v1",
+      "aliases": [
+        "manim.vector_diagram",
+        "vector_diagram_v1",
+        "vector_diagram"
+      ],
+      "phase": "phase6_expansion",
+      "family": "phase6_manim_only_bundle",
+      "source": "templates_61_107_manim_bundle"
+    },
+    {
       "template_id": "manim.wave_optics.v1",
       "template_path": "wicara_mvp_10_manim_templates/templates/manim/wave_optics_v1.py",
       "scene_class": "GeneratedTemplate",
@@ -741,6 +1085,949 @@
       "phase": "phase5_expansion",
       "family": "phase5_distinct_family",
       "source": "templates_30_60_bundle"
+    },
+    {
+      "template_id": "remotion.bio_biotech_process.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_biotech_process",
+        "bio_biotech_process_v1",
+        "bio_biotech_process"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "024_remotion_bio_biotech_process_v1",
+        "component_name": "BioBiotechProcessTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_cell_division.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_cell_division",
+        "bio_cell_division_v1",
+        "bio_cell_division"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "083_remotion_bio_cell_division_v1",
+        "component_name": "BioCellDivisionTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_cell_structure.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_cell_structure",
+        "bio_cell_structure_v1",
+        "bio_cell_structure"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "081_remotion_bio_cell_structure_v1",
+        "component_name": "BioCellStructureTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_ecosystem_network.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_ecosystem_network",
+        "bio_ecosystem_network_v1",
+        "bio_ecosystem_network"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "005_remotion_bio_ecosystem_network_v1",
+        "component_name": "BioEcosystemNetworkTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_energy_process.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_energy_process",
+        "bio_energy_process_v1",
+        "bio_energy_process"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "085_remotion_bio_energy_process_v1",
+        "component_name": "BioEnergyProcessTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_enzyme_metabolism.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_enzyme_metabolism",
+        "bio_enzyme_metabolism_v1",
+        "bio_enzyme_metabolism"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "084_remotion_bio_enzyme_metabolism_v1",
+        "component_name": "BioEnzymeMetabolismTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_evolution_selection.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_evolution_selection",
+        "bio_evolution_selection_v1",
+        "bio_evolution_selection"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "039_remotion_bio_evolution_selection_v1",
+        "component_name": "BioEvolutionSelectionTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_flow_system.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_flow_system",
+        "bio_flow_system_v1",
+        "bio_flow_system"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "019_remotion_bio_flow_system_v1",
+        "component_name": "BioFlowSystemTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_genetic_expression.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_genetic_expression",
+        "bio_genetic_expression_v1",
+        "bio_genetic_expression"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "086_remotion_bio_genetic_expression_v1",
+        "component_name": "BioGeneticExpressionTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_growth_timeline.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_growth_timeline",
+        "bio_growth_timeline_v1",
+        "bio_growth_timeline"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "088_remotion_bio_growth_timeline_v1",
+        "component_name": "BioGrowthTimelineTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_health_disorder.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_health_disorder",
+        "bio_health_disorder_v1",
+        "bio_health_disorder"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "105_remotion_bio_health_disorder_v1",
+        "component_name": "BioHealthDisorderTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_homeostasis_feedback.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_homeostasis_feedback",
+        "bio_homeostasis_feedback_v1",
+        "bio_homeostasis_feedback"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "104_remotion_bio_homeostasis_feedback_v1",
+        "component_name": "BioHomeostasisFeedbackTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_immune_response.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_immune_response",
+        "bio_immune_response_v1",
+        "bio_immune_response"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "103_remotion_bio_immune_response_v1",
+        "component_name": "BioImmuneResponseTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_membrane_transport.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_membrane_transport",
+        "bio_membrane_transport_v1",
+        "bio_membrane_transport"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "082_remotion_bio_membrane_transport_v1",
+        "component_name": "BioMembraneTransportTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_organ_system_flow.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_organ_system_flow",
+        "bio_organ_system_flow_v1",
+        "bio_organ_system_flow"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "006_remotion_bio_organ_system_flow_v1",
+        "component_name": "BioOrganSystemFlowTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_structure_labeling.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_structure_labeling",
+        "bio_structure_labeling_v1",
+        "bio_structure_labeling"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "034_remotion_bio_structure_labeling_v1",
+        "component_name": "BioStructureLabelingTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_taxonomy_biodiversity.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_taxonomy_biodiversity",
+        "bio_taxonomy_biodiversity_v1",
+        "bio_taxonomy_biodiversity"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "023_remotion_bio_taxonomy_biodiversity_v1",
+        "component_name": "BioTaxonomyBiodiversityTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.bio_virus_lifecycle.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.bio_virus_lifecycle",
+        "bio_virus_lifecycle_v1",
+        "bio_virus_lifecycle"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "038_remotion_bio_virus_lifecycle_v1",
+        "component_name": "BioVirusLifecycleTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_acid_base_safety.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_acid_base_safety",
+        "chem_acid_base_safety_v1",
+        "chem_acid_base_safety"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "054_remotion_chem_acid_base_safety_v1",
+        "component_name": "ChemAcidBaseSafetyTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_acid_base_titration.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_acid_base_titration",
+        "chem_acid_base_titration_v1",
+        "chem_acid_base_titration"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "028_remotion_chem_acid_base_titration_v1",
+        "component_name": "ChemAcidBaseTitrationTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_atomic_periodic.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_atomic_periodic",
+        "chem_atomic_periodic_v1",
+        "chem_atomic_periodic"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "026_remotion_chem_atomic_periodic_v1",
+        "component_name": "ChemAtomicPeriodicTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_bonding_molecule.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_bonding_molecule",
+        "chem_bonding_molecule_v1",
+        "chem_bonding_molecule"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "012_remotion_chem_bonding_molecule_v1",
+        "component_name": "ChemBondingMoleculeTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_lab_safety.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_lab_safety",
+        "chem_lab_safety_v1",
+        "chem_lab_safety"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "060_remotion_chem_lab_safety_v1",
+        "component_name": "ChemLabSafetyTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_lab_separation.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_lab_separation",
+        "chem_lab_separation_v1",
+        "chem_lab_separation"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "101_remotion_chem_lab_separation_v1",
+        "component_name": "ChemLabSeparationTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_material_environment.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_material_environment",
+        "chem_material_environment_v1",
+        "chem_material_environment"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "089_remotion_chem_material_environment_v1",
+        "component_name": "ChemMaterialEnvironmentTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_organic_structure.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_organic_structure",
+        "chem_organic_structure_v1",
+        "chem_organic_structure"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "043_remotion_chem_organic_structure_v1",
+        "component_name": "ChemOrganicStructureTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_particle_matter.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_particle_matter",
+        "chem_particle_matter_v1",
+        "chem_particle_matter"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "061_remotion_chem_particle_matter_v1",
+        "component_name": "ChemParticleMatterTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_particle_reaction_rate.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_particle_reaction_rate",
+        "chem_particle_reaction_rate_v1",
+        "chem_particle_reaction_rate"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "041_remotion_chem_particle_reaction_rate_v1",
+        "component_name": "ChemParticleReactionRateTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.chem_redox_electrochemistry.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.chem_redox_electrochemistry",
+        "chem_redox_electrochemistry_v1",
+        "chem_redox_electrochemistry"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "042_remotion_chem_redox_electrochemistry_v1",
+        "component_name": "ChemRedoxElectrochemistryTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.earth_space_system.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.earth_space_system",
+        "earth_space_system_v1",
+        "earth_space_system"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_svg",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "011_remotion_earth_space_system_v1",
+        "component_name": "EarthSpaceSystemTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_body_senses_health.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_body_senses_health",
+        "sd_body_senses_health_v1",
+        "sd_body_senses_health"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "047_remotion_sd_body_senses_health_v1",
+        "component_name": "SdBodySensesHealthTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_earth_resources_environment.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_earth_resources_environment",
+        "sd_earth_resources_environment_v1",
+        "sd_earth_resources_environment"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "070_remotion_sd_earth_resources_environment_v1",
+        "component_name": "SdEarthResourcesEnvironmentTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_ecosystem_food_chain.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_ecosystem_food_chain",
+        "sd_ecosystem_food_chain_v1",
+        "sd_ecosystem_food_chain"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "030_remotion_sd_ecosystem_food_chain_v1",
+        "component_name": "SdEcosystemFoodChainTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_energy_forms.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_energy_forms",
+        "sd_energy_forms_v1",
+        "sd_energy_forms"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_manim",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "031_remotion_sd_energy_forms_v1",
+        "component_name": "SdEnergyFormsTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_inquiry_observation.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_inquiry_observation",
+        "sd_inquiry_observation_v1",
+        "sd_inquiry_observation"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "067_remotion_sd_inquiry_observation_v1",
+        "component_name": "SdInquiryObservationTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_life_cycle_classification.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_life_cycle_classification",
+        "sd_life_cycle_classification_v1",
+        "sd_life_cycle_classification"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "048_remotion_sd_life_cycle_classification_v1",
+        "component_name": "SdLifeCycleClassificationTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_matter_states.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_matter_states",
+        "sd_matter_states_v1",
+        "sd_matter_states"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "068_remotion_sd_matter_states_v1",
+        "component_name": "SdMatterStatesTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_mixture_separation.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_mixture_separation",
+        "sd_mixture_separation_v1",
+        "sd_mixture_separation"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "071_remotion_sd_mixture_separation_v1",
+        "component_name": "SdMixtureSeparationTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_solar_system_day_night.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_solar_system_day_night",
+        "sd_solar_system_day_night_v1",
+        "sd_solar_system_day_night"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_manim",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "069_remotion_sd_solar_system_day_night_v1",
+        "component_name": "SdSolarSystemDayNightTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_structure_function.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_structure_function",
+        "sd_structure_function_v1",
+        "sd_structure_function"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "107_remotion_sd_structure_function_v1",
+        "component_name": "SdStructureFunctionTemplate",
+        "props_mode": "spec_json"
+      }
+    },
+    {
+      "template_id": "remotion.sd_weather_water_cycle.v1",
+      "template_path": "wicara_remotion_templates/src/index.ts",
+      "scene_class": "RemotionComposition",
+      "schema_id": "remotion.generic_explanation.v1",
+      "aliases": [
+        "remotion.sd_weather_water_cycle",
+        "sd_weather_water_cycle_v1",
+        "sd_weather_water_cycle"
+      ],
+      "phase": "phase7_remotion_integration",
+      "family": "remotion_bundle_all",
+      "source": "templates_remotion_all_bundle",
+      "render_engine": "remotion",
+      "engine_family": "remotion_or_rive",
+      "runtime": {
+        "project_dir": "wicara_remotion_templates",
+        "entry_point": "src/index.ts",
+        "composition_id": "096_remotion_sd_weather_water_cycle_v1",
+        "component_name": "SdWeatherWaterCycleTemplate",
+        "props_mode": "spec_json"
+      }
     }
   ]
 }

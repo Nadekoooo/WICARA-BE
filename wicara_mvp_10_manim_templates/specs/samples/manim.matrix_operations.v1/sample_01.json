@@ -1,0 +1,56 @@
+{
+  "id": "sample_matrix_operation_72",
+  "node_id": "phase5_matrix_operation_model",
+  "template_id": "manim.matrix_operations.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Matriks dan Operasi Data Tersusun",
+  "subtitle": "Matriks menyimpan data dalam baris dan kolom sehingga operasi dapat dilakukan secara terstruktur.",
+  "matrix_a": [
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      4
+    ]
+  ],
+  "matrix_b": [
+    [
+      2,
+      0
+    ],
+    [
+      1,
+      3
+    ]
+  ],
+  "operation": "addition",
+  "result_matrix": [
+    [
+      3,
+      2
+    ],
+    [
+      4,
+      7
+    ]
+  ],
+  "steps": [
+    {
+      "title": "Baca posisi elemen",
+      "body": "Setiap angka memiliki alamat baris dan kolom."
+    },
+    {
+      "title": "Samakan ukuran",
+      "body": "Penjumlahan matriks membutuhkan ukuran baris dan kolom yang sama."
+    },
+    {
+      "title": "Operasikan elemen bersesuaian",
+      "body": "Elemen pada posisi yang sama dijumlahkan untuk membentuk matriks hasil."
+    }
+  ],
+  "summary": "Operasi matriks adalah cara sistematis mengolah data yang tersusun dalam grid angka."
+}

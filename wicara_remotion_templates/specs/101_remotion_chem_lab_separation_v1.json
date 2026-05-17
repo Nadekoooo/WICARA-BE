@@ -1,0 +1,107 @@
+{
+  "id": "remotion_v2_101_mixture_separation_lab_model",
+  "row_index": 101,
+  "concept_type": "mixture_separation_lab_model",
+  "concept_type_label_id": "Campuran dan pemisahan sederhana",
+  "template_id": "remotion.chem_lab_separation.v1",
+  "component": "LabSeparationVideo",
+  "archetype": "lab_separation",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Campuran dan pemisahan sederhana",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `mixture_separation_lab_model`.",
+  "keyIdea": "Pemisahan campuran dipilih berdasarkan sifat fisik penyusunnya.",
+  "steps": [
+    {
+      "id": "mixture",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Campuran dianalisis",
+      "narration": "Campuran memiliki beberapa komponen dengan sifat berbeda."
+    },
+    {
+      "id": "property",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Sifat pembeda dicari",
+      "narration": "Ukuran partikel, titik didih, dan kelarutan bisa menjadi dasar pemisahan."
+    },
+    {
+      "id": "filtration",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Filtrasi memisahkan partikel",
+      "narration": "Saringan menahan padatan dan membiarkan cairan lewat."
+    },
+    {
+      "id": "distillation",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Distilasi memakai titik didih",
+      "narration": "Komponen dipisahkan karena menguap dan mengembun pada suhu berbeda."
+    },
+    {
+      "id": "chromatography",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Kromatografi memisahkan zat terlarut",
+      "narration": "Komponen bergerak berbeda pada fase diam dan fase gerak."
+    },
+    {
+      "id": "choose",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Metode dipilih sesuai campuran",
+      "narration": "Tidak semua campuran cocok dipisahkan dengan metode yang sama."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Sifat fisik menjadi kunci",
+      "narration": "Pemisahan campuran adalah penerapan langsung dari sifat fisik zat."
+    }
+  ],
+  "visual": {
+    "methods": [
+      "Filtrasi",
+      "Distilasi",
+      "Kromatografi"
+    ],
+    "mixtures": [
+      "Pasir + air",
+      "Alkohol + air",
+      "Tinta"
+    ]
+  },
+  "summarySequence": [
+    "Campuran",
+    "Sifat",
+    "Filtrasi",
+    "Distilasi",
+    "Kromatografi",
+    "Pilihan metode"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "sample_equilibrium_shift_62",
+  "node_id": "phase5_chem_equilibrium_shift",
+  "template_id": "manim.chem_equilibrium_shift.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Kesetimbangan Kimia dan Le Chatelier",
+  "subtitle": "Sistem setimbang akan bergeser untuk mengurangi pengaruh perubahan konsentrasi, tekanan, atau suhu.",
+  "equation_latex": "N_2O_4(g) \\rightleftharpoons 2NO_2(g)",
+  "left_label": "reaktan",
+  "right_label": "produk",
+  "stressors": [
+    {
+      "label": "+ reaktan",
+      "shift": "kanan"
+    },
+    {
+      "label": "+ produk",
+      "shift": "kiri"
+    },
+    {
+      "label": "naik suhu",
+      "shift": "tergantung ΔH"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Mulai dari keadaan setimbang",
+      "body": "Laju reaksi maju dan balik sama sehingga komposisi terlihat stabil."
+    },
+    {
+      "title": "Beri gangguan",
+      "body": "Perubahan konsentrasi, tekanan, atau suhu mengganggu keadaan setimbang."
+    },
+    {
+      "title": "Prediksi pergeseran",
+      "body": "Sistem bergeser ke arah yang mengurangi dampak gangguan tersebut."
+    }
+  ],
+  "summary": "Prinsip Le Chatelier membantu memprediksi arah perubahan sistem kesetimbangan secara kualitatif."
+}

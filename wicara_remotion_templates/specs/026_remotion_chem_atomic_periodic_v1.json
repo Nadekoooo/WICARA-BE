@@ -1,0 +1,108 @@
+{
+  "id": "remotion_v2_026_atomic_structure_periodic_model",
+  "row_index": 26,
+  "concept_type": "atomic_structure_periodic_model",
+  "concept_type_label_id": "Atom, elektron, isotop, dan sistem periodik",
+  "template_id": "remotion.chem_atomic_periodic.v1",
+  "component": "AtomicPeriodicVideo",
+  "archetype": "atomic_periodic",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Atom, elektron, isotop, dan sistem periodik",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `atomic_structure_periodic_model`.",
+  "keyIdea": "Konfigurasi elektron menghubungkan struktur atom dengan posisi unsur pada tabel periodik.",
+  "steps": [
+    {
+      "id": "nucleus",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Atom memiliki inti",
+      "narration": "Inti atom berisi proton dan neutron yang menentukan identitas serta massa atom."
+    },
+    {
+      "id": "electron",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Elektron berada di sekitar inti",
+      "narration": "Elektron menempati tingkat energi tertentu di sekitar inti."
+    },
+    {
+      "id": "configuration",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Konfigurasi elektron terbentuk",
+      "narration": "Susunan elektron menentukan elektron valensi suatu unsur."
+    },
+    {
+      "id": "periodic",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Posisi periodik punya pola",
+      "narration": "Tabel periodik menyusun unsur berdasarkan nomor atom dan kemiripan sifat."
+    },
+    {
+      "id": "group",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Golongan menunjukkan kemiripan",
+      "narration": "Unsur dalam golongan yang sama sering memiliki elektron valensi serupa."
+    },
+    {
+      "id": "property",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Struktur menjelaskan sifat",
+      "narration": "Sifat kimia unsur dapat ditelusuri ke struktur elektronnya."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Hubungkan atom dan tabel",
+      "narration": "Model atom memberi alasan mengapa tabel periodik memiliki pola."
+    }
+  ],
+  "visual": {
+    "element": "Na",
+    "subparticles": [
+      "Proton",
+      "Neutron",
+      "Elektron"
+    ],
+    "groups": [
+      "Gol. 1",
+      "Gol. 17",
+      "Gol. 18"
+    ]
+  },
+  "summarySequence": [
+    "Inti",
+    "Elektron",
+    "Konfigurasi",
+    "Tabel periodik",
+    "Golongan",
+    "Sifat"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

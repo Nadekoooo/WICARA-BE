@@ -1,0 +1,111 @@
+{
+  "id": "remotion_v2_085_photosynthesis_respiration_process",
+  "row_index": 85,
+  "concept_type": "photosynthesis_respiration_process",
+  "concept_type_label_id": "Fotosintesis dan respirasi sel",
+  "template_id": "remotion.bio_energy_process.v1",
+  "component": "PhotosynthesisRespirationVideo",
+  "archetype": "bio_energy_process",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Fotosintesis dan respirasi sel",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `photosynthesis_respiration_process`.",
+  "keyIdea": "Fotosintesis menyimpan energi, respirasi melepaskan energi.",
+  "steps": [
+    {
+      "id": "plant",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Tumbuhan menangkap cahaya",
+      "narration": "Tumbuhan memakai cahaya matahari untuk membuat makanan."
+    },
+    {
+      "id": "photo_input",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Fotosintesis memakai CO₂ dan air",
+      "narration": "Karbon dioksida dan air menjadi bahan awal fotosintesis."
+    },
+    {
+      "id": "photo_output",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Glukosa dan oksigen terbentuk",
+      "narration": "Fotosintesis menghasilkan glukosa dan oksigen."
+    },
+    {
+      "id": "cell",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Sel memakai glukosa",
+      "narration": "Makhluk hidup menggunakan glukosa sebagai sumber energi."
+    },
+    {
+      "id": "respiration",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Respirasi melepaskan energi",
+      "narration": "Respirasi mengubah glukosa dan oksigen menjadi energi."
+    },
+    {
+      "id": "cycle",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Dua proses saling terkait",
+      "narration": "Produk fotosintesis dapat menjadi bahan respirasi."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Energi mengalir dalam kehidupan",
+      "narration": "Fotosintesis dan respirasi menghubungkan cahaya, makanan, dan energi sel."
+    }
+  ],
+  "visual": {
+    "photosynthesis": [
+      "CO₂",
+      "H₂O",
+      "Cahaya",
+      "Glukosa",
+      "O₂"
+    ],
+    "respiration": [
+      "Glukosa",
+      "O₂",
+      "CO₂",
+      "H₂O",
+      "Energi"
+    ]
+  },
+  "summarySequence": [
+    "Cahaya",
+    "CO₂ + H₂O",
+    "Glukosa + O₂",
+    "Respirasi",
+    "Energi",
+    "Siklus"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}
