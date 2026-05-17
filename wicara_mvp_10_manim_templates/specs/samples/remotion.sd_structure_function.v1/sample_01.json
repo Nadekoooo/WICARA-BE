@@ -1,42 +1,109 @@
 {
-  "id": "spec_107_remotion_sd_structure_function_v1",
+  "id": "remotion_v2_107_plant_animal_structure_function",
   "row_index": 107,
   "concept_type": "plant_animal_structure_function",
+  "concept_type_label_id": "Struktur dan fungsi bagian tubuh tumbuhan/hewan",
   "template_id": "remotion.sd_structure_function.v1",
+  "component": "StructureFunctionVideo",
+  "archetype": "structure_function",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_rive",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Struktur dan Fungsi Tumbuhan/Hewan",
-  "subtitle": "Bagian tubuh tumbuhan dan hewan memiliki fungsi khusus yang membantu mereka bertahan hidup.",
+  "durationInFrames": 1350,
+  "title": "Struktur dan fungsi bagian tubuh tumbuhan/hewan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `plant_animal_structure_function`.",
+  "keyIdea": "Bentuk bagian tubuh terkait dengan fungsi yang membantu makhluk hidup bertahan.",
   "steps": [
     {
-      "title": "Amati bagian tubuh",
-      "body": "Makhluk hidup tersusun atas bagian-bagian yang dapat dikenali."
+      "id": "compare",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Bandingkan tumbuhan dan hewan",
+      "narration": "Tumbuhan dan hewan memiliki bagian tubuh dengan bentuk yang berbeda."
     },
     {
-      "title": "Hubungkan fungsi",
-      "body": "Setiap bagian membantu organisme melakukan tugas tertentu."
+      "id": "plant-root",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Akar menyerap air",
+      "narration": "Akar tumbuhan membantu mengambil air dari tanah."
     },
     {
-      "title": "Bandingkan tumbuhan dan hewan",
-      "body": "Keduanya memiliki struktur yang sesuai dengan kebutuhan hidupnya."
+      "id": "plant-leaf",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Daun membuat makanan",
+      "narration": "Daun membantu tumbuhan membuat makanan dengan cahaya."
+    },
+    {
+      "id": "animal-beak",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Bagian tubuh hewan membantu makan",
+      "narration": "Paruh atau mulut hewan sesuai dengan jenis makanannya."
+    },
+    {
+      "id": "animal-move",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Kaki atau sirip membantu bergerak",
+      "narration": "Struktur gerak membantu hewan berpindah tempat."
+    },
+    {
+      "id": "adapt",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Struktur membantu adaptasi",
+      "narration": "Bentuk tubuh mendukung cara makhluk hidup bertahan."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Struktur dan fungsi saling menjelaskan",
+      "narration": "Kita memahami makhluk hidup dengan mengaitkan bagian tubuh dan fungsinya."
     }
   ],
-  "summary": "Template ini menampilkan dua panel besar tumbuhan dan hewan untuk memudahkan perbandingan fungsi struktural.",
-  "plant_parts": [
+  "visual": {
+    "plantParts": [
+      "Akar",
+      "Batang",
+      "Daun",
+      "Bunga"
+    ],
+    "animalParts": [
+      "Paruh",
+      "Sirip",
+      "Kaki",
+      "Bulu"
+    ]
+  },
+  "summarySequence": [
+    "Tumbuhan",
     "Akar",
-    "Batang",
     "Daun",
-    "Bunga"
+    "Hewan",
+    "Gerak",
+    "Adaptasi"
   ],
-  "animal_parts": [
-    "Paruh",
-    "Sirip",
-    "Kaki",
-    "Bulu"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

@@ -1,40 +1,107 @@
 {
-  "id": "spec_71_remotion_sd_mixture_separation_v1",
+  "id": "remotion_v2_071_mixture_separation_change",
   "row_index": 71,
   "concept_type": "mixture_separation_change",
+  "concept_type_label_id": "Campuran, pemisahan, larutan, dan perubahan fisika/kimia awal",
   "template_id": "remotion.sd_mixture_separation.v1",
+  "component": "SDMixtureSeparationVideo",
+  "archetype": "sd_mixture_separation",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_rive",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Campuran dan Pemisahan Sederhana",
-  "subtitle": "Campuran dapat dipisahkan dengan cara sederhana seperti penyaringan, pengendapan, atau pemilahan.",
+  "durationInFrames": 1350,
+  "title": "Campuran, pemisahan, larutan, dan perubahan fisika/kimia awal",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `mixture_separation_change`.",
+  "keyIdea": "Campuran dapat dipisahkan dengan memanfaatkan perbedaan sifat bahan.",
   "steps": [
     {
-      "title": "Bedakan campuran",
-      "body": "Campuran terdiri dari dua atau lebih zat yang bergabung tanpa membentuk zat baru."
+      "id": "mix",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Campuran berisi beberapa bahan",
+      "narration": "Campuran terbentuk ketika dua atau lebih bahan digabungkan."
     },
     {
-      "title": "Pilih cara pemisahan",
-      "body": "Cara pemisahan bergantung pada sifat bahan penyusunnya."
+      "id": "observe",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Amati sifat penyusun",
+      "narration": "Ukuran, kelarutan, dan wujud bahan membantu memilih cara pemisahan."
     },
     {
-      "title": "Hubungkan dengan contoh",
-      "body": "Contoh nyata membantu anak memahami prinsip pemisahan."
+      "id": "sort",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Pemilahan memisahkan benda besar",
+      "narration": "Bahan dengan ukuran atau bentuk berbeda dapat dipilah langsung."
+    },
+    {
+      "id": "filter",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Penyaringan menahan partikel",
+      "narration": "Saringan menahan partikel besar dan membiarkan cairan lewat."
+    },
+    {
+      "id": "evaporate",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Penguapan menyisakan zat terlarut",
+      "narration": "Jika air menguap, zat yang larut dapat tertinggal."
+    },
+    {
+      "id": "choose",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Pilih metode yang sesuai",
+      "narration": "Setiap campuran membutuhkan cara pemisahan yang sesuai sifatnya."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Pemisahan memakai sifat bahan",
+      "narration": "Kita memisahkan campuran dengan mengenali perbedaan penyusunnya."
     }
   ],
-  "summary": "Versi SD memakai visual alat dan bahan sederhana, bukan setup lab detail.",
-  "mixtures": [
-    "Pasir + air",
-    "Beras + batu",
-    "Garam + air"
-  ],
-  "methods": [
+  "visual": {
+    "mixtures": [
+      "Pasir + air",
+      "Beras + batu",
+      "Garam + air"
+    ],
+    "methods": [
+      "Memilah",
+      "Menyaring",
+      "Menguapkan"
+    ]
+  },
+  "summarySequence": [
+    "Campuran",
+    "Sifat bahan",
     "Memilah",
     "Menyaring",
-    "Menguapkan"
-  ]
+    "Menguapkan",
+    "Pilih metode"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

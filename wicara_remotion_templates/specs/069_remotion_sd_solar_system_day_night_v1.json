@@ -1,40 +1,107 @@
 {
-  "id": "spec_69_remotion_sd_solar_system_day_night_v1",
+  "id": "remotion_v2_069_solar_system_day_night",
   "row_index": 69,
   "concept_type": "solar_system_day_night",
+  "concept_type_label_id": "Siang-malam, Bulan-Matahari, dan tata surya awal",
   "template_id": "remotion.sd_solar_system_day_night.v1",
+  "component": "SolarDayNightVideo",
+  "archetype": "solar_day_night",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_manim",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Siang-Malam dan Tata Surya Awal",
-  "subtitle": "Rotasi Bumi menyebabkan siang dan malam, sementara Matahari dan Bulan tampak bergerak di langit.",
+  "durationInFrames": 1350,
+  "title": "Siang-malam, Bulan-Matahari, dan tata surya awal",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `solar_system_day_night`.",
+  "keyIdea": "Siang dan malam terjadi karena Bumi berotasi.",
   "steps": [
     {
-      "title": "Lihat posisi Matahari",
-      "body": "Matahari tampak bergeser di langit sepanjang hari."
+      "id": "sun",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Matahari memberi cahaya",
+      "narration": "Matahari menjadi sumber cahaya utama bagi Bumi."
     },
     {
-      "title": "Pahami rotasi Bumi",
-      "body": "Bagian Bumi yang menghadap Matahari mengalami siang."
+      "id": "earth",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Bumi berbentuk bola",
+      "narration": "Karena Bumi bulat, tidak semua bagian menerima cahaya secara bersamaan."
     },
     {
-      "title": "Hubungkan dengan pengalaman",
-      "body": "Pergantian siang dan malam diamati setiap hari."
+      "id": "rotation",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Bumi berputar",
+      "narration": "Bumi berotasi pada porosnya."
+    },
+    {
+      "id": "day",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Sisi terang mengalami siang",
+      "narration": "Bagian yang menghadap Matahari mengalami siang."
+    },
+    {
+      "id": "night",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Sisi gelap mengalami malam",
+      "narration": "Bagian yang membelakangi Matahari mengalami malam."
+    },
+    {
+      "id": "moon",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Bulan terlihat pada waktu tertentu",
+      "narration": "Bulan mengorbit Bumi dan tampak berubah posisi."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Rotasi menjelaskan pergantian hari",
+      "narration": "Model ini membantu memahami pergantian siang dan malam setiap hari."
     }
   ],
-  "summary": "Remotion memudahkan adegan rotasi sederhana dan transisi latar siang ke malam.",
-  "objects": [
+  "visual": {
+    "objects": [
+      "Matahari",
+      "Bumi",
+      "Bulan"
+    ],
+    "focus": [
+      "Rotasi",
+      "Siang",
+      "Malam"
+    ]
+  },
+  "summarySequence": [
     "Matahari",
     "Bumi",
-    "Bulan"
-  ],
-  "focus": [
     "Rotasi",
     "Siang",
-    "Malam"
-  ]
+    "Malam",
+    "Bulan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

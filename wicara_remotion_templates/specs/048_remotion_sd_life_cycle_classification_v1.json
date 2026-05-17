@@ -1,40 +1,107 @@
 {
-  "id": "spec_48_remotion_sd_life_cycle_classification_v1",
+  "id": "remotion_v2_048_living_things_classification_lifecycle",
   "row_index": 48,
   "concept_type": "living_things_classification_lifecycle",
+  "concept_type_label_id": "Ciri makhluk hidup, klasifikasi, dan siklus hidup",
   "template_id": "remotion.sd_life_cycle_classification.v1",
+  "component": "LifeCycleClassificationVideo",
+  "archetype": "sd_life_cycle",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_rive",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Klasifikasi dan Siklus Hidup Makhluk Hidup",
-  "subtitle": "Makhluk hidup memiliki ciri tertentu dan mengalami tahapan pertumbuhan atau metamorfosis.",
+  "durationInFrames": 1350,
+  "title": "Ciri makhluk hidup, klasifikasi, dan siklus hidup",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `living_things_classification_lifecycle`.",
+  "keyIdea": "Makhluk hidup bisa dikelompokkan dan mengalami tahapan hidup.",
   "steps": [
     {
-      "title": "Kenali ciri makhluk hidup",
-      "body": "Makhluk hidup tumbuh, bernapas, dan berkembang biak."
+      "id": "living",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Kenali ciri makhluk hidup",
+      "narration": "Makhluk hidup tumbuh, bernapas, membutuhkan makanan, dan berkembang biak."
     },
     {
-      "title": "Kelompokkan",
-      "body": "Hewan dan tumbuhan dapat dibedakan dari cirinya."
+      "id": "group",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Kelompokkan berdasarkan ciri",
+      "narration": "Hewan dan tumbuhan dapat dibedakan dari ciri tubuh dan cara hidupnya."
     },
     {
-      "title": "Ikuti perubahan",
-      "body": "Beberapa makhluk hidup mengalami tahapan siklus hidup yang jelas."
+      "id": "start",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Siklus hidup dimulai",
+      "narration": "Banyak hewan memulai hidup dari telur atau tahap awal tertentu."
+    },
+    {
+      "id": "growth",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Organisme tumbuh",
+      "narration": "Tubuh berubah ukuran dan bentuk seiring waktu."
+    },
+    {
+      "id": "adult",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Individu dewasa terbentuk",
+      "narration": "Tahap dewasa memungkinkan organisme berkembang biak."
+    },
+    {
+      "id": "repeat",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Siklus berulang",
+      "narration": "Siklus hidup berlanjut dari satu generasi ke generasi berikutnya."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Klasifikasi dan siklus membantu memahami kehidupan",
+      "narration": "Kita memahami makhluk hidup dari ciri dan perubahan tahap hidupnya."
     }
   ],
-  "summary": "Konsep klasifikasi dan siklus hidup disatukan secara masuk akal karena keduanya sama-sama fokus pada organisme dasar di tingkat SD.",
-  "groups": [
-    "Hewan",
-    "Tumbuhan"
+  "visual": {
+    "groups": [
+      "Hewan",
+      "Tumbuhan"
+    ],
+    "lifeCycle": [
+      "Telur",
+      "Larva",
+      "Pupa",
+      "Kupu-kupu"
+    ]
+  },
+  "summarySequence": [
+    "Ciri hidup",
+    "Kelompok",
+    "Tahap awal",
+    "Tumbuh",
+    "Dewasa",
+    "Berulang"
   ],
-  "life_cycle": [
-    "Telur",
-    "Larva",
-    "Pupa",
-    "Kupu-kupu"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

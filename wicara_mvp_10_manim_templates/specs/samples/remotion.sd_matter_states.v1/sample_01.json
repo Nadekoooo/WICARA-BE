@@ -1,40 +1,107 @@
 {
-  "id": "spec_68_remotion_sd_matter_states_v1",
+  "id": "remotion_v2_068_matter_properties_states",
   "row_index": 68,
   "concept_type": "matter_properties_states",
+  "concept_type_label_id": "Benda, sifat bahan, wujud zat, dan perubahan wujud",
   "template_id": "remotion.sd_matter_states.v1",
+  "component": "SDMatterStatesVideo",
+  "archetype": "sd_matter_states",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_rive",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Sifat Benda dan Wujud Zat",
-  "subtitle": "Benda memiliki sifat tertentu dan zat dapat berwujud padat, cair, atau gas.",
+  "durationInFrames": 1350,
+  "title": "Benda, sifat bahan, wujud zat, dan perubahan wujud",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `matter_properties_states`.",
+  "keyIdea": "Padat, cair, dan gas dapat dikenali dari bentuk, volume, dan contohnya.",
   "steps": [
     {
-      "title": "Kelompokkan wujud zat",
-      "body": "Wujud zat berbeda pada bentuk dan susunan partikelnya."
+      "id": "object",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Benda punya sifat",
+      "narration": "Benda dapat dibedakan dari bentuk, tekstur, dan wujudnya."
     },
     {
-      "title": "Amati contoh",
-      "body": "Contoh sehari-hari membantu anak memahami perbedaan wujud."
+      "id": "solid",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Padat mempertahankan bentuk",
+      "narration": "Benda padat biasanya memiliki bentuk yang tetap."
     },
     {
-      "title": "Hubungkan perubahan wujud",
-      "body": "Pemanasan atau pendinginan dapat mengubah wujud zat."
+      "id": "liquid",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Cair mengikuti wadah",
+      "narration": "Zat cair mengalir dan bentuknya mengikuti wadah."
+    },
+    {
+      "id": "gas",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Gas mengisi ruang",
+      "narration": "Gas menyebar dan mengisi ruang yang tersedia."
+    },
+    {
+      "id": "change",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Wujud dapat berubah",
+      "narration": "Pemanasan atau pendinginan dapat mengubah wujud zat."
+    },
+    {
+      "id": "example",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Contoh sehari-hari membantu memahami",
+      "narration": "Es, air, dan uap adalah contoh perubahan wujud yang mudah diamati."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Wujud zat dapat diamati",
+      "narration": "Sifat wujud zat bisa dipelajari dari contoh dekat kehidupan siswa."
     }
   ],
-  "summary": "Template ini berbeda dari chem particle matter karena disederhanakan untuk SD dengan ikon dan contoh konkret.",
-  "states": [
+  "visual": {
+    "states": [
+      "Padat",
+      "Cair",
+      "Gas"
+    ],
+    "examples": [
+      "Es",
+      "Air",
+      "Uap"
+    ]
+  },
+  "summarySequence": [
+    "Benda",
     "Padat",
     "Cair",
-    "Gas"
+    "Gas",
+    "Perubahan",
+    "Contoh"
   ],
-  "examples": [
-    "Es",
-    "Air",
-    "Uap"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

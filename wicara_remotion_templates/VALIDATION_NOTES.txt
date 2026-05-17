@@ -1,7 +1,1 @@
-Total specs: 43
-Total unique template IDs: 41
-
-Validation performed:
-- JSON spec files generated for all rows.
-- Registry file created for Remotion compositions.
-- Reuse constrained to logically matching visual archetypes only.
+Generated 43 v2 Remotion specs. Typecheck command is run separately.

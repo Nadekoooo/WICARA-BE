@@ -1,41 +1,108 @@
 {
-  "id": "spec_34_remotion_bio_structure_labeling_v1",
+  "id": "remotion_v2_034_life_structure_classification",
   "row_index": 34,
   "concept_type": "life_structure_classification",
+  "concept_type_label_id": "Makhluk hidup, klasifikasi, dan struktur organisme",
   "template_id": "remotion.bio_structure_labeling.v1",
+  "component": "BioStructureLabelingVideo",
+  "archetype": "bio_structure_labeling",
+  "domain": "biology",
   "media_engine_family": "remotion_svg",
-  "audience_level": "smp",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Struktur Organisme dan Klasifikasi",
-  "subtitle": "Bagian tubuh organisme dapat diberi label untuk membantu identifikasi dan klasifikasi.",
+  "durationInFrames": 1350,
+  "title": "Makhluk hidup, klasifikasi, dan struktur organisme",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `life_structure_classification`.",
+  "keyIdea": "Struktur organisme membantu kita memahami fungsi dan klasifikasinya.",
   "steps": [
     {
-      "title": "Amati struktur",
-      "body": "Bagian-bagian organisme memiliki bentuk dan fungsi tertentu."
+      "id": "organism",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Amati organisme utuh",
+      "narration": "Kita mulai dari bentuk organisme secara keseluruhan."
     },
     {
-      "title": "Beri label",
-      "body": "Label membantu menghubungkan nama bagian dengan letaknya."
+      "id": "root",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Akar menyerap air",
+      "narration": "Akar membantu menyerap air dan mineral dari tanah."
     },
     {
-      "title": "Hubungkan dengan klasifikasi",
-      "body": "Ciri struktur dapat dipakai dalam pengelompokan organisme."
+      "id": "stem",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Batang mengangkut zat",
+      "narration": "Batang menopang tubuh tumbuhan dan mengangkut zat."
+    },
+    {
+      "id": "leaf",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Daun membuat makanan",
+      "narration": "Daun menjadi tempat utama fotosintesis pada banyak tumbuhan."
+    },
+    {
+      "id": "flower",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Bunga berperan dalam reproduksi",
+      "narration": "Bunga membantu proses perkembangbiakan tumbuhan berbunga."
+    },
+    {
+      "id": "classify",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Ciri membantu klasifikasi",
+      "narration": "Bagian tubuh menjadi petunjuk untuk mengelompokkan organisme."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Struktur dan fungsi saling terkait",
+      "narration": "Setiap bagian tubuh memiliki fungsi yang mendukung kehidupan organisme."
     }
   ],
-  "summary": "Template labeling dipakai karena inti konsepnya adalah penunjukan bagian dan identifikasi ciri.",
-  "organism": "Tumbuhan berbunga",
-  "parts": [
+  "visual": {
+    "organism": "Tumbuhan berbunga",
+    "parts": [
+      "Akar",
+      "Batang",
+      "Daun",
+      "Bunga"
+    ],
+    "classification": [
+      "Plantae",
+      "Angiospermae"
+    ]
+  },
+  "summarySequence": [
+    "Organisme",
     "Akar",
     "Batang",
     "Daun",
-    "Bunga"
+    "Bunga",
+    "Klasifikasi"
   ],
-  "classification": [
-    "Plantae",
-    "Angiospermae"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

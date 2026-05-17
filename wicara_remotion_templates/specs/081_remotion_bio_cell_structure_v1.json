@@ -1,41 +1,108 @@
 {
-  "id": "spec_81_remotion_bio_cell_structure_v1",
+  "id": "remotion_v2_081_cell_structure_organelle",
   "row_index": 81,
   "concept_type": "cell_structure_organelle",
+  "concept_type_label_id": "Struktur sel dan organel",
   "template_id": "remotion.bio_cell_structure.v1",
+  "component": "CellStructureVideo",
+  "archetype": "cell_structure",
+  "domain": "biology",
   "media_engine_family": "remotion_svg",
-  "audience_level": "smp",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Struktur Sel dan Organel",
-  "subtitle": "Sel memiliki bagian-bagian khusus yang menjalankan fungsi tertentu dalam kehidupan organisme.",
+  "durationInFrames": 1350,
+  "title": "Struktur sel dan organel",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `cell_structure_organelle`.",
+  "keyIdea": "Organel bekerja sama menjaga kehidupan sel.",
   "steps": [
     {
-      "title": "Kenali sel sebagai unit dasar",
-      "body": "Semua makhluk hidup tersusun atas sel."
+      "id": "cell",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Sel adalah unit dasar kehidupan",
+      "narration": "Semua makhluk hidup tersusun dari sel."
     },
     {
-      "title": "Beri label organel",
-      "body": "Setiap organel memiliki bentuk dan fungsi yang khas."
+      "id": "membrane",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Membran membatasi sel",
+      "narration": "Membran mengatur keluar masuknya zat."
     },
     {
-      "title": "Bandingkan tipe sel",
-      "body": "Sel tumbuhan dan sel hewan memiliki persamaan serta perbedaan."
+      "id": "nucleus",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Inti mengatur aktivitas",
+      "narration": "Inti menyimpan informasi genetik dan mengarahkan aktivitas sel."
+    },
+    {
+      "id": "mitochondria",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Mitokondria menghasilkan energi",
+      "narration": "Mitokondria membantu menghasilkan energi untuk kerja sel."
+    },
+    {
+      "id": "chloroplast",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Kloroplas melakukan fotosintesis",
+      "narration": "Pada sel tumbuhan, kloroplas membantu menangkap energi cahaya."
+    },
+    {
+      "id": "compare",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Sel hewan dan tumbuhan dibandingkan",
+      "narration": "Keduanya memiliki persamaan dan perbedaan organel."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Organel bekerja sebagai sistem",
+      "narration": "Setiap organel memiliki fungsi yang mendukung kehidupan sel."
     }
   ],
-  "summary": "Template labeling sel memang membutuhkan layout khusus dengan callout organel.",
-  "organelles": [
+  "visual": {
+    "organelles": [
+      "Membran",
+      "Inti",
+      "Sitoplasma",
+      "Mitokondria",
+      "Kloroplas"
+    ],
+    "cellTypes": [
+      "Sel hewan",
+      "Sel tumbuhan"
+    ]
+  },
+  "summarySequence": [
+    "Sel",
     "Membran",
     "Inti",
-    "Sitoplasma",
     "Mitokondria",
-    "Kloroplas"
+    "Kloroplas",
+    "Perbandingan"
   ],
-  "cell_types": [
-    "Sel hewan",
-    "Sel tumbuhan"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

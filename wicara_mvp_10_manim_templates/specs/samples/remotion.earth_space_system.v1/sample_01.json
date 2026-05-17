@@ -1,40 +1,107 @@
 {
-  "id": "spec_11_remotion_earth_space_system_v1",
+  "id": "remotion_v2_011_earth_space_system_model",
   "row_index": 11,
   "concept_type": "earth_space_system_model",
+  "concept_type_label_id": "Bumi, tata surya, gerak langit, dan kebencanaan",
   "template_id": "remotion.earth_space_system.v1",
+  "component": "EarthSpaceSystemVideo",
+  "archetype": "orbit_system",
+  "domain": "earth",
   "media_engine_family": "remotion_svg",
-  "audience_level": "smp",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Bumi, Tata Surya, dan Gerak Langit",
-  "subtitle": "Gerak Bumi, Bulan, dan Matahari menjelaskan siang-malam, fase Bulan, musim, dan peristiwa kebumian tertentu.",
+  "durationInFrames": 1350,
+  "title": "Bumi, tata surya, gerak langit, dan kebencanaan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `earth_space_system_model`.",
+  "keyIdea": "Rotasi dan revolusi menjelaskan pola langit yang tampak dari Bumi.",
   "steps": [
     {
-      "title": "Amati posisi benda langit",
-      "body": "Matahari, Bumi, dan Bulan berada pada posisi yang terus berubah."
+      "id": "space",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Benda langit punya posisi",
+      "narration": "Matahari, Bumi, dan Bulan berada pada susunan yang terus berubah."
     },
     {
-      "title": "Hubungkan gerak dan fenomena",
-      "body": "Rotasi dan revolusi menghasilkan pola astronomi yang teramati."
+      "id": "rotate",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Bumi berotasi",
+      "narration": "Rotasi Bumi membuat sisi yang menghadap Matahari mengalami siang."
     },
     {
-      "title": "Kaitkan dengan kehidupan",
-      "body": "Fenomena langit memengaruhi kalender, musim, dan observasi sehari-hari."
+      "id": "night",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Sisi lain mengalami malam",
+      "narration": "Bagian yang membelakangi Matahari berada dalam kondisi malam."
+    },
+    {
+      "id": "moon",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Bulan mengorbit Bumi",
+      "narration": "Gerak Bulan mengubah posisi relatif terhadap Bumi dan Matahari."
+    },
+    {
+      "id": "phenomena",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Fenomena langit muncul",
+      "narration": "Gerak ini menjelaskan fase Bulan, gerhana, dan pola langit lain."
+    },
+    {
+      "id": "earth",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Hubungkan dengan kebumian",
+      "narration": "Model ruang angkasa membantu membaca waktu, musim, dan peristiwa alam."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Rangkai model tata surya",
+      "narration": "Gerak langit menjadi masuk akal ketika kita memodelkan posisi dan arah gerak."
     }
   ],
-  "summary": "Model ruang angkasa membantu siswa menghubungkan gerak benda langit dengan fenomena yang tampak dari Bumi.",
-  "bodies": [
+  "visual": {
+    "objects": [
+      "Matahari",
+      "Bumi",
+      "Bulan"
+    ],
+    "phenomena": [
+      "Siang-malam",
+      "Musim",
+      "Gerhana"
+    ]
+  },
+  "summarySequence": [
     "Matahari",
-    "Bumi",
-    "Bulan"
+    "Rotasi Bumi",
+    "Siang",
+    "Malam",
+    "Bulan",
+    "Fenomena"
   ],
-  "phenomena": [
-    "Siang-malam",
-    "Musim",
-    "Gerhana"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

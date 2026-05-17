@@ -1,7 +1,24 @@
-import {BaseTemplateSpec} from './helpers';
-export type TemplateComponent = React.FC<{spec: BaseTemplateSpec}>;
-export type TemplateRegistryEntry = {
-  templateId: string;
-  componentName: string;
-  defaultSpec: BaseTemplateSpec;
+export type VideoStep = { id: string; start: number; duration: number; title: string; narration: string };
+export type RemotionConceptSpec = {
+  id: string;
+  row_index: number;
+  concept_type: string;
+  concept_type_label_id: string;
+  template_id: string;
+  component: string;
+  archetype: string;
+  domain: string;
+  media_engine_family: string;
+  language: string;
+  fps: number;
+  width: number;
+  height: number;
+  durationInFrames: number;
+  title: string;
+  subtitle: string;
+  keyIdea: string;
+  steps: VideoStep[];
+  visual: any;
+  summarySequence: string[];
+  qualityIntent: any;
 };

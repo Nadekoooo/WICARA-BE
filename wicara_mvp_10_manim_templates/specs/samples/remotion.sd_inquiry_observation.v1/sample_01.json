@@ -1,41 +1,108 @@
 {
-  "id": "spec_67_remotion_sd_inquiry_observation_v1",
+  "id": "remotion_v2_067_observation_inquiry_skills",
   "row_index": 67,
   "concept_type": "observation_inquiry_skills",
+  "concept_type_label_id": "Observasi, bertanya, mengelompokkan, dan mencatat data",
   "template_id": "remotion.sd_inquiry_observation.v1",
+  "component": "InquiryObservationVideo",
+  "archetype": "inquiry_observation",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_rive",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Observasi dan Keterampilan Inkuiri",
-  "subtitle": "Siswa belajar mengamati, bertanya, mengelompokkan, dan mencatat hasil pengamatan.",
+  "durationInFrames": 1350,
+  "title": "Observasi, bertanya, mengelompokkan, dan mencatat data",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `observation_inquiry_skills`.",
+  "keyIdea": "Inkuiri dimulai dari mengamati, bertanya, mengelompokkan, dan mencatat.",
   "steps": [
     {
-      "title": "Mulai dari observasi",
-      "body": "Ilmu pengetahuan diawali dengan pengamatan yang teliti."
+      "id": "look",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Amati objek",
+      "narration": "Siswa mulai dengan melihat bentuk, warna, ukuran, atau perubahan objek."
     },
     {
-      "title": "Ajukan pertanyaan",
-      "body": "Pertanyaan membantu menentukan arah penyelidikan."
+      "id": "ask",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Ajukan pertanyaan",
+      "narration": "Pertanyaan membantu menentukan apa yang ingin diketahui."
     },
     {
-      "title": "Catat hasil",
-      "body": "Data sederhana perlu dicatat dan dikelompokkan."
+      "id": "compare",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Bandingkan ciri",
+      "narration": "Objek dapat dibandingkan berdasarkan ciri yang terlihat."
+    },
+    {
+      "id": "sort",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Kelompokkan",
+      "narration": "Objek dengan ciri serupa dapat dimasukkan dalam kelompok yang sama."
+    },
+    {
+      "id": "record",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Catat hasil",
+      "narration": "Hasil pengamatan perlu dicatat agar tidak hilang."
+    },
+    {
+      "id": "conclude",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Buat kesimpulan sederhana",
+      "narration": "Kesimpulan sederhana dibuat dari data yang diamati."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Ilmu dimulai dari rasa ingin tahu",
+      "narration": "Keterampilan inkuiri membantu siswa belajar seperti ilmuwan kecil."
     }
   ],
-  "summary": "Konsep ini memang lebih cocok sebagai storyboard proses berpikir anak daripada diagram matematis.",
-  "skills": [
-    "Mengamati",
-    "Bertanya",
-    "Mengelompokkan",
-    "Mencatat"
+  "visual": {
+    "skills": [
+      "Mengamati",
+      "Bertanya",
+      "Mengelompokkan",
+      "Mencatat"
+    ],
+    "objects": [
+      "Daun",
+      "Batu",
+      "Air"
+    ]
+  },
+  "summarySequence": [
+    "Amati",
+    "Tanya",
+    "Bandingkan",
+    "Kelompokkan",
+    "Catat",
+    "Simpulkan"
   ],
-  "objects": [
-    "Daun",
-    "Batu",
-    "Air"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

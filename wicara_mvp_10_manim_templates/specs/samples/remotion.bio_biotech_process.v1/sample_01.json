@@ -1,45 +1,112 @@
 {
-  "id": "spec_24_remotion_bio_biotech_process_v1",
+  "id": "remotion_v2_024_biotechnology_process_ethics",
   "row_index": 24,
   "concept_type": "biotechnology_process_ethics",
+  "concept_type_label_id": "Bioteknologi, inovasi, dan etika",
   "template_id": "remotion.bio_biotech_process.v1",
+  "component": "BiotechProcessVideo",
+  "archetype": "biotech_process",
+  "domain": "biology",
   "media_engine_family": "remotion_svg",
-  "audience_level": "sma",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Bioteknologi, Proses, dan Etika",
-  "subtitle": "Bioteknologi memanfaatkan organisme atau komponen biologis untuk menghasilkan produk, namun juga memunculkan pertimbangan etika.",
+  "durationInFrames": 1350,
+  "title": "Bioteknologi, inovasi, dan etika",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `biotechnology_process_ethics`.",
+  "keyIdea": "Bioteknologi mengubah proses biologis menjadi produk, tetapi perlu pertimbangan etika.",
   "steps": [
     {
-      "title": "Kenali bahan dan proses",
-      "body": "Bioteknologi dapat bersifat tradisional maupun modern."
+      "id": "material",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Mulai dari bahan biologis",
+      "narration": "Bioteknologi memanfaatkan organisme, sel, atau molekul biologis."
     },
     {
-      "title": "Lihat manfaat",
-      "body": "Produk bioteknologi membantu bidang pangan, kesehatan, dan lingkungan."
+      "id": "process",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Proses dikendalikan",
+      "narration": "Proses biologis dikondisikan agar menghasilkan produk tertentu."
     },
     {
-      "title": "Bahas etika",
-      "body": "Setiap inovasi perlu ditimbang dari sisi keamanan, keadilan, dan tanggung jawab."
+      "id": "product",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Produk dimanfaatkan",
+      "narration": "Produk bioteknologi bisa dipakai untuk pangan, kesehatan, dan lingkungan."
+    },
+    {
+      "id": "modern",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Teknologi modern memperluas kemampuan",
+      "narration": "Bioteknologi modern dapat memodifikasi proses pada tingkat gen atau sel."
+    },
+    {
+      "id": "risk",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Ada risiko yang harus dinilai",
+      "narration": "Keamanan, dampak lingkungan, dan akses menjadi pertimbangan penting."
+    },
+    {
+      "id": "ethics",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Etika mengarahkan inovasi",
+      "narration": "Inovasi perlu digunakan secara bertanggung jawab."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Proses dan etika berjalan bersama",
+      "narration": "Bioteknologi bukan hanya soal produk, tetapi juga keputusan penggunaannya."
     }
   ],
-  "summary": "Template ini menyeimbangkan pemahaman proses teknis dan diskusi etika bioteknologi.",
-  "pipeline": [
-    "Bahan biologis",
+  "visual": {
+    "pipeline": [
+      "Bahan biologis",
+      "Proses",
+      "Produk"
+    ],
+    "examples": [
+      "Tempe",
+      "Insulin",
+      "Kultur jaringan"
+    ],
+    "ethics": [
+      "Keamanan",
+      "Akses",
+      "Lingkungan"
+    ]
+  },
+  "summarySequence": [
+    "Bahan",
     "Proses",
-    "Produk"
+    "Produk",
+    "Manfaat",
+    "Risiko",
+    "Etika"
   ],
-  "examples": [
-    "Tempe",
-    "Insulin",
-    "Kultur jaringan"
-  ],
-  "ethics": [
-    "Keamanan",
-    "Akses",
-    "Dampak lingkungan"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }
