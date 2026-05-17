@@ -7,8 +7,10 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.modules.accounts import models as account_models  # noqa: F401
 from app.modules.curriculum import models as curriculum_models  # noqa: F401
+from app.modules.evidence import models as evidence_models  # noqa: F401
 from app.modules.inputs import models as input_models  # noqa: F401
 from app.modules.learning import models as learning_models  # noqa: F401
+from app.modules.learning_goal_resolution import models as goal_resolution_models  # noqa: F401
 from app.modules.question_bank import models as question_bank_models  # noqa: F401
 from app.modules.workspaces import models as workspace_models  # noqa: F401
 

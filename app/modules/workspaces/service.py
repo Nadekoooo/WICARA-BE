@@ -121,6 +121,17 @@ async def append_workspace_event(
         text_payload=text_payload,
         events=list(workspace.events),
     )
+    if (
+        normalized_event_type == "quiz_answer"
+        and metadata.get("is_correct") is True
+        and tutor_response is not None
+    ):
+        tutor_response = tutor_response.model_copy(
+            update={
+                "intent": "recommend_practice",
+                "next_actions": ["apply_concept", "answer_quiz"],
+            }
+        )
 
     event_metadata = {**dict(metadata), "ai_audit": ai_audit}
     audit_metadata = {
@@ -203,6 +214,8 @@ def workspace_to_schema(session: Session, workspace: WorkspaceSession) -> Worksp
 
 
 def event_to_schema(event: WorkspaceEvent) -> WorkspaceEventRead:
+    public_metadata = dict(event.metadata_json or {})
+    public_metadata.pop("ai_audit", None)
     return WorkspaceEventRead(
         id=event.id,
         workspace_id=event.workspace_session_id,
@@ -213,7 +226,7 @@ def event_to_schema(event: WorkspaceEvent) -> WorkspaceEventRead:
         image_asset_id=event.image_asset_id,
         media_artifact_id=event.media_artifact_id,
         input_event_id=event.input_event_id,
-        metadata=event.metadata_json or {},
+        metadata=public_metadata,
         created_at=event.created_at.isoformat() if event.created_at else "",
     )
 
