@@ -1,92 +1,61 @@
 {
-  "id": "sample_scientific_inquiry_distinct",
-  "node_id": "phase4_science_inquiry_data",
+  "id": "ct_001_scientific_inquiry_process",
+  "node_id": "scientific_inquiry_process",
   "template_id": "manim.scientific_inquiry_data.v1",
   "phase": "D",
   "audience_level": "smp",
   "language": "id",
-  "title": "Inkuiri Ilmiah dari Data",
-  "subtitle": "Pertanyaan, variabel, data, lalu kesimpulan.",
-  "research_question": "Apakah durasi cahaya memengaruhi tinggi tanaman?",
-  "hypothesis": "Semakin lama terkena cahaya, tanaman tumbuh lebih tinggi.",
+  "title": "Keterampilan Proses Sains",
+  "subtitle": "Pertanyaan, variabel, observasi, dan kesimpulan membentuk alur berpikir ilmiah.",
+  "research_question": "Apakah jumlah pupuk memengaruhi tinggi tanaman kacang hijau?",
+  "hypothesis": "Semakin tepat jumlah pupuk yang diberikan, tanaman akan tumbuh lebih tinggi.",
   "variables": {
-    "independent": "Durasi cahaya",
+    "independent": "Jumlah pupuk",
     "dependent": "Tinggi tanaman",
     "controlled": [
       "Jenis tanaman",
-      "Air",
-      "Media tanam"
+      "Jumlah air",
+      "Lama penyinaran"
     ]
   },
   "observations": [
     {
+      "x": 1,
+      "y": 6.0,
+      "label": "1 gram"
+    },
+    {
       "x": 2,
-      "y": 4.0,
-      "label": "2 jam"
+      "y": 7.2,
+      "label": "2 gram"
+    },
+    {
+      "x": 3,
+      "y": 8.0,
+      "label": "3 gram"
     },
     {
       "x": 4,
-      "y": 6.1,
-      "label": "4 jam"
-    },
-    {
-      "x": 6,
-      "y": 8.2,
-      "label": "6 jam"
-    },
-    {
-      "x": 8,
-      "y": 9.0,
-      "label": "8 jam"
+      "y": 8.5,
+      "label": "4 gram"
     }
   ],
-  "x_label": "cahaya",
+  "x_label": "pupuk",
   "y_label": "tinggi",
-  "conclusion": "Data mendukung hipotesis karena tinggi tanaman cenderung naik saat durasi cahaya bertambah.",
+  "conclusion": "Data menunjukkan tinggi tanaman cenderung meningkat saat jumlah pupuk ditambah dalam rentang percobaan ini.",
   "steps": [
     {
       "title": "Mulai dari pertanyaan",
-      "body": "Pertanyaan menentukan data apa yang perlu dikumpulkan.",
-      "narration": "Mulai dari pertanyaan. Pertanyaan menentukan data apa yang perlu dikumpulkan."
+      "body": "Pertanyaan penelitian menentukan arah pengamatan dan data yang dibutuhkan."
     },
     {
       "title": "Pisahkan variabel",
-      "body": "Variabel bebas diubah, variabel terikat diamati, variabel kontrol dijaga tetap.",
-      "narration": "Pisahkan variabel. Variabel bebas diubah, variabel terikat diamati, variabel kontrol dijaga tetap."
+      "body": "Variabel bebas diubah, variabel terikat diukur, dan variabel kontrol dijaga tetap."
     },
     {
-      "title": "Tarik kesimpulan",
-      "body": "Kesimpulan harus kembali ke pola data, bukan hanya tebakan.",
-      "narration": "Tarik kesimpulan. Kesimpulan harus kembali ke pola data, bukan hanya tebakan."
+      "title": "Hubungkan data dan kesimpulan",
+      "body": "Kesimpulan harus berasal dari pola data yang benar-benar terlihat."
     }
   ],
-  "summary": "Inkuiri ilmiah yang baik menghubungkan pertanyaan, variabel, data, dan kesimpulan secara konsisten.",
-  "intro_narration": "Pertanyaan, variabel, data, lalu kesimpulan.",
-  "summary_narration": "Inkuiri ilmiah yang baik menghubungkan pertanyaan, variabel, data, dan kesimpulan secara konsisten.",
-  "voiceover_script": "Pertanyaan, variabel, data, lalu kesimpulan.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Pertanyaan, variabel, data, lalu kesimpulan."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Mulai dari pertanyaan. Pertanyaan menentukan data apa yang perlu dikumpulkan."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Pisahkan variabel. Variabel bebas diubah, variabel terikat diamati, variabel kontrol dijaga tetap."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Tarik kesimpulan. Kesimpulan harus kembali ke pola data, bukan hanya tebakan."
-    },
-    {
-      "slot": "summary",
-      "text": "Inkuiri ilmiah yang baik menghubungkan pertanyaan, variabel, data, dan kesimpulan secara konsisten."
-    }
-  ]
+  "summary": "Keterampilan proses sains menekankan hubungan yang runtut antara pertanyaan, rancangan, data, dan kesimpulan."
 }

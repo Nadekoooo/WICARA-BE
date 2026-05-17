@@ -1,0 +1,43 @@
+{
+  "id": "spec_30_remotion_sd_ecosystem_food_chain_v1",
+  "row_index": 30,
+  "concept_type": "ecosystem_interdependence",
+  "template_id": "remotion.sd_ecosystem_food_chain.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Habitat, Adaptasi, dan Rantai Makanan",
+  "subtitle": "Makhluk hidup memiliki habitat, cara beradaptasi, dan hubungan makan-dimakan dalam ekosistem.",
+  "steps": [
+    {
+      "title": "Kenali habitat",
+      "body": "Setiap makhluk hidup tinggal di lingkungan yang sesuai."
+    },
+    {
+      "title": "Lihat adaptasi",
+      "body": "Tubuh atau perilaku membantu makhluk hidup bertahan."
+    },
+    {
+      "title": "Susun rantai makanan",
+      "body": "Rantai makanan menunjukkan aliran energi sederhana di alam."
+    }
+  ],
+  "summary": "Konsep SD ini divisualisasikan sebagai adegan habitat dan rantai makanan yang ramah anak.",
+  "habitat": "Sawah",
+  "chain": [
+    "Rumput",
+    "Belalang",
+    "Katak",
+    "Ular",
+    "Elang"
+  ],
+  "adaptations": [
+    "Paruh",
+    "Bulu",
+    "Warna tubuh"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "spec_105_remotion_bio_health_disorder_v1",
+  "row_index": 105,
+  "concept_type": "disease_disorder_context",
+  "template_id": "remotion.bio_health_disorder.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Gangguan Sistem Organ dan Kesehatan",
+  "subtitle": "Gangguan pada sistem tubuh dapat dikenali dari gejala, penyebab, dan cara pencegahan atau penanganannya.",
+  "steps": [
+    {
+      "title": "Kenali contoh gangguan",
+      "body": "Penyakit dapat menyerang sistem organ yang berbeda."
+    },
+    {
+      "title": "Hubungkan gejala dan sebab",
+      "body": "Pemahaman gejala membantu mengenali masalah kesehatan."
+    },
+    {
+      "title": "Tekankan pencegahan",
+      "body": "Perilaku sehat dan penanganan dini sangat penting."
+    }
+  ],
+  "summary": "Template ini dibuat seperti kartu-kasus kesehatan sehingga lebih sesuai untuk konteks disorder dibanding sistem tubuh normal.",
+  "cases": [
+    "Asma",
+    "Anemia",
+    "Diabetes"
+  ],
+  "columns": [
+    "Sistem",
+    "Gejala",
+    "Pencegahan"
+  ]
+}

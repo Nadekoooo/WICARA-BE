@@ -1,0 +1,45 @@
+{
+  "id": "spec_89_remotion_chem_material_environment_v1",
+  "row_index": 89,
+  "concept_type": "materials_nanotech_environment",
+  "template_id": "remotion.chem_material_environment.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Material, Nanoteknologi, dan Lingkungan",
+  "subtitle": "Material modern dan nanoteknologi memiliki sifat khusus, aplikasi luas, dan dampak lingkungan yang perlu dipertimbangkan.",
+  "steps": [
+    {
+      "title": "Kenali jenis material",
+      "body": "Setiap material memiliki struktur dan sifat unik."
+    },
+    {
+      "title": "Lihat aplikasi",
+      "body": "Material canggih dipakai pada berbagai teknologi."
+    },
+    {
+      "title": "Nilai dampak",
+      "body": "Penggunaan material harus mempertimbangkan keberlanjutan lingkungan."
+    }
+  ],
+  "summary": "Konsep ini membutuhkan panel sifat-aplikasi-dampak, bukan sekadar diagram kimia tradisional.",
+  "materials": [
+    "Polimer",
+    "Komposit",
+    "Nanopartikel"
+  ],
+  "applications": [
+    "Sensor",
+    "Pelapis",
+    "Medis"
+  ],
+  "impacts": [
+    "Limbah",
+    "Daur ulang",
+    "Toksisitas"
+  ]
+}

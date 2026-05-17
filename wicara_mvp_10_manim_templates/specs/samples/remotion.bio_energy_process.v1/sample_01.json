@@ -1,0 +1,46 @@
+{
+  "id": "spec_85_remotion_bio_energy_process_v1",
+  "row_index": 85,
+  "concept_type": "photosynthesis_respiration_process",
+  "template_id": "remotion.bio_energy_process.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Fotosintesis dan Respirasi Sel",
+  "subtitle": "Tumbuhan membuat makanan melalui fotosintesis, sedangkan respirasi melepaskan energi dari makanan.",
+  "steps": [
+    {
+      "title": "Bandingkan dua proses",
+      "body": "Fotosintesis dan respirasi sama-sama penting tetapi arahnya berbeda."
+    },
+    {
+      "title": "Lihat input-output",
+      "body": "Setiap proses memiliki bahan masuk dan hasil keluar tertentu."
+    },
+    {
+      "title": "Hubungkan energi",
+      "body": "Keduanya menjelaskan aliran energi dalam makhluk hidup."
+    }
+  ],
+  "summary": "Layout dua proses berdampingan dipilih agar hubungan timbal balik keduanya mudah terlihat.",
+  "inputs_outputs": {
+    "photosynthesis": [
+      "CO₂",
+      "H₂O",
+      "Cahaya",
+      "Glukosa",
+      "O₂"
+    ],
+    "respiration": [
+      "Glukosa",
+      "O₂",
+      "CO₂",
+      "H₂O",
+      "Energi"
+    ]
+  }
+}

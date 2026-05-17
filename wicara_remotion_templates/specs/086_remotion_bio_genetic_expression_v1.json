@@ -1,0 +1,41 @@
+{
+  "id": "spec_86_remotion_bio_genetic_expression_v1",
+  "row_index": 86,
+  "concept_type": "genetic_information_expression",
+  "template_id": "remotion.bio_genetic_expression.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "DNA, Gen, dan Sintesis Protein",
+  "subtitle": "Informasi genetik disimpan dalam DNA, ditranskripsi menjadi RNA, lalu diterjemahkan menjadi protein.",
+  "steps": [
+    {
+      "title": "Simpan informasi",
+      "body": "DNA menyimpan instruksi genetik."
+    },
+    {
+      "title": "Transkripsi",
+      "body": "Informasi DNA disalin menjadi RNA."
+    },
+    {
+      "title": "Translasi",
+      "body": "Ribosom membaca RNA untuk menyusun protein."
+    }
+  ],
+  "summary": "Karena konsep ini linear dan multi-level, template pipeline genomik dibuat khusus dan tidak direuse ke biotek tanpa penyesuaian.",
+  "stages": [
+    "DNA",
+    "mRNA",
+    "Ribosom",
+    "Protein"
+  ],
+  "keywords": [
+    "Transkripsi",
+    "Translasi",
+    "Kodons"
+  ]
+}

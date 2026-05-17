@@ -1,60 +1,52 @@
 {
-  "id": "sample_ratio_scale_proportion_95",
-  "node_id": "phase3_ratio_scale_proportion",
+  "id": "ct_007_fraction_ratio_proportion_scaling",
+  "node_id": "fraction_ratio_proportion_scaling",
   "template_id": "manim.ratio_proportion.v1",
-  "phase": "C",
-  "audience_level": "sd",
+  "phase": "D",
+  "audience_level": "smp",
   "language": "id",
-  "title": "Rasio, Skala, dan Penalaran Proporsional Awal",
-  "subtitle": "Rasio membandingkan dua jumlah, sedangkan skala mempertahankan perbandingan saat ukuran berubah.",
-  "ratio": [
-    2,
-    3
-  ],
-  "labels": [
-    "sirup",
-    "air"
-  ],
-  "context": "Membuat minuman dengan perbandingan sirup dan air",
+  "title": "Pecahan, Rasio, Proporsi, dan Skala",
+  "subtitle": "Rasio dan proporsi menjelaskan perbandingan yang tetap saat semua bagian diskalakan bersama.",
+  "context": "Resep minuman",
   "quantities": [
     {
-      "label": "sirup",
-      "value": 2,
+      "label": "Sirup",
+      "value": 3,
       "unit": "bagian"
     },
     {
-      "label": "air",
-      "value": 3,
+      "label": "Air",
+      "value": 7,
       "unit": "bagian"
     }
   ],
   "ratio_pairs": [
     [
-      "sirup",
-      "air"
+      "Sirup",
+      "Air"
     ]
   ],
   "scale_factor": 2,
   "scaling_steps": [
     {
-      "from": "2:3",
-      "to": "4:6",
-      "label": "dikali 2"
+      "from": "3:7",
+      "to": "6:14",
+      "label": "Dikali 2"
     }
   ],
   "steps": [
     {
-      "title": "Bandingkan dua jumlah",
-      "body": "Rasio 2 banding 3 berarti ada dua bagian pertama untuk tiga bagian kedua."
+      "title": "Tentukan rasio awal",
+      "body": "Rasio 3 banding 7 menunjukkan perbandingan tetap antara sirup dan air."
     },
     {
-      "title": "Perbesar dengan skala",
-      "body": "Jika kedua bagian dikalikan faktor yang sama, perbandingan tetap sama."
+      "title": "Skalakan bersama",
+      "body": "Jika satu kuantitas dikali faktor tertentu, kuantitas pasangannya juga harus dikali faktor yang sama."
     },
     {
-      "title": "Gunakan proporsi",
-      "body": "Penalaran proporsional membantu menyelesaikan masalah resep, peta, dan ukuran."
+      "title": "Pertahankan proporsi",
+      "body": "Dengan begitu, rasa campuran tetap karena perbandingan tidak berubah."
     }
   ],
-  "summary": "Rasio dan skala membantu memahami perbandingan yang tetap walau ukuran berubah."
+  "summary": "Proporsi tetap saat semua bagian diperbesar atau diperkecil dengan faktor yang sama."
 }

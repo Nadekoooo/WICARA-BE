@@ -1,0 +1,44 @@
+{
+  "id": "spec_25_remotion_bio_ecosystem_network_v1",
+  "row_index": 25,
+  "concept_type": "ecosystem_interaction_energy_matter",
+  "template_id": "remotion.bio_ecosystem_network.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Ekosistem, Aliran Energi, dan Daur Materi",
+  "subtitle": "Aliran energi dan daur materi menjelaskan mengapa komponen ekosistem saling bergantung.",
+  "steps": [
+    {
+      "title": "Lacak aliran energi",
+      "body": "Energi berpindah dari produsen ke berbagai tingkat konsumen."
+    },
+    {
+      "title": "Lihat daur materi",
+      "body": "Unsur penting seperti karbon dan nitrogen terus bersirkulasi."
+    },
+    {
+      "title": "Analisis gangguan",
+      "body": "Gangguan lingkungan dapat memutus atau mengubah aliran ini."
+    }
+  ],
+  "summary": "Versi ini memakai template jaringan ekosistem yang sama secara masuk akal karena struktur konsepnya identik namun konten energinya lebih mendalam.",
+  "central_node": "Ekosistem",
+  "nodes": [
+    "Produsen",
+    "Konsumen I",
+    "Konsumen II",
+    "Pengurai",
+    "Karbon",
+    "Nitrogen"
+  ],
+  "threats": [
+    "Eutrofikasi",
+    "Deforestasi",
+    "Emisi"
+  ]
+}

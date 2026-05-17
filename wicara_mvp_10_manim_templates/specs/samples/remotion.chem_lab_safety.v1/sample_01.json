@@ -1,0 +1,41 @@
+{
+  "id": "spec_60_remotion_chem_lab_safety_v1",
+  "row_index": 60,
+  "concept_type": "chemistry_inquiry_safety_context",
+  "template_id": "remotion.chem_lab_safety.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Hakikat Kimia dan Keselamatan Laboratorium",
+  "subtitle": "Belajar kimia melibatkan observasi, eksperimen, dan budaya keselamatan di laboratorium.",
+  "steps": [
+    {
+      "title": "Pahami ruang lingkup kimia",
+      "body": "Kimia mempelajari zat dan perubahannya."
+    },
+    {
+      "title": "Gunakan proses ilmiah",
+      "body": "Eksperimen memerlukan observasi dan pencatatan yang baik."
+    },
+    {
+      "title": "Utamakan keselamatan",
+      "body": "Prosedur keselamatan adalah bagian inti dari praktik kimia."
+    }
+  ],
+  "summary": "Template safety context dipisah dari acid-base safety karena fokusnya budaya lab dan proses ilmiah.",
+  "icons": [
+    "Gelas kimia",
+    "Api",
+    "Kacamata",
+    "Simbol bahaya"
+  ],
+  "workflow": [
+    "Amati",
+    "Catat",
+    "Simpulkan"
+  ]
+}

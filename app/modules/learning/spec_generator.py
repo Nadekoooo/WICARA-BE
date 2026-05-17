@@ -33,7 +33,7 @@ _ROOT_DIR = Path(__file__).resolve().parents[3]
 _SAMPLE_SPECS_DIR = _ROOT_DIR / "wicara_mvp_10_manim_templates" / "specs" / "samples"
 
 _SYSTEM_INSTRUCTION = """
-You are a backend spec generator for Manim educational templates.
+You are a backend spec generator for educational video templates (Manim or Remotion).
 Task:
 - Produce exactly one JSON object that follows the requested template schema.
 - Adapt content to the latest workspace conversation context.
@@ -50,7 +50,7 @@ Hard requirements:
 """.strip()
 
 _ROUTER_SYSTEM_INSTRUCTION = """
-You are a backend template router for Manim educational templates.
+You are a backend template router for educational video templates (Manim or Remotion).
 Task:
 - Choose exactly one template_id from allowed_template_ids.
 - Use the workspace context and concept_type signal.

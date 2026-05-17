@@ -1,0 +1,40 @@
+{
+  "id": "spec_6_remotion_bio_organ_system_flow_v1",
+  "row_index": 6,
+  "concept_type": "organ_system_flow_regulation",
+  "template_id": "remotion.bio_organ_system_flow.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Sistem Organ, Aliran, dan Regulasi",
+  "subtitle": "Tubuh menjaga fungsi hidup melalui aliran zat dan regulasi antar sistem organ.",
+  "steps": [
+    {
+      "title": "Masuknya bahan",
+      "body": "Makanan dan oksigen masuk ke tubuh melalui sistem yang berbeda."
+    },
+    {
+      "title": "Distribusi",
+      "body": "Darah mengangkut zat penting ke seluruh tubuh."
+    },
+    {
+      "title": "Regulasi",
+      "body": "Sistem saraf dan hormon membantu menjaga kerja organ tetap terkoordinasi."
+    }
+  ],
+  "summary": "Pemahaman sistem organ menekankan aliran bahan dan koordinasi, bukan hafalan organ secara terpisah.",
+  "systems": [
+    "Pencernaan",
+    "Peredaran darah",
+    "Pernapasan",
+    "Ekskresi"
+  ],
+  "regulators": [
+    "Otak",
+    "Hormon"
+  ]
+}

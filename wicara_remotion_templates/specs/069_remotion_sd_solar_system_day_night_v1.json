@@ -1,0 +1,40 @@
+{
+  "id": "spec_69_remotion_sd_solar_system_day_night_v1",
+  "row_index": 69,
+  "concept_type": "solar_system_day_night",
+  "template_id": "remotion.sd_solar_system_day_night.v1",
+  "media_engine_family": "remotion_or_manim",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Siang-Malam dan Tata Surya Awal",
+  "subtitle": "Rotasi Bumi menyebabkan siang dan malam, sementara Matahari dan Bulan tampak bergerak di langit.",
+  "steps": [
+    {
+      "title": "Lihat posisi Matahari",
+      "body": "Matahari tampak bergeser di langit sepanjang hari."
+    },
+    {
+      "title": "Pahami rotasi Bumi",
+      "body": "Bagian Bumi yang menghadap Matahari mengalami siang."
+    },
+    {
+      "title": "Hubungkan dengan pengalaman",
+      "body": "Pergantian siang dan malam diamati setiap hari."
+    }
+  ],
+  "summary": "Remotion memudahkan adegan rotasi sederhana dan transisi latar siang ke malam.",
+  "objects": [
+    "Matahari",
+    "Bumi",
+    "Bulan"
+  ],
+  "focus": [
+    "Rotasi",
+    "Siang",
+    "Malam"
+  ]
+}

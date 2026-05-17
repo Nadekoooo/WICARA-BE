@@ -1,0 +1,41 @@
+{
+  "id": "spec_54_remotion_chem_acid_base_safety_v1",
+  "row_index": 54,
+  "concept_type": "acid_base_safety_context",
+  "template_id": "remotion.chem_acid_base_safety.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Asam-Basa dan Keselamatan Bahan",
+  "subtitle": "Bahan asam dan basa sering ditemui sehari-hari, tetapi perlu digunakan secara aman dan bertanggung jawab.",
+  "steps": [
+    {
+      "title": "Kenali contoh bahan",
+      "body": "Banyak bahan rumah tangga dapat bersifat asam atau basa."
+    },
+    {
+      "title": "Pahami risiko",
+      "body": "Beberapa bahan dapat mengiritasi atau berbahaya bila disalahgunakan."
+    },
+    {
+      "title": "Latih keselamatan",
+      "body": "Penggunaan bahan kimia perlu mengikuti aturan keselamatan dasar."
+    }
+  ],
+  "summary": "Template ini bukan salinan titrasi: fokusnya konteks rumah tangga dan keselamatan, jadi layout-nya berbeda.",
+  "items": [
+    "Cuka",
+    "Jeruk",
+    "Sabun",
+    "Pembersih lantai"
+  ],
+  "safety": [
+    "Label",
+    "Sarung tangan",
+    "Jangan dicampur sembarang"
+  ]
+}

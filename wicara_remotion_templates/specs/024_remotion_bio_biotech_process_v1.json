@@ -1,0 +1,45 @@
+{
+  "id": "spec_24_remotion_bio_biotech_process_v1",
+  "row_index": 24,
+  "concept_type": "biotechnology_process_ethics",
+  "template_id": "remotion.bio_biotech_process.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Bioteknologi, Proses, dan Etika",
+  "subtitle": "Bioteknologi memanfaatkan organisme atau komponen biologis untuk menghasilkan produk, namun juga memunculkan pertimbangan etika.",
+  "steps": [
+    {
+      "title": "Kenali bahan dan proses",
+      "body": "Bioteknologi dapat bersifat tradisional maupun modern."
+    },
+    {
+      "title": "Lihat manfaat",
+      "body": "Produk bioteknologi membantu bidang pangan, kesehatan, dan lingkungan."
+    },
+    {
+      "title": "Bahas etika",
+      "body": "Setiap inovasi perlu ditimbang dari sisi keamanan, keadilan, dan tanggung jawab."
+    }
+  ],
+  "summary": "Template ini menyeimbangkan pemahaman proses teknis dan diskusi etika bioteknologi.",
+  "pipeline": [
+    "Bahan biologis",
+    "Proses",
+    "Produk"
+  ],
+  "examples": [
+    "Tempe",
+    "Insulin",
+    "Kultur jaringan"
+  ],
+  "ethics": [
+    "Keamanan",
+    "Akses",
+    "Dampak lingkungan"
+  ]
+}

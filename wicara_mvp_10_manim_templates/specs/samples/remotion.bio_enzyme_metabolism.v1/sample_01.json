@@ -1,0 +1,40 @@
+{
+  "id": "spec_84_remotion_bio_enzyme_metabolism_v1",
+  "row_index": 84,
+  "concept_type": "enzyme_metabolism_process",
+  "template_id": "remotion.bio_enzyme_metabolism.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Enzim dan Metabolisme",
+  "subtitle": "Enzim mempercepat reaksi metabolisme dengan cara yang spesifik terhadap substratnya.",
+  "steps": [
+    {
+      "title": "Kenali peran enzim",
+      "body": "Enzim bertindak sebagai biokatalis."
+    },
+    {
+      "title": "Lihat mekanisme",
+      "body": "Substrat berikatan pada sisi aktif lalu diubah menjadi produk."
+    },
+    {
+      "title": "Pahami faktor",
+      "body": "Aktivitas enzim dipengaruhi kondisi lingkungan."
+    }
+  ],
+  "summary": "Template ini menuntut bentuk lock-and-key dan panel faktor, sehingga berbeda dari template reaksi biasa.",
+  "stages": [
+    "Substrat",
+    "Kompleks enzim-substrat",
+    "Produk"
+  ],
+  "factors": [
+    "Suhu",
+    "pH",
+    "Konsentrasi"
+  ]
+}

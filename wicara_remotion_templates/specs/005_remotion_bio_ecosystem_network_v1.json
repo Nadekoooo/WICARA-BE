@@ -1,0 +1,44 @@
+{
+  "id": "spec_5_remotion_bio_ecosystem_network_v1",
+  "row_index": 5,
+  "concept_type": "ecosystem_environment_system",
+  "template_id": "remotion.bio_ecosystem_network.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Ekosistem, Interaksi, dan Pencemaran",
+  "subtitle": "Komponen biotik dan abiotik saling terhubung dalam jaringan ekosistem yang dapat terganggu oleh pencemaran dan perubahan iklim.",
+  "steps": [
+    {
+      "title": "Kenali komponen",
+      "body": "Ekosistem tersusun dari makhluk hidup dan faktor lingkungan tak hidup."
+    },
+    {
+      "title": "Amati interaksi",
+      "body": "Produsen, konsumen, dan pengurai terhubung melalui aliran materi dan energi."
+    },
+    {
+      "title": "Lihat dampak gangguan",
+      "body": "Pencemaran dan perubahan iklim dapat mengubah keseimbangan ekosistem."
+    }
+  ],
+  "summary": "Ekosistem dipahami paling baik sebagai jaringan relasi yang dinamis, bukan kumpulan objek yang berdiri sendiri.",
+  "central_node": "Ekosistem",
+  "nodes": [
+    "Produsen",
+    "Konsumen",
+    "Pengurai",
+    "Air",
+    "Tanah",
+    "Udara"
+  ],
+  "threats": [
+    "Polusi air",
+    "Sampah",
+    "Pemanasan global"
+  ]
+}

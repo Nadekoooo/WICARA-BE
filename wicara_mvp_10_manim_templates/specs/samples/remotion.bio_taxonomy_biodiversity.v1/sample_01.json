@@ -1,0 +1,42 @@
+{
+  "id": "spec_23_remotion_bio_taxonomy_biodiversity_v1",
+  "row_index": 23,
+  "concept_type": "biodiversity_classification_conservation",
+  "template_id": "remotion.bio_taxonomy_biodiversity.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Keanekaragaman, Klasifikasi, dan Konservasi",
+  "subtitle": "Makhluk hidup dapat dikelompokkan berdasarkan ciri, dan keanekaragaman hayati perlu dijaga melalui konservasi.",
+  "steps": [
+    {
+      "title": "Kelompokkan makhluk hidup",
+      "body": "Klasifikasi membantu menata keragaman organisme."
+    },
+    {
+      "title": "Amati tingkat keanekaragaman",
+      "body": "Keanekaragaman dapat dilihat pada gen, spesies, dan ekosistem."
+    },
+    {
+      "title": "Pahami konservasi",
+      "body": "Perlindungan habitat penting untuk menjaga keanekaragaman hayati."
+    }
+  ],
+  "summary": "Taksonomi dan konservasi saling melengkapi untuk memahami sekaligus menjaga kehidupan di Bumi.",
+  "levels": [
+    "Kingdom",
+    "Filum",
+    "Kelas",
+    "Ordo",
+    "Famili"
+  ],
+  "biodiversity_examples": [
+    "Hutan hujan",
+    "Terumbu karang",
+    "Savana"
+  ]
+}

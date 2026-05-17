@@ -1,0 +1,40 @@
+{
+  "id": "spec_101_remotion_chem_lab_separation_v1",
+  "row_index": 101,
+  "concept_type": "mixture_separation_lab_model",
+  "template_id": "remotion.chem_lab_separation.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Campuran dan Pemisahan di Laboratorium",
+  "subtitle": "Pemisahan campuran di laboratorium memanfaatkan perbedaan sifat fisik komponen penyusunnya.",
+  "steps": [
+    {
+      "title": "Tentukan sifat pembeda",
+      "body": "Metode pemisahan dipilih berdasarkan titik didih, ukuran partikel, atau kelarutan."
+    },
+    {
+      "title": "Gunakan alat",
+      "body": "Setiap metode memiliki perangkat laboratorium yang berbeda."
+    },
+    {
+      "title": "Bandingkan hasil",
+      "body": "Produk pemisahan memberi informasi tentang komponen campuran."
+    }
+  ],
+  "summary": "Berbeda dari versi SD, template ini menunjukkan alat lab dan alur metode secara lebih formal.",
+  "methods": [
+    "Filtrasi",
+    "Distilasi",
+    "Kromatografi"
+  ],
+  "mixtures": [
+    "Pasir + air",
+    "Alkohol + air",
+    "Tinta"
+  ]
+}

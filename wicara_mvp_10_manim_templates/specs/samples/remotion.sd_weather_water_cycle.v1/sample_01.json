@@ -1,0 +1,42 @@
+{
+  "id": "spec_96_remotion_sd_weather_water_cycle_v1",
+  "row_index": 96,
+  "concept_type": "earth_weather_water_cycle",
+  "template_id": "remotion.sd_weather_water_cycle.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Cuaca, Musim, dan Daur Air",
+  "subtitle": "Cuaca sehari-hari dan daur air menjelaskan bagaimana air terus bergerak di alam.",
+  "steps": [
+    {
+      "title": "Amati cuaca",
+      "body": "Cuaca dapat berubah dari hari ke hari."
+    },
+    {
+      "title": "Ikuti daur air",
+      "body": "Air berpindah dari permukaan ke awan lalu kembali lagi."
+    },
+    {
+      "title": "Hubungkan peristiwa",
+      "body": "Hujan dan penguapan adalah bagian dari satu siklus."
+    }
+  ],
+  "summary": "Template ini sengaja dibuat cerah dan naratif karena targetnya siswa SD.",
+  "cycle": [
+    "Penguapan",
+    "Kondensasi",
+    "Presipitasi",
+    "Aliran"
+  ],
+  "weather_icons": [
+    "Cerah",
+    "Hujan",
+    "Berawan",
+    "Berangin"
+  ]
+}

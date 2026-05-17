@@ -1,0 +1,40 @@
+{
+  "id": "spec_68_remotion_sd_matter_states_v1",
+  "row_index": 68,
+  "concept_type": "matter_properties_states",
+  "template_id": "remotion.sd_matter_states.v1",
+  "media_engine_family": "remotion_or_rive",
+  "audience_level": "sd",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Sifat Benda dan Wujud Zat",
+  "subtitle": "Benda memiliki sifat tertentu dan zat dapat berwujud padat, cair, atau gas.",
+  "steps": [
+    {
+      "title": "Kelompokkan wujud zat",
+      "body": "Wujud zat berbeda pada bentuk dan susunan partikelnya."
+    },
+    {
+      "title": "Amati contoh",
+      "body": "Contoh sehari-hari membantu anak memahami perbedaan wujud."
+    },
+    {
+      "title": "Hubungkan perubahan wujud",
+      "body": "Pemanasan atau pendinginan dapat mengubah wujud zat."
+    }
+  ],
+  "summary": "Template ini berbeda dari chem particle matter karena disederhanakan untuk SD dengan ikon dan contoh konkret.",
+  "states": [
+    "Padat",
+    "Cair",
+    "Gas"
+  ],
+  "examples": [
+    "Es",
+    "Air",
+    "Uap"
+  ]
+}

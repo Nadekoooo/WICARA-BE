@@ -1,0 +1,40 @@
+{
+  "id": "spec_83_remotion_bio_cell_division_v1",
+  "row_index": 83,
+  "concept_type": "cell_division_cycle",
+  "template_id": "remotion.bio_cell_division.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Pembelahan Sel: Mitosis dan Meiosis",
+  "subtitle": "Pembelahan sel dapat menghasilkan sel identik atau sel gamet dengan jumlah kromosom yang berbeda.",
+  "steps": [
+    {
+      "title": "Ikuti fase",
+      "body": "Mitosis berlangsung melalui urutan fase yang teratur."
+    },
+    {
+      "title": "Bandingkan hasil",
+      "body": "Mitosis dan meiosis menghasilkan jenis sel yang berbeda."
+    },
+    {
+      "title": "Hubungkan fungsi",
+      "body": "Pembelahan penting untuk pertumbuhan, perbaikan, dan reproduksi."
+    }
+  ],
+  "summary": "Siklus pembelahan sel membutuhkan stage-by-stage animation yang cocok untuk Remotion.",
+  "mitosis": [
+    "Profase",
+    "Metafase",
+    "Anafase",
+    "Telofase"
+  ],
+  "meiosis": [
+    "Meiosis I",
+    "Meiosis II"
+  ]
+}

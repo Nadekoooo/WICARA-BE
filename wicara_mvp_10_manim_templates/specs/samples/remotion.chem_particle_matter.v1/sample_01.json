@@ -1,0 +1,40 @@
+{
+  "id": "spec_74_remotion_chem_particle_matter_v1",
+  "row_index": 74,
+  "concept_type": "matter_particle_property_model",
+  "template_id": "remotion.chem_particle_matter.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Zat, Partikel, dan Perubahan Materi",
+  "subtitle": "Sifat makroskopik zat dijelaskan melalui susunan partikel, gaya antarmolekul, dan perubahan energi.",
+  "steps": [
+    {
+      "title": "Hubungkan makro dan mikro",
+      "body": "Sifat zat yang terlihat berasal dari perilaku partikel."
+    },
+    {
+      "title": "Bandingkan susunan partikel",
+      "body": "Jarak dan gerak partikel berbeda pada tiap wujud."
+    },
+    {
+      "title": "Analisis perubahan",
+      "body": "Perubahan wujud melibatkan perubahan energi dan susunan partikel."
+    }
+  ],
+  "summary": "Reuse ke template yang sama dengan row 61 masuk akal karena struktur visualnya identik, tetapi spec-nya dibuat lebih maju untuk level SMA.",
+  "states": [
+    "Padat",
+    "Cair",
+    "Gas"
+  ],
+  "changes": [
+    "Fusi",
+    "Vaporisasi",
+    "Kondensasi"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "spec_88_remotion_bio_growth_timeline_v1",
+  "row_index": 88,
+  "concept_type": "growth_development_timeline",
+  "template_id": "remotion.bio_growth_timeline.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Pertumbuhan dan Perkembangan Organisme",
+  "subtitle": "Organisme mengalami pertumbuhan ukuran dan perkembangan fungsi melalui tahapan waktu.",
+  "steps": [
+    {
+      "title": "Urutkan tahap",
+      "body": "Pertumbuhan dan perkembangan terjadi seiring waktu."
+    },
+    {
+      "title": "Bedakan makna",
+      "body": "Pertumbuhan berkaitan dengan ukuran, perkembangan dengan kematangan fungsi."
+    },
+    {
+      "title": "Pahami faktor",
+      "body": "Banyak faktor memengaruhi cepat lambatnya proses tersebut."
+    }
+  ],
+  "summary": "Timeline menjadi bentuk paling masuk akal untuk konsep yang menekankan urutan fase perkembangan.",
+  "timeline": [
+    "Bayi",
+    "Anak",
+    "Remaja",
+    "Dewasa"
+  ],
+  "factors": [
+    "Genetik",
+    "Nutrisi",
+    "Hormon",
+    "Lingkungan"
+  ]
+}

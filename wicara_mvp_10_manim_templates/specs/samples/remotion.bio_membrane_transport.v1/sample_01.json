@@ -1,0 +1,40 @@
+{
+  "id": "spec_82_remotion_bio_membrane_transport_v1",
+  "row_index": 82,
+  "concept_type": "membrane_transport_model",
+  "template_id": "remotion.bio_membrane_transport.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "sma",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Transpor Membran, Difusi, dan Osmosis",
+  "subtitle": "Zat dapat melintasi membran melalui mekanisme pasif maupun aktif, termasuk difusi dan osmosis.",
+  "steps": [
+    {
+      "title": "Amati membran",
+      "body": "Membran sel bersifat selektif permeabel."
+    },
+    {
+      "title": "Bandingkan mekanisme",
+      "body": "Tidak semua zat bergerak dengan cara yang sama."
+    },
+    {
+      "title": "Pahami gradien",
+      "body": "Perbedaan konsentrasi mendorong perpindahan zat."
+    }
+  ],
+  "summary": "Visual dua kompartemen dan partikel bergerak dibutuhkan untuk menjelaskan arah transpor secara intuitif.",
+  "mechanisms": [
+    "Difusi",
+    "Osmosis",
+    "Transpor aktif"
+  ],
+  "particles": [
+    "Air",
+    "Ion",
+    "Glukosa"
+  ]
+}

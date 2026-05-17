@@ -1,0 +1,41 @@
+{
+  "id": "spec_34_remotion_bio_structure_labeling_v1",
+  "row_index": 34,
+  "concept_type": "life_structure_classification",
+  "template_id": "remotion.bio_structure_labeling.v1",
+  "media_engine_family": "remotion_svg",
+  "audience_level": "smp",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 270,
+  "title": "Struktur Organisme dan Klasifikasi",
+  "subtitle": "Bagian tubuh organisme dapat diberi label untuk membantu identifikasi dan klasifikasi.",
+  "steps": [
+    {
+      "title": "Amati struktur",
+      "body": "Bagian-bagian organisme memiliki bentuk dan fungsi tertentu."
+    },
+    {
+      "title": "Beri label",
+      "body": "Label membantu menghubungkan nama bagian dengan letaknya."
+    },
+    {
+      "title": "Hubungkan dengan klasifikasi",
+      "body": "Ciri struktur dapat dipakai dalam pengelompokan organisme."
+    }
+  ],
+  "summary": "Template labeling dipakai karena inti konsepnya adalah penunjukan bagian dan identifikasi ciri.",
+  "organism": "Tumbuhan berbunga",
+  "parts": [
+    "Akar",
+    "Batang",
+    "Daun",
+    "Bunga"
+  ],
+  "classification": [
+    "Plantae",
+    "Angiospermae"
+  ]
+}

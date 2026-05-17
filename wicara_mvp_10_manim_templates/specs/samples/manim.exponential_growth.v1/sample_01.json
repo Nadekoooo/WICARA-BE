@@ -1,67 +1,36 @@
 {
-  "id": "sample_exponential_growth_distinct",
-  "node_id": "phase5_exponential_growth_model",
+  "id": "ct_010_exponential_growth_model",
+  "node_id": "exponential_growth_model",
   "template_id": "manim.exponential_growth.v1",
   "phase": "E",
   "audience_level": "sma",
   "language": "id",
-  "title": "Pertumbuhan Eksponensial",
-  "subtitle": "Nilai bertambah dengan faktor kali tetap.",
-  "initial": 1,
-  "growth_factor": 2,
+  "title": "Model Pertumbuhan Eksponensial",
+  "subtitle": "Jika nilai dikalikan faktor tetap berulang kali, pertumbuhannya menjadi eksponensial.",
+  "initial": 2,
+  "growth_factor": 3,
   "periods": 5,
   "values": [
-    1,
     2,
-    4,
-    8,
-    16
+    6,
+    18,
+    54,
+    162
   ],
-  "formula_latex": "a_n=a_0\\cdot r^n",
+  "formula_latex": "a_n = a_0 \\cdot r^n",
   "steps": [
     {
-      "title": "Faktor tetap",
-      "body": "Setiap periode dikalikan faktor yang sama.",
-      "narration": "Faktor tetap. Setiap periode dikalikan faktor yang sama."
+      "title": "Tentukan nilai awal",
+      "body": "Model dimulai dari suatu nilai dasar pada periode pertama."
     },
     {
-      "title": "Pertumbuhan makin cepat",
-      "body": "Tambahan absolut makin besar walaupun faktornya tetap.",
-      "narration": "Pertumbuhan makin cepat. Tambahan absolut makin besar walaupun faktornya tetap."
+      "title": "Kalikan dengan faktor tetap",
+      "body": "Setiap periode, nilai dikalikan faktor yang sama, misalnya 3 kali lipat."
     },
     {
-      "title": "Model prediksi",
-      "body": "Rumus eksponensial membantu memperkirakan periode berikutnya.",
-      "narration": "Model prediksi. Rumus eksponensial membantu memperkirakan periode berikutnya."
+      "title": "Amati percepatan pertumbuhan",
+      "body": "Nilai meningkat sangat cepat karena faktor pengalinya diterapkan berulang kali."
     }
   ],
-  "summary": "Pertumbuhan eksponensial terjadi ketika nilai berulang kali dikalikan faktor tetap.",
-  "intro_narration": "Nilai bertambah dengan faktor kali tetap.",
-  "summary_narration": "Pertumbuhan eksponensial terjadi ketika nilai berulang kali dikalikan faktor tetap.",
-  "voiceover_script": "Nilai bertambah dengan faktor kali tetap.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Nilai bertambah dengan faktor kali tetap."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Faktor tetap. Setiap periode dikalikan faktor yang sama."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Pertumbuhan makin cepat. Tambahan absolut makin besar walaupun faktornya tetap."
-    },
-    {
-      "slot": "step",
-      "step_index": 3,
-      "text": "Model prediksi. Rumus eksponensial membantu memperkirakan periode berikutnya."
-    },
-    {
-      "slot": "summary",
-      "text": "Pertumbuhan eksponensial terjadi ketika nilai berulang kali dikalikan faktor tetap."
-    }
-  ]
+  "summary": "Pertumbuhan eksponensial cocok untuk situasi yang berkembang melalui penggandaan atau pelipatan berulang."
 }
