@@ -1,0 +1,80 @@
+{
+  "id": "sample_chem_reaction_equation",
+  "node_id": "phase4_reaction_equation_conservation",
+  "template_id": "manim.chem_reaction_equation.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Menyeimbangkan Persamaan Reaksi",
+  "subtitle": "Jumlah atom kiri dan kanan harus sama.",
+  "equation": "Fe + O2 -> Fe2O3",
+  "left_expression": "Fe + O2",
+  "right_expression": "Fe2O3",
+  "solution_steps": [
+    {
+      "operation": "Set koefisien Fe2O3 = 2",
+      "left_result": "Fe + O2",
+      "right_result": "2Fe2O3",
+      "explanation": "Mulai dari produk agar jumlah atom Fe dan O jelas targetnya."
+    },
+    {
+      "operation": "Set koefisien Fe = 4",
+      "left_result": "4Fe + O2",
+      "right_result": "2Fe2O3",
+      "explanation": "Samakan atom Fe di ruas kiri dan kanan."
+    },
+    {
+      "operation": "Set koefisien O2 = 3",
+      "left_result": "4Fe + 3O2",
+      "right_result": "2Fe2O3",
+      "explanation": "Samakan atom O sehingga kedua ruas setara."
+    }
+  ],
+  "final_solution": "4Fe + 3O2 -> 2Fe2O3",
+  "steps": [
+    {
+      "title": "Hitung atom tiap unsur",
+      "body": "Catat jumlah atom Fe dan O sebelum menambah koefisien.",
+      "narration": "Hitung atom tiap unsur. Catat jumlah atom Fe dan O sebelum menambah koefisien."
+    },
+    {
+      "title": "Ubah koefisien bertahap",
+      "body": "Mulai dari produk, lalu sesuaikan pereaksi sampai jumlah atom sama.",
+      "narration": "Ubah koefisien bertahap. Mulai dari produk, lalu sesuaikan pereaksi sampai jumlah atom sama."
+    },
+    {
+      "title": "Verifikasi kesetaraan",
+      "body": "Pastikan atom Fe dan O kiri sama dengan kanan.",
+      "narration": "Verifikasi kesetaraan. Pastikan atom Fe dan O kiri sama dengan kanan."
+    }
+  ],
+  "summary": "Persamaan reaksi seimbang jika jumlah atom tiap unsur sama pada kedua ruas.",
+  "voiceover_script": "Menyeimbangkan reaksi berarti menyamakan jumlah atom tiap unsur di kiri dan kanan persamaan.",
+  "intro_narration": "Menyeimbangkan reaksi berarti menyamakan jumlah atom tiap unsur di kiri dan kanan persamaan.",
+  "summary_narration": "Persamaan reaksi seimbang jika jumlah atom tiap unsur sama pada kedua ruas.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Menyeimbangkan reaksi berarti menyamakan jumlah atom tiap unsur di kiri dan kanan persamaan."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Hitung atom tiap unsur. Catat jumlah atom Fe dan O sebelum menambah koefisien."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Ubah koefisien bertahap. Mulai dari produk, lalu sesuaikan pereaksi sampai jumlah atom sama."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Verifikasi kesetaraan. Pastikan atom Fe dan O kiri sama dengan kanan."
+    },
+    {
+      "slot": "summary",
+      "text": "Persamaan reaksi seimbang jika jumlah atom tiap unsur sama pada kedua ruas."
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "id": "sample_electricity_magnetism",
+  "node_id": "phase4_electricity_magnetism_circuit_model",
+  "template_id": "manim.electricity_magnetism.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Gaya Listrik dan Magnet",
+  "subtitle": "Resultan gaya menentukan arah gerak partikel bermuatan.",
+  "object": {
+    "type": "particle",
+    "label": "Muatan q"
+  },
+  "forces": [
+    {
+      "label": "F_listrik",
+      "magnitude": 8,
+      "unit": "N",
+      "direction": "right"
+    },
+    {
+      "label": "F_magnet",
+      "magnitude": 3,
+      "unit": "N",
+      "direction": "left"
+    }
+  ],
+  "resultant": {
+    "magnitude": 5,
+    "unit": "N",
+    "direction": "right"
+  },
+  "motion_response": "Partikel cenderung bergerak ke kanan.",
+  "force_scale": 0.25,
+  "steps": [
+    {
+      "title": "Identifikasi gaya",
+      "body": "Muatan menerima gaya listrik dan gaya magnet dengan arah berlawanan.",
+      "narration": "Identifikasi gaya. Muatan menerima gaya listrik dan gaya magnet dengan arah berlawanan."
+    },
+    {
+      "title": "Hitung resultan",
+      "body": "Karena 8 N ke kanan dan 3 N ke kiri, resultannya 5 N ke kanan.",
+      "narration": "Hitung resultan. Karena 8 N ke kanan dan 3 N ke kiri, resultannya 5 N ke kanan."
+    },
+    {
+      "title": "Prediksi gerak",
+      "body": "Arah resultan menjadi acuan arah percepatan partikel.",
+      "narration": "Prediksi gerak. Arah resultan menjadi acuan arah percepatan partikel."
+    }
+  ],
+  "summary": "Gerak partikel ditentukan oleh resultan gaya total yang bekerja padanya.",
+  "voiceover_script": "Pada sistem listrik dan magnet, kita menjumlahkan semua gaya vektor untuk mengetahui arah gerak akhir.",
+  "intro_narration": "Pada sistem listrik dan magnet, kita menjumlahkan semua gaya vektor untuk mengetahui arah gerak akhir.",
+  "summary_narration": "Gerak partikel ditentukan oleh resultan gaya total yang bekerja padanya.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Pada sistem listrik dan magnet, kita menjumlahkan semua gaya vektor untuk mengetahui arah gerak akhir."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Identifikasi gaya. Muatan menerima gaya listrik dan gaya magnet dengan arah berlawanan."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Hitung resultan. Karena 8 N ke kanan dan 3 N ke kiri, resultannya 5 N ke kanan."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Prediksi gerak. Arah resultan menjadi acuan arah percepatan partikel."
+    },
+    {
+      "slot": "summary",
+      "text": "Gerak partikel ditentukan oleh resultan gaya total yang bekerja padanya."
+    }
+  ]
+}

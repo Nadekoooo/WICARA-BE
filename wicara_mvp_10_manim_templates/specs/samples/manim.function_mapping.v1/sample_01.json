@@ -1,0 +1,105 @@
+{
+  "id": "sample_function_mapping",
+  "node_id": "phase4_function_mapping_representation",
+  "template_id": "manim.function_mapping.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Pemetaan Fungsi",
+  "subtitle": "Setiap input dipetakan ke satu output.",
+  "function": {
+    "type": "linear",
+    "params": {
+      "m": 2,
+      "b": 1
+    }
+  },
+  "x_range": [
+    -2,
+    4,
+    1
+  ],
+  "y_range": [
+    -3,
+    10,
+    1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "f(x)=2x+1",
+  "steps": [
+    {
+      "title": "Pilih input",
+      "body": "Ambil satu nilai x sebagai input fungsi.",
+      "narration": "Pilih input. Ambil satu nilai x sebagai input fungsi."
+    },
+    {
+      "title": "Hitung output",
+      "body": "Gunakan rumus fungsi untuk mencari f(x).",
+      "narration": "Hitung output. Gunakan rumus fungsi untuk mencari f(x)."
+    },
+    {
+      "title": "Lihat pasangan",
+      "body": "Setiap pasangan (x, f(x)) menjadi titik pada grafik.",
+      "narration": "Lihat pasangan. Setiap pasangan (x, f(x)) menjadi titik pada grafik."
+    }
+  ],
+  "summary": "Fungsi memetakan setiap input ke tepat satu output.",
+  "voiceover_script": "Dengan grafik, kita bisa melihat aturan pemetaan input ke output secara konsisten.",
+  "intro_narration": "Dengan grafik, kita bisa melihat aturan pemetaan input ke output secara konsisten.",
+  "summary_narration": "Fungsi memetakan setiap input ke tepat satu output.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Dengan grafik, kita bisa melihat aturan pemetaan input ke output secara konsisten."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Pilih input. Ambil satu nilai x sebagai input fungsi."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Hitung output. Gunakan rumus fungsi untuk mencari f(x)."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Lihat pasangan. Setiap pasangan (x, f(x)) menjadi titik pada grafik."
+    },
+    {
+      "slot": "summary",
+      "text": "Fungsi memetakan setiap input ke tepat satu output."
+    }
+  ],
+  "x_label": "x",
+  "y_label": "f(x)",
+  "graph_label": "pemetaan fungsi",
+  "moving_label": "pasangan",
+  "x_path": [
+    -2,
+    -1,
+    0,
+    1,
+    2,
+    3
+  ],
+  "highlight_x": 2,
+  "show_slope": true,
+  "slope_text": "Kemiringan 2 berarti tiap kenaikan 1 pada x menaikkan f(x) sebesar 2."
+}

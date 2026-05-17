@@ -1,0 +1,71 @@
+{
+  "id": "sample_elementary_number_line_place_value",
+  "node_id": "phase4_counting_place_value_number_line",
+  "template_id": "manim.elementary_number_line_place_value.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Nilai Tempat di Garis Bilangan",
+  "subtitle": "Angka lebih besar berada lebih kanan pada garis bilangan.",
+  "number_range": {
+    "min": 0,
+    "max": 100,
+    "step": 10
+  },
+  "markers": [
+    {
+      "value": 30,
+      "label": "30"
+    },
+    {
+      "value": 70,
+      "label": "70"
+    }
+  ],
+  "highlight_values": [
+    30,
+    70
+  ],
+  "operation": {
+    "type": "compare",
+    "from": 30,
+    "to": 70,
+    "label": "70 lebih besar dari 30"
+  },
+  "steps": [
+    {
+      "title": "Tempatkan nilai puluhan",
+      "body": "30 dan 70 ditempatkan sesuai urutan nilainya di garis bilangan.",
+      "narration": "Tempatkan nilai puluhan. 30 dan 70 ditempatkan sesuai urutan nilainya di garis bilangan."
+    },
+    {
+      "title": "Bandingkan posisi",
+      "body": "Bilangan di posisi lebih kanan bernilai lebih besar.",
+      "narration": "Bandingkan posisi. Bilangan di posisi lebih kanan bernilai lebih besar."
+    }
+  ],
+  "summary": "Nilai tempat membantu membaca urutan dan besar bilangan.",
+  "voiceover_script": "Pada garis bilangan puluhan, posisi angka membuat perbandingan nilai jadi lebih mudah dipahami.",
+  "intro_narration": "Pada garis bilangan puluhan, posisi angka membuat perbandingan nilai jadi lebih mudah dipahami.",
+  "summary_narration": "Nilai tempat membantu membaca urutan dan besar bilangan.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Pada garis bilangan puluhan, posisi angka membuat perbandingan nilai jadi lebih mudah dipahami."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Tempatkan nilai puluhan. 30 dan 70 ditempatkan sesuai urutan nilainya di garis bilangan."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Bandingkan posisi. Bilangan di posisi lebih kanan bernilai lebih besar."
+    },
+    {
+      "slot": "summary",
+      "text": "Nilai tempat membantu membaca urutan dan besar bilangan."
+    }
+  ]
+}

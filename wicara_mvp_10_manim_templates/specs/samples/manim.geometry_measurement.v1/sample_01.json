@@ -1,0 +1,74 @@
+{
+  "id": "sample_geometry_measurement",
+  "node_id": "phase4_geometry_measurement_area_volume",
+  "template_id": "manim.geometry_measurement.v1",
+  "phase": "B",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Pengukuran Luas dan Keliling",
+  "subtitle": "Gunakan panjang dan lebar untuk menghitung besaran geometri.",
+  "shape_type": "rectangle",
+  "dimensions": {
+    "length": 8,
+    "width": 5,
+    "unit": "cm"
+  },
+  "transformations": [
+    {
+      "type": "fill_unit_squares",
+      "label": "Isi dengan persegi satuan"
+    }
+  ],
+  "formula_latex": "L = p \\times l,\\ K = 2(p+l)",
+  "highlight_features": [
+    "panjang",
+    "lebar",
+    "luas"
+  ],
+  "steps": [
+    {
+      "title": "Ukur dimensi",
+      "body": "Catat panjang dan lebar bangun secara tepat.",
+      "narration": "Ukur dimensi. Catat panjang dan lebar bangun secara tepat."
+    },
+    {
+      "title": "Hitung luas",
+      "body": "Luas diperoleh dari panjang dikali lebar.",
+      "narration": "Hitung luas. Luas diperoleh dari panjang dikali lebar."
+    },
+    {
+      "title": "Hitung keliling",
+      "body": "Keliling diperoleh dari jumlah seluruh sisi luar.",
+      "narration": "Hitung keliling. Keliling diperoleh dari jumlah seluruh sisi luar."
+    }
+  ],
+  "summary": "Pengukuran yang tepat menghasilkan perhitungan luas dan keliling yang akurat.",
+  "voiceover_script": "Dengan ukuran sisi yang benar, kita bisa menghitung luas dan keliling bangun secara konsisten.",
+  "intro_narration": "Dengan ukuran sisi yang benar, kita bisa menghitung luas dan keliling bangun secara konsisten.",
+  "summary_narration": "Pengukuran yang tepat menghasilkan perhitungan luas dan keliling yang akurat.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Dengan ukuran sisi yang benar, kita bisa menghitung luas dan keliling bangun secara konsisten."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Ukur dimensi. Catat panjang dan lebar bangun secara tepat."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Hitung luas. Luas diperoleh dari panjang dikali lebar."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Hitung keliling. Keliling diperoleh dari jumlah seluruh sisi luar."
+    },
+    {
+      "slot": "summary",
+      "text": "Pengukuran yang tepat menghasilkan perhitungan luas dan keliling yang akurat."
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import argparse, json, shutil, subprocess, sys
+from pprint import pformat
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser()
@@ -14,7 +15,13 @@ for name in ['core_templates.py','base_scene.py']:
     shutil.copyfile(ROOT/'templates'/'manim'/name, tmp/name)
 shutil.copyfile(Path(args.template), tmp/'generated_template.py')
 spec=json.loads(Path(args.spec).read_text(encoding='utf-8'))
-(tmp/'render_scene.py').write_text('from generated_template import GeneratedTemplate\n\nclass RenderScene(GeneratedTemplate):\n    SPEC = '+json.dumps(spec,ensure_ascii=False,indent=4)+'\n',encoding='utf-8')
+spec_literal = pformat(spec, indent=4, width=120, sort_dicts=False)
+(tmp/'render_scene.py').write_text(
+    'from generated_template import GeneratedTemplate\n\nclass RenderScene(GeneratedTemplate):\n    SPEC = '
+    + spec_literal
+    + '\n',
+    encoding='utf-8',
+)
 quality = args.quality.strip()
 if not quality:
     quality = '-ql'

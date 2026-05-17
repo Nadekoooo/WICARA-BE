@@ -1,0 +1,307 @@
+{
+  "version": "phase4_top30_v1",
+  "source": "manim_family_expansion_phase4",
+  "notes": [
+    "Top30-style routing map for manim concept types.",
+    "Each concept type provides primary_template_id and fallback candidates."
+  ],
+  "routes": [
+    {
+      "concept_type": "number_line_quantity_model",
+      "primary_template_id": "manim.number_line_quantity.v1",
+      "template_candidates": [
+        "manim.number_line_quantity.v1",
+        "manim.elementary_number_line_place_value.v1"
+      ],
+      "family": "number_line_family"
+    },
+    {
+      "concept_type": "counting_place_value_number_line",
+      "primary_template_id": "manim.elementary_number_line_place_value.v1",
+      "template_candidates": [
+        "manim.elementary_number_line_place_value.v1",
+        "manim.number_line_quantity.v1"
+      ],
+      "family": "number_line_family"
+    },
+    {
+      "concept_type": "equation_balance_model",
+      "primary_template_id": "manim.equation_balance.v1",
+      "template_candidates": [
+        "manim.equation_balance.v1",
+        "manim.chem_reaction_equation.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "equation_balance_unknown",
+      "primary_template_id": "manim.equation_balance.v1",
+      "template_candidates": [
+        "manim.equation_balance.v1",
+        "manim.stoichiometry_board.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "stoichiometry_mole_calculation",
+      "primary_template_id": "manim.stoichiometry_board.v1",
+      "template_candidates": [
+        "manim.stoichiometry_board.v1",
+        "manim.chem_reaction_equation.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "reaction_equation_conservation",
+      "primary_template_id": "manim.chem_reaction_equation.v1",
+      "template_candidates": [
+        "manim.chem_reaction_equation.v1",
+        "manim.stoichiometry_board.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "fraction_decimal_percent_model",
+      "primary_template_id": "manim.fraction_bar_partition.v1",
+      "template_candidates": [
+        "manim.fraction_bar_partition.v1",
+        "manim.ratio_proportion.v1"
+      ],
+      "family": "fraction_ratio_family"
+    },
+    {
+      "concept_type": "fraction_ratio_proportion_scaling",
+      "primary_template_id": "manim.ratio_proportion.v1",
+      "template_candidates": [
+        "manim.ratio_proportion.v1",
+        "manim.fraction_bar_partition.v1"
+      ],
+      "family": "fraction_ratio_family"
+    },
+    {
+      "concept_type": "geometry_measurement_area_volume",
+      "primary_template_id": "manim.geometry_measurement.v1",
+      "template_candidates": [
+        "manim.geometry_measurement.v1",
+        "manim.geometry_area_volume.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "area_perimeter_volume_model",
+      "primary_template_id": "manim.geometry_measurement.v1",
+      "template_candidates": [
+        "manim.geometry_measurement.v1",
+        "manim.geometry_area_volume.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "congruence_similarity_transform",
+      "primary_template_id": "manim.geometry_transform.v1",
+      "template_candidates": [
+        "manim.geometry_transform.v1",
+        "manim.geometry_theorem.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "angle_relationship_geometry",
+      "primary_template_id": "manim.geometry_theorem.v1",
+      "template_candidates": [
+        "manim.geometry_theorem.v1",
+        "manim.geometry_transform.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "shape_identification_geometry",
+      "primary_template_id": "manim.geometry_area_volume.v1",
+      "template_candidates": [
+        "manim.geometry_area_volume.v1",
+        "manim.geometry_measurement.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "sequence_pattern_generalization",
+      "primary_template_id": "manim.sequence_pattern.v1",
+      "template_candidates": [
+        "manim.sequence_pattern.v1",
+        "manim.exponential_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "pattern_sequence_generalization",
+      "primary_template_id": "manim.sequence_pattern.v1",
+      "template_candidates": [
+        "manim.sequence_pattern.v1",
+        "manim.financial_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "financial_growth_model",
+      "primary_template_id": "manim.financial_growth.v1",
+      "template_candidates": [
+        "manim.financial_growth.v1",
+        "manim.exponential_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "exponential_growth_model",
+      "primary_template_id": "manim.exponential_growth.v1",
+      "template_candidates": [
+        "manim.exponential_growth.v1",
+        "manim.financial_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "probability_model",
+      "primary_template_id": "manim.probability_tree.v1",
+      "template_candidates": [
+        "manim.probability_tree.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "data_representation_model",
+      "primary_template_id": "manim.data_representation.v1",
+      "template_candidates": [
+        "manim.data_representation.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "center_spread_statistics",
+      "primary_template_id": "manim.statistics_center_spread.v1",
+      "template_candidates": [
+        "manim.statistics_center_spread.v1",
+        "manim.scatter_association.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "function_mapping_representation",
+      "primary_template_id": "manim.function_mapping.v1",
+      "template_candidates": [
+        "manim.function_mapping.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "quadratic_model",
+      "primary_template_id": "manim.quadratic_model.v1",
+      "template_candidates": [
+        "manim.quadratic_model.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "bivariable_association_regression",
+      "primary_template_id": "manim.scatter_association.v1",
+      "template_candidates": [
+        "manim.scatter_association.v1",
+        "manim.data_representation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "scientific_inquiry_process",
+      "primary_template_id": "manim.scientific_inquiry_data.v1",
+      "template_candidates": [
+        "manim.scientific_inquiry_data.v1",
+        "manim.data_representation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "scientific_inquiry_data_model",
+      "primary_template_id": "manim.scientific_inquiry_data.v1",
+      "template_candidates": [
+        "manim.scientific_inquiry_data.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "wave_oscillation_model",
+      "primary_template_id": "manim.wave_optics.v1",
+      "template_candidates": [
+        "manim.wave_optics.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "wave_sound_light_model",
+      "primary_template_id": "manim.wave_optics.v1",
+      "template_candidates": [
+        "manim.wave_optics.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "heat_energy_transfer_model",
+      "primary_template_id": "manim.heat_energy_machine.v1",
+      "template_candidates": [
+        "manim.heat_energy_machine.v1",
+        "manim.motion_kinematics.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "heat_temperature_transfer_model",
+      "primary_template_id": "manim.heat_energy_machine.v1",
+      "template_candidates": [
+        "manim.heat_energy_machine.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "electricity_magnetism_circuit_model",
+      "primary_template_id": "manim.electricity_magnetism.v1",
+      "template_candidates": [
+        "manim.electricity_magnetism.v1",
+        "manim.force_diagram.v1"
+      ],
+      "family": "force_family"
+    },
+    {
+      "concept_type": "electric_circuit_model",
+      "primary_template_id": "manim.electricity_magnetism.v1",
+      "template_candidates": [
+        "manim.electricity_magnetism.v1",
+        "manim.force_diagram.v1"
+      ],
+      "family": "force_family"
+    },
+    {
+      "concept_type": "environment_energy_system_model",
+      "primary_template_id": "manim.energy_environment_system.v1",
+      "template_candidates": [
+        "manim.energy_environment_system.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "modern_atomic_nuclear_model",
+      "primary_template_id": "manim.modern_atomic_nuclear.v1",
+      "template_candidates": [
+        "manim.modern_atomic_nuclear.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    }
+  ]
+}

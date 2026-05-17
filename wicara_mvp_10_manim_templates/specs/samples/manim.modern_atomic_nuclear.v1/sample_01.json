@@ -1,0 +1,107 @@
+{
+  "id": "sample_modern_atomic_nuclear",
+  "node_id": "phase4_modern_atomic_nuclear_model",
+  "template_id": "manim.modern_atomic_nuclear.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Model Atom Modern dan Peluruhan",
+  "subtitle": "Perubahan jumlah inti dapat dimodelkan secara eksponensial.",
+  "function": {
+    "type": "exponential",
+    "params": {
+      "a": 8,
+      "base": 0.5,
+      "k": 1,
+      "c": 0
+    }
+  },
+  "x_range": [
+    0,
+    6,
+    1
+  ],
+  "y_range": [
+    0,
+    9,
+    1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "N(t)=8(0.5)^t",
+  "steps": [
+    {
+      "title": "Nilai awal inti",
+      "body": "Pada awal pengamatan, jumlah inti masih maksimum.",
+      "narration": "Nilai awal inti. Pada awal pengamatan, jumlah inti masih maksimum."
+    },
+    {
+      "title": "Laju peluruhan",
+      "body": "Jumlah inti berkurang seiring waktu mengikuti pola eksponensial.",
+      "narration": "Laju peluruhan. Jumlah inti berkurang seiring waktu mengikuti pola eksponensial."
+    },
+    {
+      "title": "Interpretasi kurva",
+      "body": "Kurva menurun tajam di awal lalu melandai pada waktu besar.",
+      "narration": "Interpretasi kurva. Kurva menurun tajam di awal lalu melandai pada waktu besar."
+    }
+  ],
+  "summary": "Model eksponensial cocok untuk menggambarkan peluruhan radioaktif.",
+  "voiceover_script": "Pada peluruhan inti, penurunan jumlah partikel biasanya mengikuti kurva eksponensial menurun.",
+  "intro_narration": "Pada peluruhan inti, penurunan jumlah partikel biasanya mengikuti kurva eksponensial menurun.",
+  "summary_narration": "Model eksponensial cocok untuk menggambarkan peluruhan radioaktif.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Pada peluruhan inti, penurunan jumlah partikel biasanya mengikuti kurva eksponensial menurun."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Nilai awal inti. Pada awal pengamatan, jumlah inti masih maksimum."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Laju peluruhan. Jumlah inti berkurang seiring waktu mengikuti pola eksponensial."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Interpretasi kurva. Kurva menurun tajam di awal lalu melandai pada waktu besar."
+    },
+    {
+      "slot": "summary",
+      "text": "Model eksponensial cocok untuk menggambarkan peluruhan radioaktif."
+    }
+  ],
+  "x_label": "waktu",
+  "y_label": "jumlah relatif",
+  "graph_label": "kurva peluruhan",
+  "moving_label": "N",
+  "x_path": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "highlight_x": 3,
+  "show_slope": false
+}

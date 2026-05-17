@@ -1,0 +1,64 @@
+{
+  "id": "sample_stoichiometry_board",
+  "node_id": "phase4_stoichiometry_mole_calculation",
+  "template_id": "manim.stoichiometry_board.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Koefisien Reaksi untuk Stoikiometri",
+  "subtitle": "Koefisien seimbang jadi dasar hitung mol.",
+  "equation": "N2 + H2 -> NH3",
+  "left_expression": "N2 + H2",
+  "right_expression": "NH3",
+  "solution_steps": [
+    {
+      "operation": "Set koefisien NH3 = 2",
+      "left_result": "N2 + H2",
+      "right_result": "2NH3",
+      "explanation": "Agar atom N di produk menjadi 2 dan sesuai dengan N2."
+    },
+    {
+      "operation": "Set koefisien H2 = 3",
+      "left_result": "N2 + 3H2",
+      "right_result": "2NH3",
+      "explanation": "Samakan atom H menjadi 6 di kedua ruas."
+    }
+  ],
+  "final_solution": "N2 + 3H2 -> 2NH3",
+  "steps": [
+    {
+      "title": "Tetapkan target produk",
+      "body": "Mulai dari produk untuk menentukan jumlah atom yang harus dipenuhi pereaksi.",
+      "narration": "Tetapkan target produk. Mulai dari produk untuk menentukan jumlah atom yang harus dipenuhi pereaksi."
+    },
+    {
+      "title": "Setarakan pereaksi",
+      "body": "Ubah koefisien pereaksi sampai jumlah atom N dan H seimbang.",
+      "narration": "Setarakan pereaksi. Ubah koefisien pereaksi sampai jumlah atom N dan H seimbang."
+    }
+  ],
+  "summary": "Koefisien seimbang memberi rasio mol N2:H2:NH3 = 1:3:2.",
+  "voiceover_script": "Di stoikiometri, koefisien persamaan seimbang dipakai sebagai rasio mol antar zat.",
+  "intro_narration": "Di stoikiometri, koefisien persamaan seimbang dipakai sebagai rasio mol antar zat.",
+  "summary_narration": "Koefisien seimbang memberi rasio mol N2:H2:NH3 = 1:3:2.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Di stoikiometri, koefisien persamaan seimbang dipakai sebagai rasio mol antar zat."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Tetapkan target produk. Mulai dari produk untuk menentukan jumlah atom yang harus dipenuhi pereaksi."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Setarakan pereaksi. Ubah koefisien pereaksi sampai jumlah atom N dan H seimbang."
+    },
+    {
+      "slot": "summary",
+      "text": "Koefisien seimbang memberi rasio mol N2:H2:NH3 = 1:3:2."
+    }
+  ]
+}

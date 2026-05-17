@@ -2958,3 +2958,447 @@ class ForceDiagramTemplate(WicaraTemplateScene):
 
         active_card = self.render_step_cards(spec, active_card=active_card)
         self.clean_summary(spec, active_card=active_card)
+
+
+def _clone_spec(base_spec, patch):
+    spec = dict(base_spec)
+    for key, value in patch.items():
+        spec[key] = value
+    return spec
+
+
+# ============================================================
+# PHASE 4 EXPANDED CORE TEMPLATES (TOP 30 TRACK)
+# ============================================================
+
+class ProbabilityTreeTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.probability_tree.v1",
+            "title": "Peluang Bertahap",
+            "subtitle": "Bandingkan peluang kejadian antar tahap.",
+            "formula_latex": "P(k)=0.12k+0.2",
+            "function": {"type": "linear", "params": {"m": 0.12, "b": 0.2}},
+            "x_range": [0, 6, 1],
+            "y_range": [0, 1, 0.1],
+            "x_label": "tahap",
+            "y_label": "peluang",
+            "graph_label": "peluang kejadian",
+            "moving_label": "P",
+            "x_path": [0, 1, 2, 3, 4, 5],
+            "show_slope": False,
+            "summary": "Visual peluang membantu membaca kecenderungan kejadian.",
+        },
+    )
+
+
+class ScientificInquiryDataTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.scientific_inquiry_data.v1",
+            "title": "Inkuiri Ilmiah Berbasis Data",
+            "subtitle": "Baca pola eksperimen dari grafik.",
+            "formula_latex": "y=1.5x+2",
+            "function": {"type": "linear", "params": {"m": 1.5, "b": 2}},
+            "x_range": [0, 8, 1],
+            "y_range": [0, 15, 1],
+            "x_label": "waktu",
+            "y_label": "hasil ukur",
+            "graph_label": "hasil eksperimen",
+            "moving_label": "ukur",
+            "x_path": [0, 1, 2, 3, 4, 5, 6],
+            "summary": "Data eksperimen membantu menyusun kesimpulan ilmiah.",
+        },
+    )
+
+
+class FinancialGrowthTemplate(SequencePatternTemplate):
+    SPEC = _clone_spec(
+        SequencePatternTemplate.SPEC,
+        {
+            "template_id": "manim.financial_growth.v1",
+            "audience_level": "smp",
+            "title": "Pertumbuhan Nilai Tabungan",
+            "subtitle": "Nilai naik per periode dengan faktor tetap.",
+            "terms": [100, 120, 144, 173],
+            "rule": "Naik 20% setiap periode",
+            "table_values": [
+                {"n": 1, "value": 100},
+                {"n": 2, "value": 120},
+                {"n": 3, "value": 144},
+                {"n": 4, "value": 173},
+            ],
+            "target_term": {"n": 5, "value": 208},
+            "summary": "Model pertumbuhan persentase dipakai untuk prediksi keuangan.",
+        },
+    )
+
+
+class DataRepresentationTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.data_representation.v1",
+            "title": "Representasi Data Kelas",
+            "subtitle": "Bandingkan jumlah data antar kategori.",
+            "formula_latex": "y=3x+10",
+            "function": {"type": "linear", "params": {"m": 3, "b": 10}},
+            "x_range": [0, 6, 1],
+            "y_range": [0, 30, 5],
+            "x_label": "kategori",
+            "y_label": "jumlah",
+            "graph_label": "data pengamatan",
+            "moving_label": "data",
+            "x_path": [0, 1, 2, 3, 4, 5],
+            "show_slope": False,
+            "summary": "Representasi visual memudahkan perbandingan data.",
+        },
+    )
+
+
+class StatisticsCenterSpreadTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.statistics_center_spread.v1",
+            "title": "Pemusatan dan Sebaran",
+            "subtitle": "Lihat pusat data dan penyebarannya.",
+            "formula_latex": "y=0.4x^2-2x+7",
+            "function": {"type": "quadratic", "params": {"a": 0.4, "b": -2, "c": 7}},
+            "x_range": [0, 8, 1],
+            "y_range": [0, 10, 1],
+            "x_label": "indeks data",
+            "y_label": "nilai",
+            "graph_label": "pola data",
+            "moving_label": "nilai",
+            "x_path": [0, 2, 4, 6, 8],
+            "show_slope": False,
+            "summary": "Ukuran pusat dan sebaran dibaca bersama.",
+        },
+    )
+
+
+class GeometryTransformTemplate(GeometryAreaVolumeTemplate):
+    SPEC = _clone_spec(
+        GeometryAreaVolumeTemplate.SPEC,
+        {
+            "template_id": "manim.geometry_transform.v1",
+            "title": "Transformasi Geometri Dasar",
+            "subtitle": "Geser, putar, dan cermin tanpa mengubah sifat utama.",
+            "shape_type": "triangle",
+            "dimensions": {"length": 4, "width": 3, "unit": "satuan"},
+            "formula_latex": "A' = A",
+            "highlight_features": ["translasi", "rotasi", "refleksi"],
+            "summary": "Transformasi mengubah posisi, bukan identitas bangun.",
+        },
+    )
+
+
+class ExponentialGrowthTemplate(SequencePatternTemplate):
+    SPEC = _clone_spec(
+        SequencePatternTemplate.SPEC,
+        {
+            "template_id": "manim.exponential_growth.v1",
+            "audience_level": "smp",
+            "title": "Pertumbuhan Eksponensial",
+            "subtitle": "Nilai bertambah dengan faktor kali tetap.",
+            "terms": [1, 2, 4, 8],
+            "rule": "Dikalikan 2 setiap langkah",
+            "table_values": [
+                {"n": 1, "value": 1},
+                {"n": 2, "value": 2},
+                {"n": 3, "value": 4},
+                {"n": 4, "value": 8},
+            ],
+            "target_term": {"n": 5, "value": 16},
+            "summary": "Pertumbuhan eksponensial memakai faktor kali tetap.",
+        },
+    )
+
+
+class FunctionMappingTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.function_mapping.v1",
+            "title": "Pemetaan Fungsi",
+            "subtitle": "Setiap input dipetakan ke satu output.",
+            "formula_latex": "f(x)=2x+1",
+            "function": {"type": "linear", "params": {"m": 2, "b": 1}},
+            "x_range": [-2, 4, 1],
+            "y_range": [-3, 10, 1],
+            "x_label": "x",
+            "y_label": "f(x)",
+            "graph_label": "pemetaan fungsi",
+            "moving_label": "pasangan",
+            "x_path": [-2, -1, 0, 1, 2, 3],
+            "summary": "Fungsi memetakan setiap input ke tepat satu output.",
+        },
+    )
+
+
+class GeometryMeasurementTemplate(GeometryAreaVolumeTemplate):
+    SPEC = _clone_spec(
+        GeometryAreaVolumeTemplate.SPEC,
+        {
+            "template_id": "manim.geometry_measurement.v1",
+            "title": "Pengukuran Luas dan Keliling",
+            "subtitle": "Gunakan ukuran sisi untuk menghitung besaran geometri.",
+            "shape_type": "rectangle",
+            "dimensions": {"length": 8, "width": 5, "unit": "cm"},
+            "formula_latex": "L = p \\times l,\\ K = 2(p+l)",
+            "highlight_features": ["panjang", "lebar", "luas"],
+            "summary": "Pengukuran tepat menghasilkan hitung geometri akurat.",
+        },
+    )
+
+
+class GeometryTheoremTemplate(GeometryAreaVolumeTemplate):
+    SPEC = _clone_spec(
+        GeometryAreaVolumeTemplate.SPEC,
+        {
+            "template_id": "manim.geometry_theorem.v1",
+            "title": "Teorema Sudut Segitiga",
+            "subtitle": "Jumlah sudut dalam segitiga adalah 180 derajat.",
+            "shape_type": "triangle",
+            "dimensions": {"length": 5, "width": 4, "unit": "satuan"},
+            "formula_latex": "\\angle A + \\angle B + \\angle C = 180^\\circ",
+            "highlight_features": ["sudut A", "sudut B", "sudut C"],
+            "summary": "Teorema sudut segitiga menjadi dasar soal geometri.",
+        },
+    )
+
+
+class HeatEnergyMachineTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.heat_energy_machine.v1",
+            "title": "Kalor dan Perpindahan Energi",
+            "subtitle": "Temperatur berubah seiring aliran energi panas.",
+            "formula_latex": "T(t)=1.2t+25",
+            "function": {"type": "linear", "params": {"m": 1.2, "b": 25}},
+            "x_range": [0, 10, 1],
+            "y_range": [24, 40, 2],
+            "x_label": "menit",
+            "y_label": "suhu",
+            "graph_label": "tren suhu",
+            "moving_label": "temperatur",
+            "x_path": [0, 2, 4, 6, 8, 10],
+            "summary": "Grafik suhu-waktu membantu membaca perpindahan energi.",
+        },
+    )
+
+
+class WaveOpticsTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.wave_optics.v1",
+            "title": "Getaran, Gelombang, dan Optik",
+            "subtitle": "Gelombang periodik dimodelkan dengan fungsi sinus.",
+            "formula_latex": "y = 2\\sin(x)",
+            "function": {"type": "sine", "params": {"a": 2, "b": 1, "c": 0, "d": 0}},
+            "x_range": [-6, 6, 1],
+            "y_range": [-3, 3, 1],
+            "x_label": "posisi",
+            "y_label": "simpangan",
+            "graph_label": "gelombang sinus",
+            "moving_label": "puncak",
+            "x_path": [-6, -4, -2, 0, 2, 4, 6],
+            "summary": "Model sinus membantu memahami gelombang periodik.",
+        },
+    )
+
+
+class StoichiometryBoardTemplate(EquationBalanceTemplate):
+    SPEC = _clone_spec(
+        EquationBalanceTemplate.SPEC,
+        {
+            "template_id": "manim.stoichiometry_board.v1",
+            "title": "Koefisien Reaksi untuk Stoikiometri",
+            "subtitle": "Koefisien seimbang adalah dasar rasio mol.",
+            "equation": "N2 + H2 -> NH3",
+            "left_expression": "N2 + H2",
+            "right_expression": "NH3",
+            "solution_steps": [
+                {
+                    "operation": "Set koefisien NH3 = 2",
+                    "left_result": "N2 + H2",
+                    "right_result": "2NH3",
+                    "explanation": "Samakan atom N di ruas kanan dengan N2 di ruas kiri.",
+                },
+                {
+                    "operation": "Set koefisien H2 = 3",
+                    "left_result": "N2 + 3H2",
+                    "right_result": "2NH3",
+                    "explanation": "Samakan jumlah atom H di kedua ruas.",
+                },
+            ],
+            "final_solution": "N2 + 3H2 -> 2NH3",
+            "summary": "Koefisien seimbang memberi rasio mol N2:H2:NH3 = 1:3:2.",
+        },
+    )
+
+
+class ElementaryNumberLinePlaceValueTemplate(NumberLineQuantityTemplate):
+    SPEC = _clone_spec(
+        NumberLineQuantityTemplate.SPEC,
+        {
+            "template_id": "manim.elementary_number_line_place_value.v1",
+            "phase": "C",
+            "audience_level": "sd",
+            "title": "Nilai Tempat di Garis Bilangan",
+            "subtitle": "Posisi angka menunjukkan besar nilainya.",
+            "number_range": {"min": 0, "max": 100, "step": 10},
+            "markers": [{"value": 30, "label": "30"}, {"value": 70, "label": "70"}],
+            "highlight_values": [30, 70],
+            "operation": {"type": "compare", "from": 30, "to": 70, "label": "70 lebih besar dari 30"},
+            "summary": "Bilangan yang lebih kanan bernilai lebih besar.",
+        },
+    )
+
+
+class QuadraticModelTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.quadratic_model.v1",
+            "title": "Model Kuadrat dan Parabola",
+            "subtitle": "Fungsi kuadrat membentuk kurva parabola.",
+            "formula_latex": "f(x)=x^2-2x-3",
+            "function": {"type": "quadratic", "params": {"a": 1, "b": -2, "c": -3}},
+            "x_range": [-3, 5, 1],
+            "y_range": [-5, 10, 1],
+            "x_label": "x",
+            "y_label": "f(x)",
+            "graph_label": "parabola kuadrat",
+            "moving_label": "titik f(x)",
+            "x_path": [-3, -1, 0, 1, 2, 3, 4],
+            "summary": "Model kuadrat memudahkan analisis puncak dan bukaan.",
+        },
+    )
+
+
+class ScatterAssociationTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.scatter_association.v1",
+            "title": "Asosiasi Dua Variabel",
+            "subtitle": "Lihat kecenderungan hubungan data x dan y.",
+            "formula_latex": "y=0.8x+2",
+            "function": {"type": "linear", "params": {"m": 0.8, "b": 2}},
+            "x_range": [0, 10, 1],
+            "y_range": [0, 12, 1],
+            "x_label": "variabel x",
+            "y_label": "variabel y",
+            "graph_label": "asosiasi data",
+            "moving_label": "titik data",
+            "x_path": [0, 2, 4, 6, 8, 10],
+            "show_slope": False,
+            "summary": "Asosiasi menunjukkan kecenderungan hubungan dua variabel.",
+        },
+    )
+
+
+class ElectricityMagnetismTemplate(ForceDiagramTemplate):
+    SPEC = _clone_spec(
+        ForceDiagramTemplate.SPEC,
+        {
+            "template_id": "manim.electricity_magnetism.v1",
+            "title": "Gaya Listrik dan Magnet",
+            "subtitle": "Resultan gaya menentukan arah gerak partikel.",
+            "object": {"type": "particle", "label": "Muatan q"},
+            "forces": [
+                {"label": "F_listrik", "magnitude": 8, "unit": "N", "direction": "right"},
+                {"label": "F_magnet", "magnitude": 3, "unit": "N", "direction": "left"},
+            ],
+            "resultant": {"magnitude": 5, "unit": "N", "direction": "right"},
+            "motion_response": "Partikel cenderung bergerak ke kanan.",
+            "summary": "Gerak partikel ditentukan oleh resultan gaya total.",
+        },
+    )
+
+
+class EnergyEnvironmentSystemTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.energy_environment_system.v1",
+            "title": "Energi dan Lingkungan",
+            "subtitle": "Baca tren emisi saat transisi energi.",
+            "formula_latex": "E(t)=-0.6t+8",
+            "function": {"type": "linear", "params": {"m": -0.6, "b": 8}},
+            "x_range": [0, 10, 1],
+            "y_range": [0, 9, 1],
+            "x_label": "tahun",
+            "y_label": "indeks emisi",
+            "graph_label": "tren emisi",
+            "moving_label": "emisi",
+            "x_path": [0, 2, 4, 6, 8, 10],
+            "summary": "Grafik tren membantu evaluasi dampak kebijakan energi.",
+        },
+    )
+
+
+class ModernAtomicNuclearTemplate(GraphExplanationTemplate):
+    SPEC = _clone_spec(
+        GraphExplanationTemplate.SPEC,
+        {
+            "template_id": "manim.modern_atomic_nuclear.v1",
+            "title": "Model Atom Modern dan Peluruhan",
+            "subtitle": "Peluruhan inti dapat dimodelkan secara eksponensial.",
+            "formula_latex": "N(t)=8(0.5)^t",
+            "function": {"type": "exponential", "params": {"a": 8, "base": 0.5, "k": 1, "c": 0}},
+            "x_range": [0, 6, 1],
+            "y_range": [0, 9, 1],
+            "x_label": "waktu",
+            "y_label": "jumlah relatif",
+            "graph_label": "kurva peluruhan",
+            "moving_label": "N",
+            "x_path": [0, 1, 2, 3, 4, 5, 6],
+            "show_slope": False,
+            "summary": "Peluruhan radioaktif cocok dimodelkan oleh fungsi eksponensial.",
+        },
+    )
+
+
+class ChemistryReactionEquationTemplate(EquationBalanceTemplate):
+    SPEC = _clone_spec(
+        EquationBalanceTemplate.SPEC,
+        {
+            "template_id": "manim.chem_reaction_equation.v1",
+            "phase": "E",
+            "audience_level": "sma",
+            "title": "Menyeimbangkan Persamaan Reaksi",
+            "subtitle": "Jumlah atom tiap unsur harus sama di kedua ruas.",
+            "equation": "Fe + O2 -> Fe2O3",
+            "left_expression": "Fe + O2",
+            "right_expression": "Fe2O3",
+            "solution_steps": [
+                {
+                    "operation": "Set koefisien Fe2O3 = 2",
+                    "left_result": "Fe + O2",
+                    "right_result": "2Fe2O3",
+                    "explanation": "Mulai dari produk agar target atom Fe dan O jelas.",
+                },
+                {
+                    "operation": "Set koefisien Fe = 4",
+                    "left_result": "4Fe + O2",
+                    "right_result": "2Fe2O3",
+                    "explanation": "Samakan atom Fe kiri dan kanan.",
+                },
+                {
+                    "operation": "Set koefisien O2 = 3",
+                    "left_result": "4Fe + 3O2",
+                    "right_result": "2Fe2O3",
+                    "explanation": "Samakan atom O hingga kedua ruas setara.",
+                },
+            ],
+            "final_solution": "4Fe + 3O2 -> 2Fe2O3",
+            "summary": "Persamaan reaksi seimbang berarti jumlah atom tiap unsur sama.",
+        },
+    )

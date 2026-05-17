@@ -28,13 +28,13 @@
   "steps": [
     {
       "title": "Ukur dua sisi",
-      "body": "Persegi panjang punya panjang dan lebar.",
-      "narration": "Ukur dua sisi. Persegi panjang punya panjang dan lebar."
+      "body": "Persegi panjang punya panjang 6 cm dan lebar 4 cm.",
+      "narration": "Pertama tandai dua sisi penting: panjang enam sentimeter dan lebar empat sentimeter, supaya ukuran bangunnya jelas sebelum dihitung."
     },
     {
       "title": "Kalikan",
-      "body": "Luas diperoleh dari panjang dikali lebar.",
-      "narration": "Kalikan. Luas diperoleh dari panjang dikali lebar."
+      "body": "Luas diperoleh dari panjang dikali lebar, yaitu 6 x 4.",
+      "narration": "Lalu kalikan enam dengan empat. Perkalian ini menunjukkan banyak persegi satuan yang menutupi seluruh bidang persegi panjang."
     }
   ],
   "summary": "Luas persegi panjang adalah panjang dikali lebar.",
@@ -49,12 +49,12 @@
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Ukur dua sisi. Persegi panjang punya panjang dan lebar."
+      "text": "Pertama tandai dua sisi penting: panjang enam sentimeter dan lebar empat sentimeter, supaya ukuran bangunnya jelas sebelum dihitung."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Kalikan. Luas diperoleh dari panjang dikali lebar."
+      "text": "Lalu kalikan enam dengan empat. Perkalian ini menunjukkan banyak persegi satuan yang menutupi seluruh bidang persegi panjang."
     },
     {
       "slot": "summary",

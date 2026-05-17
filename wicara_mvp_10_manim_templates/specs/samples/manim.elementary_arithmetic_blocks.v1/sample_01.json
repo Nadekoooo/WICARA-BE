@@ -25,13 +25,13 @@
   "steps": [
     {
       "title": "Ada dua kelompok",
-      "body": "Kelompok pertama berisi 12, kelompok kedua berisi 8.",
-      "narration": "Ada dua kelompok. Kelompok pertama berisi 12, kelompok kedua berisi 8."
+      "body": "Kelompok pertama berisi 12 blok, kelompok kedua berisi 8 blok.",
+      "narration": "Amati dua kelompok blok. Kelompok pertama berisi 12 blok dan kelompok kedua berisi 8 blok, jadi kita hitung bersama dengan teliti."
     },
     {
       "title": "Gabungkan",
-      "body": "Setelah digabung, jumlahnya menjadi 20.",
-      "narration": "Gabungkan. Setelah digabung, jumlahnya menjadi 20."
+      "body": "Setelah digabung, jumlah keseluruhannya menjadi 20 blok.",
+      "narration": "Sekarang gabungkan semua blok menjadi satu kumpulan, lalu hitung satu per satu sampai terlihat totalnya tepat 20 blok."
     }
   ],
   "summary": "Penjumlahan berarti menggabungkan dua kelompok.",
@@ -46,12 +46,12 @@
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Ada dua kelompok. Kelompok pertama berisi 12, kelompok kedua berisi 8."
+      "text": "Amati dua kelompok blok. Kelompok pertama berisi 12 blok dan kelompok kedua berisi 8 blok, jadi kita hitung bersama dengan teliti."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Gabungkan. Setelah digabung, jumlahnya menjadi 20."
+      "text": "Sekarang gabungkan semua blok menjadi satu kumpulan, lalu hitung satu per satu sampai terlihat totalnya tepat 20 blok."
     },
     {
       "slot": "summary",

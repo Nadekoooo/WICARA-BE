@@ -1,0 +1,74 @@
+{
+  "id": "sample_geometry_theorem",
+  "node_id": "phase4_angle_relationship_geometry",
+  "template_id": "manim.geometry_theorem.v1",
+  "phase": "B",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Teorema Sudut Segitiga",
+  "subtitle": "Jumlah sudut dalam segitiga selalu 180 derajat.",
+  "shape_type": "triangle",
+  "dimensions": {
+    "length": 5,
+    "width": 4,
+    "unit": "satuan"
+  },
+  "transformations": [
+    {
+      "type": "fill_unit_squares",
+      "label": "Isi dengan persegi satuan"
+    }
+  ],
+  "formula_latex": "\\angle A + \\angle B + \\angle C = 180^\\circ",
+  "highlight_features": [
+    "sudut A",
+    "sudut B",
+    "sudut C"
+  ],
+  "steps": [
+    {
+      "title": "Tentukan tiga sudut",
+      "body": "Segitiga memiliki tiga sudut yang saling berhubungan.",
+      "narration": "Tentukan tiga sudut. Segitiga memiliki tiga sudut yang saling berhubungan."
+    },
+    {
+      "title": "Jumlahkan sudut",
+      "body": "Ketiga sudut dalam segitiga jika dijumlahkan selalu 180 derajat.",
+      "narration": "Jumlahkan sudut. Ketiga sudut dalam segitiga jika dijumlahkan selalu 180 derajat."
+    },
+    {
+      "title": "Gunakan untuk hitung sudut",
+      "body": "Jika dua sudut diketahui, sudut ketiga bisa dicari dari total 180 derajat.",
+      "narration": "Gunakan untuk hitung sudut. Jika dua sudut diketahui, sudut ketiga bisa dicari dari total 180 derajat."
+    }
+  ],
+  "summary": "Teorema jumlah sudut segitiga menjadi dasar banyak soal geometri.",
+  "voiceover_script": "Dengan teorema jumlah sudut, kita dapat menemukan sudut yang belum diketahui secara sistematis.",
+  "intro_narration": "Dengan teorema jumlah sudut, kita dapat menemukan sudut yang belum diketahui secara sistematis.",
+  "summary_narration": "Teorema jumlah sudut segitiga menjadi dasar banyak soal geometri.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Dengan teorema jumlah sudut, kita dapat menemukan sudut yang belum diketahui secara sistematis."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Tentukan tiga sudut. Segitiga memiliki tiga sudut yang saling berhubungan."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Jumlahkan sudut. Ketiga sudut dalam segitiga jika dijumlahkan selalu 180 derajat."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Gunakan untuk hitung sudut. Jika dua sudut diketahui, sudut ketiga bisa dicari dari total 180 derajat."
+    },
+    {
+      "slot": "summary",
+      "text": "Teorema jumlah sudut segitiga menjadi dasar banyak soal geometri."
+    }
+  ]
+}

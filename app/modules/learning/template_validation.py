@@ -69,6 +69,7 @@ class NarrationSegmentSpec(BaseModel):
 
 
 class BaseTemplateSpec(BaseModel):
+    template_contract_version: str = Field(default="v1", min_length=1, max_length=16)
     phase: str = Field(default="D", min_length=1, max_length=8)
     audience_level: str = Field(default="smp", min_length=1, max_length=16)
     language: str = Field(
@@ -107,6 +108,55 @@ class BaseTemplateSpec(BaseModel):
             if base:
                 normalized = base
         return normalized[:16]
+
+    @model_validator(mode="after")
+    def validate_narration_contract(self) -> BaseTemplateSpec:
+        allowed_slots = {"intro", "step", "summary", "outro"}
+        step_count = len(self.steps)
+        has_voiceover = bool(str(self.voiceover_script or "").strip())
+        has_intro = bool(str(self.intro_narration or "").strip())
+        has_summary = bool(str(self.summary_narration or "").strip())
+        has_step_narration = any(bool(str(step.narration or "").strip()) for step in self.steps)
+        has_segment_narration = False
+        seen_step_segments: set[int] = set()
+
+        for segment in self.narration_segments:
+            slot = str(segment.slot or "").strip().lower()
+            if slot not in allowed_slots:
+                raise ValueError(
+                    f"narration_segments.slot '{segment.slot}' is invalid. "
+                    f"Allowed: {sorted(allowed_slots)}."
+                )
+            text = str(segment.text or "").strip()
+            if text:
+                has_segment_narration = True
+
+            if slot == "step":
+                if segment.step_index is None:
+                    raise ValueError(
+                        "narration_segments.step entries must include step_index."
+                    )
+                if segment.step_index > step_count:
+                    raise ValueError(
+                        "narration_segments.step_index cannot exceed number of steps."
+                    )
+                if segment.step_index in seen_step_segments:
+                    raise ValueError(
+                        "narration_segments.step_index must be unique per step slot."
+                    )
+                seen_step_segments.add(segment.step_index)
+            elif segment.step_index is not None:
+                raise ValueError(
+                    "narration_segments.step_index is only allowed when slot='step'."
+                )
+
+        if not (has_voiceover or has_intro or has_summary or has_step_narration or has_segment_narration):
+            raise ValueError(
+                "At least one narration source is required: "
+                "voiceover_script, intro_narration, summary_narration, "
+                "steps[n].narration, or narration_segments."
+            )
+        return self
 
 
 class NumberRangeSpec(BaseModel):

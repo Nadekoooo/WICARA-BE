@@ -1,0 +1,104 @@
+{
+  "id": "sample_scatter_association",
+  "node_id": "phase4_bivariable_association_regression",
+  "template_id": "manim.scatter_association.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Asosiasi Dua Variabel",
+  "subtitle": "Lihat hubungan nilai x dan y dari sebaran data.",
+  "function": {
+    "type": "linear",
+    "params": {
+      "m": 0.8,
+      "b": 2
+    }
+  },
+  "x_range": [
+    0,
+    10,
+    1
+  ],
+  "y_range": [
+    0,
+    12,
+    1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "y = 0.8x + 2",
+  "steps": [
+    {
+      "title": "Plot pasangan data",
+      "body": "Setiap pasangan nilai menjadi satu titik di bidang koordinat.",
+      "narration": "Plot pasangan data. Setiap pasangan nilai menjadi satu titik di bidang koordinat."
+    },
+    {
+      "title": "Amati arah pola",
+      "body": "Pola naik menunjukkan asosiasi positif, pola turun menunjukkan asosiasi negatif.",
+      "narration": "Amati arah pola. Pola naik menunjukkan asosiasi positif, pola turun menunjukkan asosiasi negatif."
+    },
+    {
+      "title": "Gunakan untuk prediksi",
+      "body": "Asosiasi dapat dipakai memperkirakan nilai saat salah satu variabel berubah.",
+      "narration": "Gunakan untuk prediksi. Asosiasi dapat dipakai memperkirakan nilai saat salah satu variabel berubah."
+    }
+  ],
+  "summary": "Asosiasi menunjukkan kecenderungan hubungan antar variabel, bukan sebab-akibat langsung.",
+  "voiceover_script": "Sebaran titik membantu kita membaca ada tidaknya kecenderungan hubungan antara dua variabel.",
+  "intro_narration": "Sebaran titik membantu kita membaca ada tidaknya kecenderungan hubungan antara dua variabel.",
+  "summary_narration": "Asosiasi menunjukkan kecenderungan hubungan antar variabel, bukan sebab-akibat langsung.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Sebaran titik membantu kita membaca ada tidaknya kecenderungan hubungan antara dua variabel."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Plot pasangan data. Setiap pasangan nilai menjadi satu titik di bidang koordinat."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Amati arah pola. Pola naik menunjukkan asosiasi positif, pola turun menunjukkan asosiasi negatif."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Gunakan untuk prediksi. Asosiasi dapat dipakai memperkirakan nilai saat salah satu variabel berubah."
+    },
+    {
+      "slot": "summary",
+      "text": "Asosiasi menunjukkan kecenderungan hubungan antar variabel, bukan sebab-akibat langsung."
+    }
+  ],
+  "x_label": "variabel x",
+  "y_label": "variabel y",
+  "graph_label": "asosiasi data",
+  "moving_label": "titik data",
+  "x_path": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10
+  ],
+  "highlight_x": 6,
+  "show_slope": false
+}

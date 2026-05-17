@@ -1,0 +1,108 @@
+{
+  "id": "sample_wave_optics",
+  "node_id": "phase4_wave_oscillation_model",
+  "template_id": "manim.wave_optics.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Getaran, Gelombang, dan Optik",
+  "subtitle": "Pola sinus menggambarkan rambatan gelombang periodik.",
+  "function": {
+    "type": "sine",
+    "params": {
+      "a": 2,
+      "b": 1,
+      "c": 0,
+      "d": 0
+    }
+  },
+  "x_range": [
+    -6,
+    6,
+    1
+  ],
+  "y_range": [
+    -3,
+    3,
+    1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "y = 2\\sin(x)",
+  "steps": [
+    {
+      "title": "Kenali perioda",
+      "body": "Gelombang mengulang pola secara periodik.",
+      "narration": "Kenali perioda. Gelombang mengulang pola secara periodik."
+    },
+    {
+      "title": "Amati puncak dan lembah",
+      "body": "Puncak bernilai positif maksimum, lembah bernilai negatif minimum.",
+      "narration": "Amati puncak dan lembah. Puncak bernilai positif maksimum, lembah bernilai negatif minimum."
+    },
+    {
+      "title": "Hubungkan ke fenomena",
+      "body": "Model gelombang dipakai pada bunyi, cahaya, dan getaran mekanik.",
+      "narration": "Hubungkan ke fenomena. Model gelombang dipakai pada bunyi, cahaya, dan getaran mekanik."
+    }
+  ],
+  "summary": "Grafik sinus membantu memahami karakter periodik gelombang.",
+  "voiceover_script": "Gelombang periodik dapat dimodelkan dengan fungsi sinus untuk membaca puncak, lembah, dan perubahan fase.",
+  "intro_narration": "Gelombang periodik dapat dimodelkan dengan fungsi sinus untuk membaca puncak, lembah, dan perubahan fase.",
+  "summary_narration": "Grafik sinus membantu memahami karakter periodik gelombang.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Gelombang periodik dapat dimodelkan dengan fungsi sinus untuk membaca puncak, lembah, dan perubahan fase."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Kenali perioda. Gelombang mengulang pola secara periodik."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Amati puncak dan lembah. Puncak bernilai positif maksimum, lembah bernilai negatif minimum."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Hubungkan ke fenomena. Model gelombang dipakai pada bunyi, cahaya, dan getaran mekanik."
+    },
+    {
+      "slot": "summary",
+      "text": "Grafik sinus membantu memahami karakter periodik gelombang."
+    }
+  ],
+  "x_label": "posisi",
+  "y_label": "simpangan",
+  "graph_label": "gelombang sinus",
+  "moving_label": "puncak",
+  "x_path": [
+    -6,
+    -4,
+    -2,
+    0,
+    2,
+    4,
+    6
+  ],
+  "highlight_x": 2,
+  "show_slope": true,
+  "slope_text": "Kemiringan lokal menunjukkan arah perubahan simpangan di titik itu."
+}

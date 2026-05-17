@@ -1,0 +1,104 @@
+{
+  "id": "sample_probability_tree",
+  "node_id": "phase4_probability_model",
+  "template_id": "manim.probability_tree.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Peluang Bertahap",
+  "subtitle": "Estimasi peluang total dengan membaca pola nilai peluang.",
+  "function": {
+    "type": "linear",
+    "params": {
+      "m": 0.12,
+      "b": 0.2
+    }
+  },
+  "x_range": [
+    0,
+    6,
+    1
+  ],
+  "y_range": [
+    0,
+    1.0,
+    0.1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "P(k) = 0.12k + 0.2",
+  "steps": [
+    {
+      "title": "Pahami rentang peluang",
+      "body": "Nilai peluang selalu berada antara 0 dan 1.",
+      "narration": "Pahami rentang peluang. Nilai peluang selalu berada antara 0 dan 1."
+    },
+    {
+      "title": "Bandingkan antar tahap",
+      "body": "Setiap tahap punya peluang yang dapat dibandingkan di grafik.",
+      "narration": "Bandingkan antar tahap. Setiap tahap punya peluang yang dapat dibandingkan di grafik."
+    },
+    {
+      "title": "Tarik kesimpulan",
+      "body": "Perubahan nilai peluang membantu memprediksi hasil tahap berikutnya.",
+      "narration": "Tarik kesimpulan. Perubahan nilai peluang membantu memprediksi hasil tahap berikutnya."
+    }
+  ],
+  "summary": "Visual peluang membantu membaca kecenderungan kejadian dalam proses bertahap.",
+  "voiceover_script": "Kita bisa melihat perubahan peluang per tahap lewat grafik agar perbandingan antar kejadian lebih jelas.",
+  "intro_narration": "Kita bisa melihat perubahan peluang per tahap lewat grafik agar perbandingan antar kejadian lebih jelas.",
+  "summary_narration": "Visual peluang membantu membaca kecenderungan kejadian dalam proses bertahap.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Kita bisa melihat perubahan peluang per tahap lewat grafik agar perbandingan antar kejadian lebih jelas."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Pahami rentang peluang. Nilai peluang selalu berada antara 0 dan 1."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Bandingkan antar tahap. Setiap tahap punya peluang yang dapat dibandingkan di grafik."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Tarik kesimpulan. Perubahan nilai peluang membantu memprediksi hasil tahap berikutnya."
+    },
+    {
+      "slot": "summary",
+      "text": "Visual peluang membantu membaca kecenderungan kejadian dalam proses bertahap."
+    }
+  ],
+  "x_label": "tahap",
+  "y_label": "peluang",
+  "graph_label": "peluang kejadian",
+  "moving_label": "P",
+  "x_path": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "highlight_x": 4,
+  "show_slope": false
+}

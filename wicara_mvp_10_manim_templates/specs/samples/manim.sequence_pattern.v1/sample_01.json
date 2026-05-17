@@ -36,13 +36,13 @@
   "steps": [
     {
       "title": "Amati suku",
-      "body": "Setiap suku bertambah dua.",
-      "narration": "Amati suku. Setiap suku bertambah dua."
+      "body": "Setiap suku bertambah dua dari suku sebelumnya.",
+      "narration": "Perhatikan selisih antar suku: dari 2 ke 4, dari 4 ke 6, dan dari 6 ke 8 semuanya bertambah dua."
     },
     {
       "title": "Terapkan aturan",
       "body": "Suku berikutnya adalah 10.",
-      "narration": "Terapkan aturan. Suku berikutnya adalah 10."
+      "narration": "Karena aturan polanya tambah dua setiap langkah, suku ke-5 didapat dari 8 ditambah 2 sehingga hasilnya 10."
     }
   ],
   "summary": "Pola dapat diteruskan jika aturan perubahannya diketahui.",
@@ -57,12 +57,12 @@
     {
       "slot": "step",
       "step_index": 1,
-      "text": "Amati suku. Setiap suku bertambah dua."
+      "text": "Perhatikan selisih antar suku: dari 2 ke 4, dari 4 ke 6, dan dari 6 ke 8 semuanya bertambah dua."
     },
     {
       "slot": "step",
       "step_index": 2,
-      "text": "Terapkan aturan. Suku berikutnya adalah 10."
+      "text": "Karena aturan polanya tambah dua setiap langkah, suku ke-5 didapat dari 8 ditambah 2 sehingga hasilnya 10."
     },
     {
       "slot": "summary",

@@ -1,0 +1,74 @@
+{
+  "id": "sample_geometry_transform",
+  "node_id": "phase4_congruence_similarity_transform",
+  "template_id": "manim.geometry_transform.v1",
+  "phase": "B",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Transformasi Geometri Dasar",
+  "subtitle": "Bentuk bisa digeser, diputar, atau dicerminkan tanpa mengubah sifat utamanya.",
+  "shape_type": "triangle",
+  "dimensions": {
+    "length": 4,
+    "width": 3,
+    "unit": "satuan"
+  },
+  "transformations": [
+    {
+      "type": "fill_unit_squares",
+      "label": "Isi dengan persegi satuan"
+    }
+  ],
+  "formula_latex": "A' = A",
+  "highlight_features": [
+    "translasi",
+    "rotasi",
+    "refleksi"
+  ],
+  "steps": [
+    {
+      "title": "Kenali bangun awal",
+      "body": "Amati bentuk awal sebelum transformasi dilakukan.",
+      "narration": "Kenali bangun awal. Amati bentuk awal sebelum transformasi dilakukan."
+    },
+    {
+      "title": "Lakukan transformasi",
+      "body": "Bangun bisa dipindah atau diputar, tetapi relasi sisinya tetap.",
+      "narration": "Lakukan transformasi. Bangun bisa dipindah atau diputar, tetapi relasi sisinya tetap."
+    },
+    {
+      "title": "Bandingkan hasil",
+      "body": "Periksa posisi baru dan pastikan sifat utama bangun tetap.",
+      "narration": "Bandingkan hasil. Periksa posisi baru dan pastikan sifat utama bangun tetap."
+    }
+  ],
+  "summary": "Transformasi mengubah posisi atau orientasi, bukan identitas dasar bangun.",
+  "voiceover_script": "Transformasi geometri membantu kita melihat perubahan posisi bangun sambil menjaga sifat pentingnya.",
+  "intro_narration": "Transformasi geometri membantu kita melihat perubahan posisi bangun sambil menjaga sifat pentingnya.",
+  "summary_narration": "Transformasi mengubah posisi atau orientasi, bukan identitas dasar bangun.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Transformasi geometri membantu kita melihat perubahan posisi bangun sambil menjaga sifat pentingnya."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Kenali bangun awal. Amati bentuk awal sebelum transformasi dilakukan."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Lakukan transformasi. Bangun bisa dipindah atau diputar, tetapi relasi sisinya tetap."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Bandingkan hasil. Periksa posisi baru dan pastikan sifat utama bangun tetap."
+    },
+    {
+      "slot": "summary",
+      "text": "Transformasi mengubah posisi atau orientasi, bukan identitas dasar bangun."
+    }
+  ]
+}

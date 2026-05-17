@@ -9,7 +9,9 @@ from typing import Any
 from app.modules.ai import ai_client
 from app.modules.ai.errors import AIConfigurationError, AIError
 from app.modules.ai.schemas import AIGenerationResponse
+from app.modules.learning.concept_template_router import resolve_primary_template_id
 from app.modules.learning.template_registry import TemplateRegistryError, resolve_template_entry
+from app.modules.learning.template_quality import evaluate_template_quality
 from app.modules.learning.template_validation import (
     TemplateValidationError,
     validate_template_spec,
@@ -36,6 +38,7 @@ Hard requirements:
 - Keep all textual fields (title, subtitle, steps, narration) in that same language.
 - Include narration fields so voiceover can be generated cleanly.
 - Keep values realistic and classroom-safe.
+- Keep narration pacing balanced: avoid long intro and provide clear narration per step.
 """.strip()
 
 
@@ -56,10 +59,17 @@ def generate_spec_from_workspace_context(
     language: str,
 ) -> WorkspaceGeneratedSpec:
     metadata = dict(workspace.metadata_json or {})
+    active_concept_type = str(metadata.get("active_concept_type") or "").strip().lower()
     raw_template_id = str(metadata.get("active_template_id") or "").strip().lower()
+    template_resolution_source = "active_template_id"
+    if not raw_template_id:
+        mapped_template_id = resolve_primary_template_id(active_concept_type)
+        if mapped_template_id:
+            raw_template_id = mapped_template_id
+            template_resolution_source = "concept_type_route"
     if not raw_template_id:
         raise WorkspaceContextSpecGenerationError(
-            "Workspace context is missing active_template_id."
+            "Workspace context is missing active_template_id and no concept_type route is available."
         )
 
     try:
@@ -117,12 +127,29 @@ def generate_spec_from_workspace_context(
                 ) from exc
             continue
 
+        quality_result = evaluate_template_quality(
+            template_id=template_id,
+            spec_json=validation_result.normalized_spec,
+        )
+        if not quality_result.passed:
+            quality_errors = [issue.message for issue in quality_result.errors]
+            last_error = "Template quality lint failed."
+            validation_details = quality_result.to_feedback_details()
+            last_response = ai_response.text
+            if attempt >= _MAX_ATTEMPTS:
+                error_text = "; ".join(quality_errors) if quality_errors else "Unknown quality issue."
+                raise WorkspaceContextSpecGenerationError(
+                    f"Gemini generated low-quality pacing for {template_id}: {error_text}"
+                )
+            continue
+
         debug_meta: dict[str, Any] = {
             "spec_source": "context_auto_backend_gemini",
             "prompt_version": _PROMPT_VERSION,
             "resolved_template_id": template_id,
+            "template_resolution_source": template_resolution_source,
             "resolved_node_id": node_id or None,
-            "resolved_concept_type": metadata.get("active_concept_type"),
+            "resolved_concept_type": active_concept_type or None,
             "resolved_prerequisites": metadata.get("active_prerequisites"),
             "context_source": metadata.get("context_source"),
             "language": requested_language,
@@ -134,6 +161,13 @@ def generate_spec_from_workspace_context(
             "input_tokens": ai_response.usage.input_tokens if ai_response.usage else None,
             "output_tokens": ai_response.usage.output_tokens if ai_response.usage else None,
             "conversation_turns_used": len(context_snapshot["recent_turns"]),
+            "quality_lint": {
+                "passed": quality_result.passed,
+                "details": quality_result.to_feedback_details()[:8],
+                "error_count": len(quality_result.errors),
+                "warning_count": len(quality_result.warnings),
+                "metrics": quality_result.metrics,
+            },
         }
         return WorkspaceGeneratedSpec(
             template_id=template_id,
@@ -252,6 +286,8 @@ def _build_user_instruction(
             "Do not switch language, mix languages, or auto-detect another language.",
             "Keep required fields complete.",
             "Keep narration fields coherent with steps.",
+            "Provide at least 2 instructional steps with narration on each step.",
+            "Distribute explanation to step narration, not only intro.",
             "Do not return markdown.",
         ],
         "context_snapshot": context_snapshot,

@@ -1,0 +1,105 @@
+{
+  "id": "sample_energy_environment_system",
+  "node_id": "phase4_environment_energy_system_model",
+  "template_id": "manim.energy_environment_system.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Energi dan Lingkungan",
+  "subtitle": "Baca tren emisi saat energi terbarukan meningkat.",
+  "function": {
+    "type": "linear",
+    "params": {
+      "m": -0.6,
+      "b": 8
+    }
+  },
+  "x_range": [
+    0,
+    10,
+    1
+  ],
+  "y_range": [
+    0,
+    9,
+    1
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "E(t) = -0.6t + 8",
+  "steps": [
+    {
+      "title": "Identifikasi sumbu",
+      "body": "Sumbu-x menunjukkan waktu, sumbu-y menunjukkan indeks emisi.",
+      "narration": "Identifikasi sumbu. Sumbu-x menunjukkan waktu, sumbu-y menunjukkan indeks emisi."
+    },
+    {
+      "title": "Baca arah tren",
+      "body": "Garis menurun menandakan emisi berkurang dari waktu ke waktu.",
+      "narration": "Baca arah tren. Garis menurun menandakan emisi berkurang dari waktu ke waktu."
+    },
+    {
+      "title": "Tafsir kemiringan",
+      "body": "Kemiringan memberi laju perubahan emisi per tahun.",
+      "narration": "Tafsir kemiringan. Kemiringan memberi laju perubahan emisi per tahun."
+    }
+  ],
+  "summary": "Grafik tren membantu menilai dampak kebijakan energi terhadap lingkungan.",
+  "voiceover_script": "Grafik ini menunjukkan kecenderungan emisi menurun ketika sistem energi bergerak ke sumber yang lebih bersih.",
+  "intro_narration": "Grafik ini menunjukkan kecenderungan emisi menurun ketika sistem energi bergerak ke sumber yang lebih bersih.",
+  "summary_narration": "Grafik tren membantu menilai dampak kebijakan energi terhadap lingkungan.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Grafik ini menunjukkan kecenderungan emisi menurun ketika sistem energi bergerak ke sumber yang lebih bersih."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Identifikasi sumbu. Sumbu-x menunjukkan waktu, sumbu-y menunjukkan indeks emisi."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Baca arah tren. Garis menurun menandakan emisi berkurang dari waktu ke waktu."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Tafsir kemiringan. Kemiringan memberi laju perubahan emisi per tahun."
+    },
+    {
+      "slot": "summary",
+      "text": "Grafik tren membantu menilai dampak kebijakan energi terhadap lingkungan."
+    }
+  ],
+  "x_label": "tahun",
+  "y_label": "indeks emisi",
+  "graph_label": "tren emisi",
+  "moving_label": "emisi",
+  "x_path": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10
+  ],
+  "highlight_x": 6,
+  "show_slope": true,
+  "slope_text": "Kemiringan negatif menunjukkan emisi cenderung turun seiring transisi energi."
+}

@@ -1,0 +1,76 @@
+{
+  "id": "sample_exponential_growth",
+  "node_id": "phase4_exponential_growth_model",
+  "template_id": "manim.exponential_growth.v1",
+  "phase": "C",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pertumbuhan Eksponensial",
+  "subtitle": "Nilai bertambah dengan faktor tetap setiap langkah.",
+  "terms": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "visual_pattern_type": "growing_dots",
+  "rule": "Dikalikan 2 setiap langkah",
+  "table_values": [
+    {
+      "n": 1,
+      "value": 1
+    },
+    {
+      "n": 2,
+      "value": 2
+    },
+    {
+      "n": 3,
+      "value": 4
+    },
+    {
+      "n": 4,
+      "value": 8
+    }
+  ],
+  "target_term": {
+    "n": 5,
+    "value": 16
+  },
+  "steps": [
+    {
+      "title": "Amati faktor pengali",
+      "body": "Setiap suku diperoleh dengan mengalikan suku sebelumnya dengan 2.",
+      "narration": "Amati faktor pengali. Setiap suku diperoleh dengan mengalikan suku sebelumnya dengan 2."
+    },
+    {
+      "title": "Lanjutkan pola",
+      "body": "Setelah 8, suku berikutnya adalah 16 karena 8 x 2.",
+      "narration": "Lanjutkan pola. Setelah 8, suku berikutnya adalah 16 karena 8 x 2."
+    }
+  ],
+  "summary": "Pertumbuhan eksponensial terjadi saat perubahan menggunakan faktor kali tetap.",
+  "voiceover_script": "Pada pertumbuhan eksponensial, nilai tidak bertambah selisih tetap, tetapi bertambah dengan faktor kali yang tetap.",
+  "intro_narration": "Pada pertumbuhan eksponensial, nilai tidak bertambah selisih tetap, tetapi bertambah dengan faktor kali yang tetap.",
+  "summary_narration": "Pertumbuhan eksponensial terjadi saat perubahan menggunakan faktor kali tetap.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Pada pertumbuhan eksponensial, nilai tidak bertambah selisih tetap, tetapi bertambah dengan faktor kali yang tetap."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Amati faktor pengali. Setiap suku diperoleh dengan mengalikan suku sebelumnya dengan 2."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Lanjutkan pola. Setelah 8, suku berikutnya adalah 16 karena 8 x 2."
+    },
+    {
+      "slot": "summary",
+      "text": "Pertumbuhan eksponensial terjadi saat perubahan menggunakan faktor kali tetap."
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "id": "sample_data_representation",
+  "node_id": "phase4_data_representation_model",
+  "template_id": "manim.data_representation.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Representasi Data Kelas",
+  "subtitle": "Bandingkan jumlah siswa per kategori kegiatan.",
+  "function": {
+    "type": "linear",
+    "params": {
+      "m": 3,
+      "b": 10
+    }
+  },
+  "x_range": [
+    0,
+    6,
+    1
+  ],
+  "y_range": [
+    0,
+    30,
+    5
+  ],
+  "graph_features": [
+    {
+      "type": "vertex",
+      "label": "Titik puncak"
+    },
+    {
+      "type": "slope",
+      "label": "Kemiringan lokal"
+    }
+  ],
+  "highlight_points": [
+    {
+      "x": 1,
+      "label": "x = 1"
+    }
+  ],
+  "formula_latex": "y = 3x + 10",
+  "steps": [
+    {
+      "title": "Baca skala",
+      "body": "Pastikan tiap sumbu dibaca dengan skala yang benar.",
+      "narration": "Baca skala. Pastikan tiap sumbu dibaca dengan skala yang benar."
+    },
+    {
+      "title": "Bandingkan nilai",
+      "body": "Nilai yang lebih tinggi berarti jumlah lebih banyak.",
+      "narration": "Bandingkan nilai. Nilai yang lebih tinggi berarti jumlah lebih banyak."
+    },
+    {
+      "title": "Simpulkan tren",
+      "body": "Gunakan pola naik-turun untuk menyimpulkan data.",
+      "narration": "Simpulkan tren. Gunakan pola naik-turun untuk menyimpulkan data."
+    }
+  ],
+  "summary": "Representasi visual memudahkan perbandingan data antar kategori.",
+  "voiceover_script": "Saat data divisualkan, kita lebih cepat menemukan kategori yang paling tinggi atau paling rendah.",
+  "intro_narration": "Saat data divisualkan, kita lebih cepat menemukan kategori yang paling tinggi atau paling rendah.",
+  "summary_narration": "Representasi visual memudahkan perbandingan data antar kategori.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Saat data divisualkan, kita lebih cepat menemukan kategori yang paling tinggi atau paling rendah."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Baca skala. Pastikan tiap sumbu dibaca dengan skala yang benar."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Bandingkan nilai. Nilai yang lebih tinggi berarti jumlah lebih banyak."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Simpulkan tren. Gunakan pola naik-turun untuk menyimpulkan data."
+    },
+    {
+      "slot": "summary",
+      "text": "Representasi visual memudahkan perbandingan data antar kategori."
+    }
+  ],
+  "x_label": "kategori",
+  "y_label": "jumlah",
+  "graph_label": "data pengamatan",
+  "moving_label": "data",
+  "x_path": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "highlight_x": 3,
+  "show_slope": false
+}

@@ -1,0 +1,76 @@
+{
+  "id": "sample_financial_growth",
+  "node_id": "phase4_financial_growth_model",
+  "template_id": "manim.financial_growth.v1",
+  "phase": "C",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pertumbuhan Nilai Tabungan",
+  "subtitle": "Nilai tabungan naik secara persentase per periode.",
+  "terms": [
+    100,
+    120,
+    144,
+    173
+  ],
+  "visual_pattern_type": "growing_dots",
+  "rule": "Naik 20% setiap periode",
+  "table_values": [
+    {
+      "n": 1,
+      "value": 100
+    },
+    {
+      "n": 2,
+      "value": 120
+    },
+    {
+      "n": 3,
+      "value": 144
+    },
+    {
+      "n": 4,
+      "value": 173
+    }
+  ],
+  "target_term": {
+    "n": 5,
+    "value": 208
+  },
+  "steps": [
+    {
+      "title": "Hitung kenaikan persentase",
+      "body": "Setiap periode, nilai baru = nilai lama x 1,2.",
+      "narration": "Hitung kenaikan persentase. Setiap periode, nilai baru = nilai lama x 1,2."
+    },
+    {
+      "title": "Prediksi periode berikutnya",
+      "body": "Setelah 173, nilai perkiraan periode berikutnya sekitar 208.",
+      "narration": "Prediksi periode berikutnya. Setelah 173, nilai perkiraan periode berikutnya sekitar 208."
+    }
+  ],
+  "summary": "Model pertumbuhan persentase membantu memperkirakan nilai keuangan di masa depan.",
+  "voiceover_script": "Dalam konteks keuangan, pertumbuhan periodik sering dimodelkan sebagai kenaikan persentase dari nilai sebelumnya.",
+  "intro_narration": "Dalam konteks keuangan, pertumbuhan periodik sering dimodelkan sebagai kenaikan persentase dari nilai sebelumnya.",
+  "summary_narration": "Model pertumbuhan persentase membantu memperkirakan nilai keuangan di masa depan.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Dalam konteks keuangan, pertumbuhan periodik sering dimodelkan sebagai kenaikan persentase dari nilai sebelumnya."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Hitung kenaikan persentase. Setiap periode, nilai baru = nilai lama x 1,2."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Prediksi periode berikutnya. Setelah 173, nilai perkiraan periode berikutnya sekitar 208."
+    },
+    {
+      "slot": "summary",
+      "text": "Model pertumbuhan persentase membantu memperkirakan nilai keuangan di masa depan."
+    }
+  ]
+}
