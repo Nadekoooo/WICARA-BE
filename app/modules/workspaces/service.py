@@ -168,13 +168,25 @@ async def append_workspace_event(
 
     module = session.get(TrackModule, workspace.module_id)
 
-    # Call Gemini before saving so audit info goes into event metadata
-    tutor_response, ai_audit = await generate_tutor_response(
-        workspace=workspace,
-        event_type=normalized_event_type,
-        text_payload=text_payload,
-        events=list(workspace.events),
-    )
+    edge_mode = str(metadata.get("edge_mode", "")).strip().lower()
+    edge_force_local = metadata.get("edge_force_local") is True or edge_mode == "force_local"
+
+    # In force-local mode, backend must not silently generate tutor text.
+    if edge_force_local:
+        tutor_response = None
+        ai_audit = {
+            "ai_source": "skipped_edge_force_local",
+            "edge_mode": edge_mode or "force_local",
+            "event_type": normalized_event_type,
+            "reason": "Backend tutor generation disabled by edge force-local policy.",
+        }
+    else:
+        tutor_response, ai_audit = await generate_tutor_response(
+            workspace=workspace,
+            event_type=normalized_event_type,
+            text_payload=text_payload,
+            events=list(workspace.events),
+        )
     if (
         normalized_event_type == "quiz_answer"
         and metadata.get("is_correct") is True
