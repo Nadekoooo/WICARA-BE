@@ -5,11 +5,20 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.models import KnowledgeConcept
-from app.modules.learning.models import AssessmentSession, LearnerConceptState, LearningGoal
+from app.modules.learning.models import (
+    AssessmentSession,
+    LearnerConceptState,
+    LearningGoal,
+    LearningTrack,
+    TrackModule,
+)
+from app.modules.tracks.path_builder import PATH_OPTIONS as TRACK_PATH_OPTIONS
+from app.modules.tracks.path_builder import TrackBuilderService
+from app.modules.workspaces.models import WorkspaceSession
 
 PATH_OPTIONS = [
     "review_only",
@@ -66,6 +75,25 @@ class PretestDiagnosisService:
         if goal is not None and goal.status != "in_progress":
             goal.status = "diagnosed"
             goal.metadata_json = {**(goal.metadata_json or {}), "diagnosis": diagnosis}
+        if goal is not None:
+            auto_session_goal = _auto_prepare_session_goal_from_diagnosis(
+                session,
+                user=user,
+                goal=goal,
+                recommended_path=recommended_path,
+            )
+            if auto_session_goal is not None:
+                focus_concept_id = auto_session_goal.get("focus_concept_id")
+                if focus_concept_id:
+                    try:
+                        goal.target_concept_id = UUID(str(focus_concept_id))
+                    except ValueError:
+                        pass
+                diagnosis["session_goal"] = auto_session_goal
+                goal.metadata_json = {
+                    **(goal.metadata_json or {}),
+                    "session_goal": auto_session_goal,
+                }
         session.commit()
         return diagnosis
 
@@ -300,6 +328,99 @@ def _analysis_report(
         "gaps": gaps,
         "evidence_notes": evidence_notes,
         "recommended_focus": _recommended_focus(recommended_path),
+    }
+
+
+def _auto_prepare_session_goal_from_diagnosis(
+    session: Session,
+    *,
+    user: UserAccount,
+    goal: LearningGoal,
+    recommended_path: str,
+) -> dict[str, Any] | None:
+    selected_path = (
+        recommended_path if recommended_path in TRACK_PATH_OPTIONS else "target_from_basics"
+    )
+    try:
+        selection = TrackBuilderService().select_path(
+            session,
+            user=user,
+            learning_goal_id=goal.id,
+            path_option=selected_path,
+        )
+    except ValueError:
+        return None
+    if selection is None or not selection.modules:
+        return None
+
+    track = session.scalar(
+        select(LearningTrack)
+        .where(LearningTrack.id == selection.track_id, LearningTrack.user_id == user.id)
+        .options(selectinload(LearningTrack.modules))
+    )
+    if track is None:
+        return None
+
+    modules = sorted(track.modules, key=lambda item: item.sort_order)
+    primary_module = next(
+        (item for item in modules if item.status in {"ready", "active"}),
+        modules[0] if modules else None,
+    )
+    if primary_module is None:
+        return None
+
+    concept = (
+        session.get(KnowledgeConcept, primary_module.concept_id)
+        if primary_module.concept_id
+        else None
+    )
+
+    workspace = session.scalar(
+        select(WorkspaceSession)
+        .where(
+            WorkspaceSession.user_id == user.id,
+            WorkspaceSession.track_id == track.id,
+            WorkspaceSession.module_id == primary_module.id,
+            WorkspaceSession.status == "active",
+        )
+        .order_by(WorkspaceSession.updated_at.desc(), WorkspaceSession.created_at.desc())
+    )
+    if workspace is None:
+        workspace_metadata = {
+            "source": "pretest_auto_workspace",
+            "learning_flow": "5e_steam",
+            "context_source": "adaptive_pretest_primary_node",
+            "active_node_id": concept.code if concept else None,
+            "active_concept_type": (
+                str((concept.metadata_json or {}).get("concept_type") or "").strip().lower()
+                if concept is not None
+                else "general_steam"
+            ),
+            "active_prerequisites": [],
+        }
+        workspace = WorkspaceSession(
+            user_id=user.id,
+            track_id=track.id,
+            module_id=primary_module.id,
+            current_topic=primary_module.title,
+            content_mode="chat",
+            status="active",
+            metadata_json={key: value for key, value in workspace_metadata.items() if value is not None},
+        )
+        session.add(workspace)
+        session.flush()
+
+    return {
+        "learning_goal_id": str(goal.id),
+        "track_id": str(track.id),
+        "module_id": str(primary_module.id),
+        "workspace_session_id": str(workspace.id),
+        "subject_id": str(goal.subject_id),
+        "focus_concept_id": str(concept.id) if concept else None,
+        "focus_concept_code": concept.code if concept else None,
+        "focus_title": concept.title if concept else primary_module.title,
+        "learning_flow": "5e_steam",
+        "path_option": selected_path,
     }
 
 

@@ -79,6 +79,7 @@ class WorkspaceRead(BaseModel):
     events: list[WorkspaceEventRead] = Field(default_factory=list)
     last_image_asset_id: UUID | None = None
     latest_media: MediaArtifactRead | None = None
+    posttest_trigger: dict[str, Any] | None = None
 
 
 class WorkspaceSessionSummaryRead(BaseModel):

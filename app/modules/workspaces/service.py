@@ -8,10 +8,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
+from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept
 from app.modules.inputs.service import create_workspace_input_event
-from app.modules.learning.models import LearningTrack, MediaArtifact, TrackModule
+from app.modules.learning.models import LearningGoal, LearningTrack, MediaArtifact, TrackModule
 from app.modules.learning.spec_generator import generate_spec_from_workspace_context
 from app.modules.learning.service import media_artifact_to_schema, queue_animation_job
+from app.modules.posttests.service import AdaptivePosttestService
 from app.modules.workspaces.mastery import WorkspaceMasteryService
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 from app.modules.workspaces.schemas import (
@@ -35,12 +37,9 @@ VALID_EVENT_TYPES = {
 }
 VALID_ACTOR_TYPES = {"learner", "tutor", "system"}
 _mastery_service = WorkspaceMasteryService()
+_posttest_service = AdaptivePosttestService()
 
-_PILOT_NODE_ID = "km_d_matematika_bilangan_bulat"
-_PILOT_CONCEPT_TYPE = "number_line_quantity_model"
 _PILOT_TEMPLATE_ID = "manim.number_line_quantity.v1"
-_PILOT_PREREQUISITES = ["km_c_matematika_bilangan_cacah_sampai_1000000"]
-_PILOT_CONTEXT_SOURCE = "hardcoded_number_line_pilot"
 
 
 def create_or_resume_workspace(
@@ -95,7 +94,7 @@ def create_or_resume_workspace(
         workspace.content_mode = _normalize_content_mode(content_mode)
         workspace.status = "active"
         workspace.updated_at = datetime.now(UTC)
-    _apply_workspace_pilot_context(workspace)
+    _apply_workspace_context(session, workspace=workspace, module=module)
     module.status = "active"
     track.status = "active"
 
@@ -249,8 +248,22 @@ async def append_workspace_event(
                 "next_actions": list(tutor_response.next_actions),
             },
         )
+    if normalized_event_type != "quiz_answer":
+        stage = ai_audit.get("stage")
+        if stage in {"engage", "explore", "explain", "elaborate"}:
+            visited: set[str] = set((workspace.metadata_json or {}).get("visited_5e_phases", []))
+            visited.add(stage)
+            workspace.metadata_json = {
+                **dict(workspace.metadata_json or {}),
+                "visited_5e_phases": sorted(visited),
+            }
+
+    _5E_PREREQ = {"engage", "explore", "explain", "elaborate"}
     if normalized_event_type == "quiz_answer" and audit_metadata.get("is_correct") is True:
-        _complete_workspace_module(session, user=user, workspace=workspace)
+        visited_phases: set[str] = set((workspace.metadata_json or {}).get("visited_5e_phases", []))
+        if _5E_PREREQ.issubset(visited_phases):
+            _complete_workspace_module(session, user=user, workspace=workspace)
+
     workspace.updated_at = datetime.now(UTC)
     session.add(event)
     if tutor_event is not None:
@@ -370,6 +383,7 @@ def workspace_to_schema(session: Session, workspace: WorkspaceSession) -> Worksp
         events=[event_to_schema(event) for event in events],
         last_image_asset_id=_latest_image_asset_id(events),
         latest_media=media_artifact_to_schema(latest_media) if latest_media else None,
+        posttest_trigger=_posttest_trigger_payload(workspace),
     )
 
 
@@ -516,18 +530,51 @@ def _normalize_generation_mode(generation_mode: str) -> str:
     return normalized
 
 
-def _apply_workspace_pilot_context(workspace: WorkspaceSession) -> None:
+def _apply_workspace_context(
+    session: Session,
+    *,
+    workspace: WorkspaceSession,
+    module: TrackModule,
+) -> None:
     metadata = dict(workspace.metadata_json or {})
+    concept = session.get(KnowledgeConcept, module.concept_id) if module.concept_id else None
+    prerequisite_codes: list[str] = []
+    if concept is not None:
+        prerequisite_codes = list(
+            session.scalars(
+                select(KnowledgeConcept.code)
+                .join(ConceptEdge, ConceptEdge.from_concept_id == KnowledgeConcept.id)
+                .where(
+                    ConceptEdge.to_concept_id == concept.id,
+                    ConceptEdge.edge_type == "prerequisite",
+                )
+            )
+        )
     metadata.update(
         {
-            "active_node_id": _PILOT_NODE_ID,
-            "active_concept_type": _PILOT_CONCEPT_TYPE,
-            "active_template_id": _PILOT_TEMPLATE_ID,
-            "active_prerequisites": list(_PILOT_PREREQUISITES),
-            "context_source": _PILOT_CONTEXT_SOURCE,
+            "active_node_id": concept.code if concept is not None else metadata.get("active_node_id"),
+            "active_concept_type": (
+                str((concept.metadata_json or {}).get("concept_type") or "").strip().lower()
+                if concept is not None
+                else str(metadata.get("active_concept_type") or "").strip().lower()
+            )
+            or "general_steam",
+            "active_template_id": (
+                str((concept.metadata_json or {}).get("template_id") or "").strip().lower()
+                if concept is not None
+                else str(metadata.get("active_template_id") or "").strip().lower()
+            )
+            or _PILOT_TEMPLATE_ID,
+            "active_prerequisites": prerequisite_codes,
+            "context_source": "module_concept_context" if concept is not None else "workspace_module_fallback",
+            "learning_flow": "5e_steam",
+            "session_goal_concept_id": str(concept.id) if concept is not None else None,
+            "session_goal_concept_title": concept.title if concept is not None else module.title,
         }
     )
-    workspace.metadata_json = metadata
+    workspace.metadata_json = {
+        key: value for key, value in metadata.items() if value is not None
+    }
 
 
 def _complete_workspace_module(
@@ -565,6 +612,72 @@ def _complete_workspace_module(
         track.status = "completed"
     else:
         track.status = "active"
+    _trigger_posttest_for_completed_session(
+        session,
+        user=user,
+        track=track,
+        module=module,
+        workspace=workspace,
+    )
+
+
+def _trigger_posttest_for_completed_session(
+    session: Session,
+    *,
+    user: UserAccount,
+    track: LearningTrack,
+    module: TrackModule,
+    workspace: WorkspaceSession,
+) -> None:
+    goal = session.get(LearningGoal, track.learning_goal_id)
+    concept = session.get(KnowledgeConcept, module.concept_id) if module.concept_id else None
+    trigger_payload: dict[str, Any] = {
+        "status": "pending",
+        "reason": "module_completed",
+        "learning_goal_id": str(track.learning_goal_id),
+        "track_id": str(track.id),
+        "module_id": str(module.id),
+        "concept_code": concept.code if concept is not None else None,
+        "concept_title": concept.title if concept is not None else module.title,
+        "learning_flow": "5e_steam",
+        "triggered_at": datetime.now(UTC).isoformat(),
+    }
+    if goal is None:
+        workspace.metadata_json = {
+            **dict(workspace.metadata_json or {}),
+            "posttest_trigger": trigger_payload,
+        }
+        return
+
+    try:
+        posttest_session = _posttest_service.start(
+            session,
+            user=user,
+            learning_goal_id=goal.id,
+            track_id=track.id,
+            module_id=module.id,
+        )
+        if posttest_session is not None:
+            trigger_payload["status"] = "ready"
+            trigger_payload["posttest_session_id"] = str(posttest_session.session_id)
+            trigger_payload["question_count"] = int(posttest_session.total_questions)
+        else:
+            trigger_payload["status"] = "unavailable"
+    except ValueError as exc:
+        trigger_payload["status"] = "blocked"
+        trigger_payload["error"] = str(exc)
+
+    workspace.metadata_json = {
+        **dict(workspace.metadata_json or {}),
+        "posttest_trigger": {key: value for key, value in trigger_payload.items() if value is not None},
+    }
+
+
+def _posttest_trigger_payload(workspace: WorkspaceSession) -> dict[str, Any] | None:
+    payload = (workspace.metadata_json or {}).get("posttest_trigger")
+    if isinstance(payload, dict):
+        return payload
+    return None
 
 
 # _deterministic_tutor_response removed: Gemini is now the primary tutor via tutor.py

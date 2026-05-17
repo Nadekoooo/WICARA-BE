@@ -9,9 +9,11 @@ from app.db.session import get_session
 from app.modules.accounts.dependencies import get_current_account
 from app.modules.accounts.models import UserAccount
 from app.modules.learning_goal_resolution.schemas import (
+    ActiveLearningGoalResponse,
     PathSelectionRequest,
     RepromptLearningGoalRequest,
     ResolveLearningGoalRequest,
+    SessionGoalHistoryResponse,
     SelectResolvedConceptRequest,
 )
 from app.modules.learning_goal_resolution.service import (
@@ -53,7 +55,7 @@ def confirm_learning_goal(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "error": "ACTIVE_LEARNING_GOAL_EXISTS",
-                "message": "You already have an active learning goal.",
+                "message": "You already have an active session goal for this node.",
                 "active_goal": exc.active_goal.model_dump(mode="json"),
             },
         ) from exc
@@ -108,8 +110,16 @@ def select_resolved_concept(
 def get_active_learning_goal(
     session: Session = Depends(get_session),
     user: UserAccount = Depends(get_current_account),
-):
+) -> ActiveLearningGoalResponse:
     return service.get_active_goal(session, user=user)
+
+
+@router.get("/learning-goals/history", response_model=SessionGoalHistoryResponse)
+def get_session_goal_history(
+    session: Session = Depends(get_session),
+    user: UserAccount = Depends(get_current_account),
+) -> SessionGoalHistoryResponse:
+    return service.list_session_goal_history(session, user=user)
 
 
 @router.post("/learning-goals/{learning_goal_id}/cancel")

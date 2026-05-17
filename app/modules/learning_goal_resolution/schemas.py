@@ -73,11 +73,12 @@ class ActiveGoalRead(BaseModel):
 class ActiveLearningGoalResponse(BaseModel):
     has_active_goal: bool
     goal: ActiveGoalRead | None = None
+    active_goals: list[ActiveGoalRead] = Field(default_factory=list)
 
 
 class ActiveLearningGoalConflict(BaseModel):
     error: str = "ACTIVE_LEARNING_GOAL_EXISTS"
-    message: str = "You already have an active learning goal."
+    message: str = "You already have an active session goal for this node."
     active_goal: ActiveGoalRead
 
 
@@ -111,3 +112,28 @@ class PathSelectionResponse(BaseModel):
     modules: list[PathModuleRead]
     goal_status: str
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SessionGoalSummaryRead(BaseModel):
+    learning_goal_id: UUID
+    status: str
+    raw_topic: str
+    normalized_topic: str
+    target_concept_id: UUID | None = None
+    target_concept_code: str | None = None
+    target_concept_title: str | None = None
+    track_id: UUID | None = None
+    workspace_session_id: UUID | None = None
+    next_action: str
+    created_at: str
+    updated_at: str
+
+
+class SubjectSessionGoalHistoryRead(BaseModel):
+    subject_code: str
+    subject_name: str
+    session_goals: list[SessionGoalSummaryRead] = Field(default_factory=list)
+
+
+class SessionGoalHistoryResponse(BaseModel):
+    subjects: list[SubjectSessionGoalHistoryRead] = Field(default_factory=list)

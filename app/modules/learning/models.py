@@ -29,14 +29,15 @@ class LearningGoal(Base):
     __tablename__ = "learning_goals"
     __table_args__ = (
         Index(
-            "uq_learning_goals_active_user",
+            "uq_learning_goals_active_user_target",
             "user_id",
+            "target_concept_id",
             unique=True,
             postgresql_where=text(
-                "status in ('confirmed', 'pretest_in_progress', 'diagnosed', 'in_progress')"
+                "target_concept_id is not null and status in ('confirmed', 'pretest_in_progress', 'diagnosed', 'in_progress')"
             ),
             sqlite_where=text(
-                "status in ('confirmed', 'pretest_in_progress', 'diagnosed', 'in_progress')"
+                "target_concept_id is not null and status in ('confirmed', 'pretest_in_progress', 'diagnosed', 'in_progress')"
             ),
         ),
     )

@@ -39,8 +39,12 @@ from app.modules.learning_goal_resolution.schemas import (
     ConceptCandidateRead,
     ConfirmLearningGoalResponse,
     ResolveLearningGoalResponse,
+    SessionGoalHistoryResponse,
+    SessionGoalSummaryRead,
+    SubjectSessionGoalHistoryRead,
 )
 from app.modules.tracks.path_builder import TrackBuilderService
+from app.modules.workspaces.models import WorkspaceSession
 
 
 ACTIVE_GOAL_STATUSES = {"confirmed", "pretest_in_progress", "diagnosed", "in_progress"}
@@ -339,13 +343,17 @@ class GoalResolverService:
             return None
         if resolution.suggested_concept_id is None:
             raise ValueError("Resolution has no suggested concept to confirm.")
-        active = self.get_active_goal(session, user=user)
-        if active.goal is not None:
-            raise ActiveLearningGoalExists(active.goal)
 
         concept = session.get(KnowledgeConcept, resolution.suggested_concept_id)
         if concept is None:
             raise ValueError("Suggested concept was not found.")
+        active_for_target = _active_goal_for_target(
+            session,
+            user=user,
+            target_concept_id=concept.id,
+        )
+        if active_for_target is not None:
+            raise ActiveLearningGoalExists(_active_goal_to_read(session, active_for_target))
         subject = session.get(Subject, concept.subject_id)
         goal = LearningGoal(
             user_id=user.id,
@@ -368,9 +376,15 @@ class GoalResolverService:
             session.commit()
         except IntegrityError as exc:
             session.rollback()
-            active_after_race = self.get_active_goal(session, user=user)
-            if active_after_race.goal is not None:
-                raise ActiveLearningGoalExists(active_after_race.goal) from exc
+            active_after_race = _active_goal_for_target(
+                session,
+                user=user,
+                target_concept_id=concept.id,
+            )
+            if active_after_race is not None:
+                raise ActiveLearningGoalExists(
+                    _active_goal_to_read(session, active_after_race)
+                ) from exc
             raise
         return ConfirmLearningGoalResponse(
             learning_goal_id=goal.id,
@@ -387,16 +401,118 @@ class GoalResolverService:
         *,
         user: UserAccount,
     ) -> ActiveLearningGoalResponse:
-        goal = session.scalar(
-            select(LearningGoal)
-            .where(LearningGoal.user_id == user.id, LearningGoal.status.in_(ACTIVE_GOAL_STATUSES))
-            .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
-            .order_by(LearningGoal.created_at.desc())
+        goals = list(
+            session.scalars(
+                select(LearningGoal)
+                .where(LearningGoal.user_id == user.id, LearningGoal.status.in_(ACTIVE_GOAL_STATUSES))
+                .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+                .order_by(LearningGoal.created_at.desc())
+            )
         )
+        goal = goals[0] if goals else None
         return ActiveLearningGoalResponse(
             has_active_goal=goal is not None,
             goal=_active_goal_to_read(session, goal) if goal else None,
+            active_goals=[_active_goal_to_read(session, item) for item in goals],
         )
+
+    def list_session_goal_history(
+        self,
+        session: Session,
+        *,
+        user: UserAccount,
+    ) -> SessionGoalHistoryResponse:
+        goals = list(
+            session.scalars(
+                select(LearningGoal)
+                .where(
+                    LearningGoal.user_id == user.id,
+                    LearningGoal.status != "archived",
+                )
+                .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+                .order_by(LearningGoal.updated_at.desc(), LearningGoal.created_at.desc())
+            )
+        )
+        if not goals:
+            return SessionGoalHistoryResponse(subjects=[])
+
+        subject_ids = {goal.subject_id for goal in goals}
+        subjects_by_id = {
+            item.id: item
+            for item in session.scalars(select(Subject).where(Subject.id.in_(subject_ids)))
+        }
+        concept_ids = {goal.target_concept_id for goal in goals if goal.target_concept_id is not None}
+        concepts_by_id = {
+            item.id: item
+            for item in session.scalars(select(KnowledgeConcept).where(KnowledgeConcept.id.in_(concept_ids)))
+        }
+        track_ids = {goal.track.id for goal in goals if goal.track is not None}
+        workspaces_by_track: dict[UUID, WorkspaceSession] = {}
+        if track_ids:
+            workspace_rows = list(
+                session.scalars(
+                    select(WorkspaceSession)
+                    .where(
+                        WorkspaceSession.user_id == user.id,
+                        WorkspaceSession.track_id.in_(track_ids),
+                    )
+                    .order_by(
+                        WorkspaceSession.track_id,
+                        WorkspaceSession.updated_at.desc(),
+                        WorkspaceSession.created_at.desc(),
+                    )
+                )
+            )
+            for item in workspace_rows:
+                if item.track_id not in workspaces_by_track:
+                    workspaces_by_track[item.track_id] = item
+
+        grouped: dict[str, SubjectSessionGoalHistoryRead] = {}
+        for goal in goals:
+            subject = subjects_by_id.get(goal.subject_id)
+            if subject is None:
+                continue
+            concept = concepts_by_id.get(goal.target_concept_id) if goal.target_concept_id else None
+            track = goal.track
+            latest_workspace = (
+                workspaces_by_track.get(track.id) if track is not None else None
+            )
+            next_action = {
+                "confirmed": "start_pretest",
+                "pretest_in_progress": "continue_pretest",
+                "diagnosed": "enter_workspace",
+                "in_progress": "enter_workspace",
+                "completed": "review_or_new_goal",
+                "cancelled": "resume_or_new_goal",
+            }.get(goal.status, "view_progress")
+            session_goal = SessionGoalSummaryRead(
+                learning_goal_id=goal.id,
+                status=goal.status,
+                raw_topic=goal.raw_topic,
+                normalized_topic=goal.normalized_topic,
+                target_concept_id=concept.id if concept else goal.target_concept_id,
+                target_concept_code=concept.code if concept else None,
+                target_concept_title=concept.title if concept else None,
+                track_id=track.id if track else None,
+                workspace_session_id=latest_workspace.id if latest_workspace else None,
+                next_action=next_action,
+                created_at=goal.created_at.isoformat() if goal.created_at else "",
+                updated_at=goal.updated_at.isoformat() if goal.updated_at else "",
+            )
+            key = subject.code
+            if key not in grouped:
+                grouped[key] = SubjectSessionGoalHistoryRead(
+                    subject_code=subject.code,
+                    subject_name=subject.name,
+                    session_goals=[],
+                )
+            grouped[key].session_goals.append(session_goal)
+
+        ordered_subjects = sorted(
+            grouped.values(),
+            key=lambda item: (item.subject_name.lower(), item.subject_code.lower()),
+        )
+        return SessionGoalHistoryResponse(subjects=ordered_subjects)
 
     def cancel_goal(
         self,
@@ -995,6 +1111,24 @@ def _is_indonesian_language(language: str) -> bool:
     return normalized in {"id", "indonesian", "bahasa indonesia"} or "indo" in normalized
 
 
+def _active_goal_for_target(
+    session: Session,
+    *,
+    user: UserAccount,
+    target_concept_id: UUID,
+) -> LearningGoal | None:
+    return session.scalar(
+        select(LearningGoal)
+        .where(
+            LearningGoal.user_id == user.id,
+            LearningGoal.target_concept_id == target_concept_id,
+            LearningGoal.status.in_(ACTIVE_GOAL_STATUSES),
+        )
+        .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+        .order_by(LearningGoal.created_at.desc())
+    )
+
+
 def _active_goal_to_read(session: Session, goal: LearningGoal) -> ActiveGoalRead:
     concept = session.get(KnowledgeConcept, goal.target_concept_id) if goal.target_concept_id else None
     subject = session.get(Subject, concept.subject_id) if concept else None
@@ -1009,7 +1143,7 @@ def _active_goal_to_read(session: Session, goal: LearningGoal) -> ActiveGoalRead
     next_action = {
         "confirmed": "start_pretest",
         "pretest_in_progress": "continue_pretest",
-        "diagnosed": "choose_path",
+        "diagnosed": "enter_workspace",
         "in_progress": "continue_learning",
     }.get(goal.status, "view_progress")
     return ActiveGoalRead(

@@ -18,6 +18,7 @@ from app.modules.learning.models import (
     LearningGoal,
     LearnerConceptState,
     LearningTrack,
+    TrackModule,
 )
 from app.modules.posttests.schemas import (
     PosttestAnswerResponse,
@@ -50,8 +51,15 @@ class AdaptivePosttestService:
         user: UserAccount,
         learning_goal_id: UUID | None,
         track_id: UUID | None,
+        module_id: UUID | None = None,
     ) -> PosttestSessionRead | None:
-        goal = _resolve_goal(session, user=user, learning_goal_id=learning_goal_id, track_id=track_id)
+        goal, focus_concept_code = _resolve_goal_context(
+            session,
+            user=user,
+            learning_goal_id=learning_goal_id,
+            track_id=track_id,
+            module_id=module_id,
+        )
         if goal is None:
             return None
 
@@ -63,6 +71,40 @@ class AdaptivePosttestService:
         nodes = diagnosis.get("nodes", []) if isinstance(diagnosis, dict) else []
         remediation_nodes = _remediation_nodes(nodes)
         selected_nodes = remediation_nodes[:_max_nodes_per_posttest()]
+        if focus_concept_code:
+            focused = [
+                node
+                for node in remediation_nodes
+                if str(node.get("concept_code") or "").strip() == focus_concept_code
+            ]
+            if focused:
+                selected_nodes = focused[:_max_nodes_per_posttest()]
+            elif goal.target_concept_id:
+                concept = session.get(KnowledgeConcept, goal.target_concept_id)
+                if concept is not None and concept.code == focus_concept_code:
+                    selected_nodes = [
+                        {
+                            "concept_id": str(concept.id),
+                            "concept_code": concept.code,
+                            "title": concept.title,
+                            "role": "target",
+                            "status": "fragile",
+                            "depth": 0,
+                        }
+                    ]
+        if not selected_nodes and goal.target_concept_id is not None:
+            fallback_concept = session.get(KnowledgeConcept, goal.target_concept_id)
+            if fallback_concept is not None:
+                selected_nodes = [
+                    {
+                        "concept_id": str(fallback_concept.id),
+                        "concept_code": fallback_concept.code,
+                        "title": fallback_concept.title,
+                        "role": "target",
+                        "status": "fragile",
+                        "depth": 0,
+                    }
+                ]
         if not selected_nodes:
             raise ValueError("No remediation nodes found from pretest diagnosis.")
 
@@ -87,6 +129,7 @@ class AdaptivePosttestService:
                 "available_node_count": len(remediation_nodes),
                 "selected_node_count": len(selected_nodes),
                 "omitted_node_count": max(0, len(remediation_nodes) - len(selected_nodes)),
+                "focus_concept_code": focus_concept_code,
             },
             decision_state_json={},
             graph_scope_json={},
@@ -307,6 +350,19 @@ class AdaptivePosttestService:
             "posttest_finalized_at": now_iso,
             "node_results": node_results,
         }
+
+        if assessment.learning_goal_id is not None:
+            goal = session.get(LearningGoal, assessment.learning_goal_id)
+            if goal is not None and goal.status == "in_progress":
+                all_passed = bool(node_results) and all(
+                    bool(payload.get("passed"))
+                    for payload in node_results.values()
+                    if isinstance(payload, dict)
+                )
+                if all_passed:
+                    goal.status = "completed"
+                    goal.completed_at = datetime.now(UTC)
+
         session.commit()
 
         node_reads = _node_results_read(state)
@@ -392,21 +448,67 @@ class AdaptivePosttestService:
         return selected_ids[:3]
 
 
-def _resolve_goal(
+def _resolve_goal_context(
     session: Session,
     *,
     user: UserAccount,
     learning_goal_id: UUID | None,
     track_id: UUID | None,
-) -> LearningGoal | None:
+    module_id: UUID | None,
+) -> tuple[LearningGoal | None, str | None]:
+    focus_concept_code: str | None = None
+    resolved_track_id = track_id
+    if module_id is not None:
+        module = session.scalar(
+            select(TrackModule)
+            .join(LearningTrack, TrackModule.track_id == LearningTrack.id)
+            .where(
+                TrackModule.id == module_id,
+                LearningTrack.user_id == user.id,
+            )
+        )
+        if module is None:
+            return None, None
+        resolved_track_id = module.track_id
+        if module.concept_id is not None:
+            concept = session.get(KnowledgeConcept, module.concept_id)
+            if concept is not None:
+                focus_concept_code = concept.code
+
     if learning_goal_id is not None:
-        return session.scalar(select(LearningGoal).where(LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id))
-    if track_id is not None:
-        track = session.scalar(select(LearningTrack).where(LearningTrack.id == track_id, LearningTrack.user_id == user.id))
+        goal = session.scalar(
+            select(LearningGoal).where(
+                LearningGoal.id == learning_goal_id,
+                LearningGoal.user_id == user.id,
+            )
+        )
+        if goal is None:
+            return None, focus_concept_code
+        if resolved_track_id is not None:
+            owned_track_for_goal = session.scalar(
+                select(LearningTrack).where(
+                    LearningTrack.id == resolved_track_id,
+                    LearningTrack.user_id == user.id,
+                    LearningTrack.learning_goal_id == goal.id,
+                )
+            )
+            if owned_track_for_goal is None:
+                raise ValueError("module_id does not belong to the selected learning_goal_id.")
+        return goal, focus_concept_code
+
+    if resolved_track_id is not None:
+        track = session.scalar(
+            select(LearningTrack).where(
+                LearningTrack.id == resolved_track_id,
+                LearningTrack.user_id == user.id,
+            )
+        )
         if track is None:
-            return None
-        return session.get(LearningGoal, track.learning_goal_id)
-    return None
+            return None, focus_concept_code
+        goal = session.get(LearningGoal, track.learning_goal_id)
+        return goal, focus_concept_code
+
+    return None, focus_concept_code
 
 
 def _active_posttest_for_goal(session: Session, *, user: UserAccount, goal_id: UUID) -> AssessmentSession | None:
@@ -523,7 +625,7 @@ def _refresh_node_result_score(payload: dict[str, Any]) -> None:
 def _posttest_scaled_score(*, correct_count: int, total_questions: int) -> float:
     if total_questions <= 0:
         return 0.0
-    return float(round((max(0, correct_count) / total_questions) * 10))
+    return float(round((max(0, correct_count) / total_questions) * 10, 2))
 
 
 def _clamp01(value: float) -> float:
