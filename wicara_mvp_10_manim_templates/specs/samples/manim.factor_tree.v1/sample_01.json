@@ -1,0 +1,47 @@
+{
+  "id": "sample_factorization_divisibility_97",
+  "node_id": "phase4_factorization_divisibility_model",
+  "template_id": "manim.factor_tree.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Faktorisasi dan Keterbagian",
+  "subtitle": "Pohon faktor memecah bilangan menjadi faktor prima untuk membaca struktur keterbagian.",
+  "number": 84,
+  "tree_levels": [
+    [
+      84
+    ],
+    [
+      2,
+      42
+    ],
+    [
+      2,
+      2,
+      21
+    ],
+    [
+      2,
+      2,
+      3,
+      7
+    ]
+  ],
+  "prime_factorization": "84 = 2^2 \\times 3 \\times 7",
+  "steps": [
+    {
+      "title": "Pecah bilangan",
+      "body": "Mulai dari bilangan besar lalu pecah menjadi dua faktor."
+    },
+    {
+      "title": "Lanjutkan sampai prima",
+      "body": "Faktor komposit dipecah lagi sampai semua daun adalah bilangan prima."
+    },
+    {
+      "title": "Tulis faktorisasi",
+      "body": "Faktor prima disusun sebagai perkalian yang setara dengan bilangan awal."
+    }
+  ],
+  "summary": "Faktorisasi prima memudahkan analisis keterbagian, FPB, KPK, dan penyederhanaan pecahan."
+}

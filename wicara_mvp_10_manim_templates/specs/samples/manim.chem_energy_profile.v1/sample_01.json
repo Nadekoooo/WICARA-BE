@@ -1,0 +1,30 @@
+{
+  "id": "sample_thermochemistry_energy_profile_63",
+  "node_id": "phase5_thermochemistry_energy_profile",
+  "template_id": "manim.chem_energy_profile.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Profil Energi Termokimia",
+  "subtitle": "Perubahan entalpi dapat dibaca dari posisi energi reaktan dan produk pada diagram energi.",
+  "reaction_type": "eksoterm",
+  "delta_h_label": "\\Delta H < 0",
+  "reactant_energy": 4.0,
+  "product_energy": 1.7,
+  "activation_energy": 6.2,
+  "steps": [
+    {
+      "title": "Tentukan energi awal",
+      "body": "Reaktan memiliki tingkat energi tertentu sebelum reaksi berlangsung."
+    },
+    {
+      "title": "Lewati energi aktivasi",
+      "body": "Reaksi membutuhkan energi aktivasi untuk mencapai keadaan transisi."
+    },
+    {
+      "title": "Baca ΔH",
+      "body": "Selisih energi produk dan reaktan menunjukkan apakah reaksi menyerap atau melepas kalor."
+    }
+  ],
+  "summary": "Diagram profil energi memperjelas hubungan antara energi aktivasi, produk, reaktan, dan entalpi reaksi."
+}

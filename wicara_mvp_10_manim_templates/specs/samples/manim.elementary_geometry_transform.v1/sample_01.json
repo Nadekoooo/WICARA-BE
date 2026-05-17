@@ -1,0 +1,31 @@
+{
+  "id": "sample_angle_symmetry_transformation_93",
+  "node_id": "phase3_angle_symmetry_transformation",
+  "template_id": "manim.elementary_geometry_transform.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Sudut, Simetri, dan Transformasi Awal",
+  "subtitle": "Bentuk dapat diputar, dicerminkan, dan digeser sambil mempertahankan sifat tertentu.",
+  "angle_degrees": 90,
+  "transformations": [
+    "refleksi",
+    "rotasi",
+    "translasi"
+  ],
+  "steps": [
+    {
+      "title": "Ukur sudut",
+      "body": "Sudut menunjukkan besar bukaan antara dua garis."
+    },
+    {
+      "title": "Lihat simetri",
+      "body": "Bentuk simetris dapat dilipat atau dicerminkan sehingga kedua sisi cocok."
+    },
+    {
+      "title": "Coba transformasi",
+      "body": "Translasi, rotasi, dan refleksi mengubah posisi atau arah bentuk."
+    }
+  ],
+  "summary": "Sudut dan transformasi membantu siswa memahami bagaimana bentuk bergerak dan tetap dikenali."
+}

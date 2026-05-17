@@ -1,9 +1,10 @@
 {
-  "version": "phase4_top30_v1",
+  "version": "phase6_top107_manim_v1",
   "source": "manim_family_expansion_phase4",
   "notes": [
     "Top30-style routing map for manim concept types.",
-    "Each concept type provides primary_template_id and fallback candidates."
+    "Each concept type provides primary_template_id and fallback candidates.",
+    "Phase6 manim-only bundle (rows 61-107) integrated into routing map."
   ],
   "routes": [
     {
@@ -302,6 +303,190 @@
         "manim.graph_explanation.v1"
       ],
       "family": "graph_family"
+    },
+    {
+      "concept_type": "equilibrium_shift_model",
+      "primary_template_id": "manim.chem_equilibrium_shift.v1",
+      "template_candidates": [
+        "manim.chem_equilibrium_shift.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "thermochemistry_energy_profile",
+      "primary_template_id": "manim.chem_energy_profile.v1",
+      "template_candidates": [
+        "manim.chem_energy_profile.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "matrix_operation_model",
+      "primary_template_id": "manim.matrix_operations.v1",
+      "template_candidates": [
+        "manim.matrix_operations.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "geodesic_coordinate_model",
+      "primary_template_id": "manim.geodesic_coordinate.v1",
+      "template_candidates": [
+        "manim.geodesic_coordinate.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "motion_force_pressure_model",
+      "primary_template_id": "manim.force_motion_pressure.v1",
+      "template_candidates": [
+        "manim.force_motion_pressure.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "work_energy_power_model",
+      "primary_template_id": "manim.energy_transfer.v1",
+      "template_candidates": [
+        "manim.energy_transfer.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "scalar_vector_model",
+      "primary_template_id": "manim.vector_diagram.v1",
+      "template_candidates": [
+        "manim.vector_diagram.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "force_newton_diagram",
+      "primary_template_id": "manim.force_diagram.v1",
+      "template_candidates": [
+        "manim.force_diagram.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "fluid_pressure_model",
+      "primary_template_id": "manim.fluid_pressure.v1",
+      "template_candidates": [
+        "manim.fluid_pressure.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "electromagnetism_field_model",
+      "primary_template_id": "manim.electromagnetism_field.v1",
+      "template_candidates": [
+        "manim.electromagnetism_field.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "inheritance_probability_model",
+      "primary_template_id": "manim.bio_genetics_probability.v1",
+      "template_candidates": [
+        "manim.bio_genetics_probability.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "measurement_unit_conversion",
+      "primary_template_id": "manim.measurement_units.v1",
+      "template_candidates": [
+        "manim.measurement_units.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "financial_quantity_model",
+      "primary_template_id": "manim.elementary_finance_timeline.v1",
+      "template_candidates": [
+        "manim.elementary_finance_timeline.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "factor_multiple_divisibility",
+      "primary_template_id": "manim.factor_tree_multiple_grid.v1",
+      "template_candidates": [
+        "manim.factor_tree_multiple_grid.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "angle_symmetry_transformation",
+      "primary_template_id": "manim.elementary_geometry_transform.v1",
+      "template_candidates": [
+        "manim.elementary_geometry_transform.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "chance_probability_informal",
+      "primary_template_id": "manim.elementary_probability.v1",
+      "template_candidates": [
+        "manim.elementary_probability.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "ratio_scale_proportion_model",
+      "primary_template_id": "manim.ratio_proportion.v1",
+      "template_candidates": [
+        "manim.ratio_proportion.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "factorization_divisibility_model",
+      "primary_template_id": "manim.factor_tree.v1",
+      "template_candidates": [
+        "manim.factor_tree.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "graph_function_model",
+      "primary_template_id": "manim.graph_explanation.v1",
+      "template_candidates": [
+        "manim.graph_explanation.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "spatial_net_model",
+      "primary_template_id": "manim.spatial_net.v1",
+      "template_candidates": [
+        "manim.spatial_net.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "measurement_data_process",
+      "primary_template_id": "manim.measurement_data.v1",
+      "template_candidates": [
+        "manim.measurement_data.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "momentum_impulse_collision_model",
+      "primary_template_id": "manim.momentum_collision.v1",
+      "template_candidates": [
+        "manim.momentum_collision.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "coordinate_spatial_model",
+      "primary_template_id": "manim.coordinate_grid_elementary.v1",
+      "template_candidates": [
+        "manim.coordinate_grid_elementary.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
     }
   ]
 }

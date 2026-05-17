@@ -1,0 +1,42 @@
+{
+  "id": "sample_scalar_vector_77",
+  "node_id": "phase4_scalar_vector_model",
+  "template_id": "manim.vector_diagram.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Skalar, Vektor, dan Resultan",
+  "subtitle": "Skalar hanya memiliki besar, sedangkan vektor memiliki besar dan arah.",
+  "vectors": [
+    {
+      "label": "A",
+      "x": 3,
+      "y": 1
+    },
+    {
+      "label": "B",
+      "x": 1,
+      "y": 2
+    }
+  ],
+  "resultant": {
+    "label": "R",
+    "x": 4,
+    "y": 3
+  },
+  "steps": [
+    {
+      "title": "Bedakan skalar dan vektor",
+      "body": "Massa dan suhu adalah skalar, sedangkan perpindahan dan gaya adalah vektor."
+    },
+    {
+      "title": "Gambar arah",
+      "body": "Panah menunjukkan besar sekaligus arah suatu vektor."
+    },
+    {
+      "title": "Jumlahkan vektor",
+      "body": "Resultan dapat diperoleh dengan menyambung panah secara kepala-ke-ekor."
+    }
+  ],
+  "summary": "Diagram vektor membantu memahami arah, besar, dan resultan secara visual."
+}

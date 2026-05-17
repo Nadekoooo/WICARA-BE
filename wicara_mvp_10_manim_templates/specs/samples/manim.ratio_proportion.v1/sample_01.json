@@ -1,75 +1,60 @@
 {
-  "id": "sample_ratio_syrup",
-  "node_id": "km_d_matematika_rasio",
+  "id": "sample_ratio_scale_proportion_95",
+  "node_id": "phase3_ratio_scale_proportion",
   "template_id": "manim.ratio_proportion.v1",
-  "phase": "D",
-  "audience_level": "smp",
+  "phase": "C",
+  "audience_level": "sd",
   "language": "id",
-  "title": "Rasio Gula dan Air",
-  "subtitle": "Rasio menjaga perbandingan dua kuantitas.",
-  "context": "Membuat sirup",
+  "title": "Rasio, Skala, dan Penalaran Proporsional Awal",
+  "subtitle": "Rasio membandingkan dua jumlah, sedangkan skala mempertahankan perbandingan saat ukuran berubah.",
+  "ratio": [
+    2,
+    3
+  ],
+  "labels": [
+    "sirup",
+    "air"
+  ],
+  "context": "Membuat minuman dengan perbandingan sirup dan air",
   "quantities": [
     {
-      "label": "Gula",
+      "label": "sirup",
       "value": 2,
-      "unit": "sendok"
+      "unit": "bagian"
     },
     {
-      "label": "Air",
-      "value": 5,
-      "unit": "gelas"
+      "label": "air",
+      "value": 3,
+      "unit": "bagian"
     }
   ],
   "ratio_pairs": [
     [
-      "Gula",
-      "Air"
+      "sirup",
+      "air"
     ]
   ],
   "scale_factor": 2,
   "scaling_steps": [
     {
-      "from": "2:5",
-      "to": "4:10",
-      "label": "Dikali 2"
+      "from": "2:3",
+      "to": "4:6",
+      "label": "dikali 2"
     }
   ],
   "steps": [
     {
-      "title": "Rasio awal",
-      "body": "Gula dan air dibandingkan 2 banding 5.",
-      "narration": "Rasio awal. Gula dan air dibandingkan 2 banding 5."
+      "title": "Bandingkan dua jumlah",
+      "body": "Rasio 2 banding 3 berarti ada dua bagian pertama untuk tiga bagian kedua."
     },
     {
-      "title": "Skalakan bersama",
-      "body": "Jika gula dikali 2, air juga dikali 2.",
-      "narration": "Skalakan bersama. Jika gula dikali 2, air juga dikali 2."
+      "title": "Perbesar dengan skala",
+      "body": "Jika kedua bagian dikalikan faktor yang sama, perbandingan tetap sama."
+    },
+    {
+      "title": "Gunakan proporsi",
+      "body": "Penalaran proporsional membantu menyelesaikan masalah resep, peta, dan ukuran."
     }
   ],
-  "summary": "Proporsi terjaga jika kedua kuantitas dikalikan faktor yang sama.",
-  "voiceover_script": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air.",
-  "intro_narration": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air.",
-  "summary_narration": "Proporsi terjaga jika kedua kuantitas dikalikan faktor yang sama.",
-  "narration_segments": [
-    {
-      "slot": "intro",
-      "text": "Rasio dua banding lima berarti dua sendok gula dipasangkan dengan lima gelas air."
-    },
-    {
-      "slot": "step",
-      "step_index": 1,
-      "text": "Rasio awal. Gula dan air dibandingkan 2 banding 5."
-    },
-    {
-      "slot": "step",
-      "step_index": 2,
-      "text": "Skalakan bersama. Jika gula dikali 2, air juga dikali 2."
-    },
-    {
-      "slot": "summary",
-      "text": "Proporsi terjaga jika kedua kuantitas dikalikan faktor yang sama."
-    }
-  ]
+  "summary": "Rasio dan skala membantu memahami perbandingan yang tetap walau ukuran berubah."
 }
-
-
