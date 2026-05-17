@@ -14,7 +14,7 @@ Create a local `.env` from the example file and adjust the database or Supabase 
 Copy-Item .env.example .env
 ```
 
-For complete local Manim worker setup and troubleshooting, see `SETUP_VENV_MANIM.md`.
+For complete local Manim worker setup and troubleshooting, see [Local Manim Setup](#local-manim-setup).
 
 Run database migrations when PostgreSQL is available:
 
@@ -45,6 +45,114 @@ Run media worker process for animation jobs:
 ```powershell
 python -m app.workers.media_worker
 ```
+
+## Local Manim Setup
+
+Use this workflow when you want to run the backend together with the local Manim worker for video generation.
+
+### 1. Create and activate venv
+
+```powershell
+cd "C:\Users\antho\OneDrive\Gambar\Dokumen\wicara\WICARA-BE"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### 2. Install dependencies
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -e ".[test,render]"
+```
+
+Notes:
+- `render` extra is required for `manim-voiceover` (GTTS + OpenAI TTS).
+- This repo pins `setuptools<81` so `manim-voiceover` packages that still import `pkg_resources` keep working.
+
+### 3. Prepare env file
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Minimal config for local Manim testing:
+- `MEDIA_JOB_QUEUE_BACKEND=noop`
+- `MEDIA_STORAGE_BACKEND=local`
+- `MEDIA_STORAGE_PUBLIC_BASE_URL=/media-storage`
+- `MEDIA_TTS_PROVIDER=gtts_voiceover` or `openai_voiceover`
+- `MEDIA_TTS_REQUIRED=true` (optional, but recommended if audio is mandatory)
+
+If you use OpenAI TTS, add:
+- `OPENAI_API_KEY=...`
+- `MEDIA_OPENAI_TTS_MODEL_PRIMARY=gpt-4o-mini-tts`
+- `MEDIA_OPENAI_TTS_MODEL_FALLBACK=tts-1`
+- `MEDIA_OPENAI_TTS_VOICE_PRIMARY=marin`
+- `MEDIA_OPENAI_TTS_VOICE_FALLBACK=alloy`
+- `MEDIA_OPENAI_TTS_RESPONSE_FORMAT=mp3`
+
+For Supabase pooler, use the pooler connection string from the dashboard with host `*.pooler.supabase.com`.
+
+### 4. Run migration
+
+```powershell
+alembic upgrade head
+```
+
+### 5. Run API and worker
+
+Terminal 1:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+Terminal 2:
+
+```powershell
+python -m app.workers.media_worker
+```
+
+### 6. Verify audio exists in rendered video
+
+```powershell
+ffprobe -v error -select_streams a -show_entries stream=index -of json "<path-to-final_video.mp4>"
+```
+
+If audio is present, the `streams` field is not empty.
+
+### 7. Common errors and fixes
+
+1. `ModuleNotFoundError: No module named 'pkg_resources'`
+  Reinstall the render dependency in the active venv:
+
+  ```powershell
+  python -m pip install -e ".[render]"
+  ```
+
+2. `'sox' is not recognized as an internal or external command`
+  Install SoX, then refresh the terminal PATH.
+
+  ```powershell
+  winget install --id ChrisBagwell.SoX --exact --accept-source-agreements --accept-package-agreements
+  where sox
+  sox --version
+  ```
+
+  If `where sox` is still empty, close and reopen the terminal. If it still does not resolve, refresh PATH in the active session:
+
+  ```powershell
+  $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+  where sox
+  ```
+
+3. `prepared statement "_pg3_0" does not exist` or `DuplicatePreparedStatement`
+  Update to the latest code in this repo. Session/engine already disables prepared statements automatically when a Supabase pooler host is detected.
+
+4. Video is `ready` but has no audio
+  - make sure `manim-voiceover` is installed with `python -m pip install -e ".[render]"`
+  - for OpenAI TTS, confirm `OPENAI_API_KEY` is valid
+  - set `MEDIA_TTS_REQUIRED=true` so the job fails if the audio stream is missing
+  - queue the job again
 
 Important for Phase-4 render worker:
 - Install Manim runtime in the worker environment (`python -m pip install manim`).
