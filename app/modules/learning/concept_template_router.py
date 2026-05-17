@@ -12,12 +12,34 @@ def resolve_primary_template_id(concept_type: str | None) -> str | None:
     normalized = _normalize_key(concept_type)
     if not normalized:
         return None
-    routes = _routing_map()
-    row = routes.get(normalized)
+    row = resolve_route_entry(concept_type)
     if row is None:
         return None
     template_id = _normalize_key(row.get("primary_template_id"))
     return template_id or None
+
+
+def resolve_template_candidates(concept_type: str | None) -> list[str]:
+    row = resolve_route_entry(concept_type)
+    if row is None:
+        return []
+    candidates = row.get("template_candidates", [])
+    if not isinstance(candidates, list):
+        return []
+    normalized_candidates: list[str] = []
+    for item in candidates:
+        token = _normalize_key(item)
+        if token and token not in normalized_candidates:
+            normalized_candidates.append(token)
+    return normalized_candidates
+
+
+def resolve_route_entry(concept_type: str | None) -> dict | None:
+    normalized = _normalize_key(concept_type)
+    if not normalized:
+        return None
+    routes = _routing_map()
+    return routes.get(normalized)
 
 
 @lru_cache

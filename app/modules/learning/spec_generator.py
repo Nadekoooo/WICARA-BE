@@ -9,8 +9,15 @@ from typing import Any
 from app.modules.ai import ai_client
 from app.modules.ai.errors import AIConfigurationError, AIError
 from app.modules.ai.schemas import AIGenerationResponse
-from app.modules.learning.concept_template_router import resolve_primary_template_id
-from app.modules.learning.template_registry import TemplateRegistryError, resolve_template_entry
+from app.modules.learning.concept_template_router import (
+    resolve_primary_template_id,
+    resolve_template_candidates,
+)
+from app.modules.learning.template_registry import (
+    TemplateRegistryError,
+    registered_template_ids,
+    resolve_template_entry,
+)
 from app.modules.learning.template_quality import evaluate_template_quality
 from app.modules.learning.template_validation import (
     TemplateValidationError,
@@ -19,6 +26,7 @@ from app.modules.learning.template_validation import (
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 
 _PROMPT_VERSION = "workspace_context_spec_gemini_v1"
+_ROUTER_PROMPT_VERSION = "workspace_context_template_router_gemini_v1"
 _DEFAULT_MODEL = "gemini-2.5-flash"
 _MAX_ATTEMPTS = 2
 _ROOT_DIR = Path(__file__).resolve().parents[3]
@@ -39,6 +47,19 @@ Hard requirements:
 - Include narration fields so voiceover can be generated cleanly.
 - Keep values realistic and classroom-safe.
 - Keep narration pacing balanced: avoid long intro and provide clear narration per step.
+""".strip()
+
+_ROUTER_SYSTEM_INSTRUCTION = """
+You are a backend template router for Manim educational templates.
+Task:
+- Choose exactly one template_id from allowed_template_ids.
+- Use the workspace context and concept_type signal.
+
+Hard requirements:
+- Return JSON only, no markdown.
+- Use exact format: {"template_id":"...","reason":"..."}.
+- template_id must be one value from allowed_template_ids.
+- Prefer templates whose semantic domain matches learner context.
 """.strip()
 
 
@@ -62,14 +83,55 @@ def generate_spec_from_workspace_context(
     active_concept_type = str(metadata.get("active_concept_type") or "").strip().lower()
     raw_template_id = str(metadata.get("active_template_id") or "").strip().lower()
     template_resolution_source = "active_template_id"
+    router_candidates: list[str] = []
+    router_used = False
+    requested_language = _normalize_language(language) or "id"
+    context_snapshot = _build_context_snapshot(
+        workspace=workspace,
+        metadata=metadata,
+        requested_language=requested_language,
+    )
+
     if not raw_template_id:
+        router_candidates = resolve_template_candidates(active_concept_type)
         mapped_template_id = resolve_primary_template_id(active_concept_type)
-        if mapped_template_id:
+        if not router_candidates and mapped_template_id:
+            router_candidates = [mapped_template_id]
+
+        if router_candidates:
+            planned = _select_template_id_with_gemini(
+                concept_type=active_concept_type,
+                requested_language=requested_language,
+                context_snapshot=context_snapshot,
+                allowed_template_ids=router_candidates,
+            )
+            if planned:
+                raw_template_id = planned
+                template_resolution_source = "gemini_router_candidates"
+                router_used = True
+            else:
+                raw_template_id = router_candidates[0]
+                template_resolution_source = "concept_type_candidates_fallback"
+        elif mapped_template_id:
             raw_template_id = mapped_template_id
-            template_resolution_source = "concept_type_route"
+            template_resolution_source = "concept_type_route_primary"
+        else:
+            global_candidates = _global_router_candidates()
+            router_candidates = global_candidates
+            planned = _select_template_id_with_gemini(
+                concept_type=active_concept_type,
+                requested_language=requested_language,
+                context_snapshot=context_snapshot,
+                allowed_template_ids=global_candidates,
+            )
+            if planned:
+                raw_template_id = planned
+                template_resolution_source = "gemini_router_global"
+                router_used = True
+
     if not raw_template_id:
         raise WorkspaceContextSpecGenerationError(
-            "Workspace context is missing active_template_id and no concept_type route is available."
+            "Workspace context is missing active_template_id and no template route could be resolved."
         )
 
     try:
@@ -79,13 +141,7 @@ def generate_spec_from_workspace_context(
 
     template_id = resolved.entry.template_id
     node_id = str(metadata.get("active_node_id") or "").strip()
-    requested_language = _normalize_language(language) or "id"
     sample_spec = _load_sample_spec(template_id)
-    context_snapshot = _build_context_snapshot(
-        workspace=workspace,
-        metadata=metadata,
-        requested_language=requested_language,
-    )
 
     last_error: str | None = None
     last_response: str | None = None
@@ -154,6 +210,10 @@ def generate_spec_from_workspace_context(
             "context_source": metadata.get("context_source"),
             "language": requested_language,
             "requested_language": requested_language,
+            "router_used": router_used,
+            "router_prompt_version": _ROUTER_PROMPT_VERSION if router_used else None,
+            "router_candidate_count": len(router_candidates),
+            "router_candidates": router_candidates[:20],
             "attempt": attempt,
             "ai_source": ai_response.provider,
             "ai_model": ai_response.model,
@@ -257,6 +317,72 @@ def _recent_turns(events: list[WorkspaceEvent], *, max_turns: int) -> list[dict[
     return lines[-max_turns:]
 
 
+def _global_router_candidates() -> list[str]:
+    try:
+        rows = registered_template_ids()
+    except TemplateRegistryError:
+        return []
+    candidates = [item for item in rows if item.startswith("manim.")]
+    return sorted(set(candidates))
+
+
+def _select_template_id_with_gemini(
+    *,
+    concept_type: str,
+    requested_language: str,
+    context_snapshot: dict[str, Any],
+    allowed_template_ids: list[str],
+) -> str | None:
+    normalized_candidates = [str(item).strip().lower() for item in allowed_template_ids if str(item).strip()]
+    normalized_candidates = sorted(set(normalized_candidates))
+    if not normalized_candidates:
+        return None
+
+    instruction_payload = {
+        "task": "choose_template_id",
+        "requested_language": requested_language or "id",
+        "active_concept_type": concept_type or "",
+        "allowed_template_ids": normalized_candidates,
+        "workspace_context": {
+            "current_topic": context_snapshot.get("current_topic"),
+            "latest_learner_text": context_snapshot.get("latest_learner_text"),
+            "recent_turns": context_snapshot.get("recent_turns", []),
+            "active_prerequisites": context_snapshot.get("active_prerequisites"),
+        },
+        "output_contract": {
+            "json_only": True,
+            "must_use_allowed_template_id": True,
+            "format": {"template_id": "string", "reason": "string"},
+        },
+    }
+    user_instruction = json.dumps(instruction_payload, ensure_ascii=True, indent=2)
+    params = {
+        "temperature": 0.1,
+        "maxOutputTokens": 512,
+        "responseMimeType": "application/json",
+    }
+
+    try:
+        response = _run_async_generate(
+            system_instruction=_ROUTER_SYSTEM_INSTRUCTION,
+            user_instruction=user_instruction,
+            params=params,
+        )
+    except (AIConfigurationError, AIError):
+        return None
+
+    payload = _try_parse_json_object_response(response.text)
+    if payload is None:
+        return None
+
+    selected = str(payload.get("template_id") or "").strip().lower()
+    if not selected:
+        return None
+    if selected not in normalized_candidates:
+        return None
+    return selected
+
+
 def _build_user_instruction(
     *,
     template_id: str,
@@ -349,9 +475,18 @@ def _run_async_generate(
 
 
 def _parse_candidate_spec(raw_text: str) -> dict[str, Any]:
+    payload = _try_parse_json_object_response(raw_text)
+    if payload is None:
+        raise WorkspaceContextSpecGenerationError(
+            "Gemini response is not a valid JSON object for spec generation."
+        )
+    return payload
+
+
+def _try_parse_json_object_response(raw_text: str) -> dict[str, Any] | None:
     text = (raw_text or "").strip()
     if not text:
-        raise WorkspaceContextSpecGenerationError("Gemini returned an empty response.")
+        return None
 
     candidates = [text]
     fenced = _extract_fenced_json(text)
@@ -368,10 +503,7 @@ def _parse_candidate_spec(raw_text: str) -> dict[str, Any]:
             continue
         if isinstance(payload, dict):
             return payload
-
-    raise WorkspaceContextSpecGenerationError(
-        "Gemini response is not a valid JSON object for spec generation."
-    )
+    return None
 
 
 def _extract_fenced_json(text: str) -> str:
