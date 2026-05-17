@@ -747,8 +747,16 @@ def process_animation_job_for_worker(
         _log_job_event(
             level="info",
             stage="render_ok",
-            message="Manim rendering completed.",
-            context={**context, "attempts_used": attempts_used, **timing_meta},
+            message="Template rendering completed.",
+            context={
+                **context,
+                "attempts_used": attempts_used,
+                "render_engine": (
+                    str((artifact.render_meta_json or {}).get("render_engine", "")).strip().lower()
+                    or ("remotion" if artifact.template_id.startswith("remotion.") else "manim")
+                ),
+                **timing_meta,
+            },
         )
         _update_job_progress(
             session,
@@ -2338,6 +2346,9 @@ def _initial_render_meta(
                 "template_path": validation_result.template_path,
                 "scene_class": validation_result.scene_class,
                 "schema_id": validation_result.schema_id,
+                "render_engine": validation_result.render_engine,
+                "engine_family": validation_result.engine_family,
+                "runtime": validation_result.runtime,
                 "resolved_from": validation_result.resolved_from,
                 "used_alias": validation_result.used_alias,
             }
@@ -2468,6 +2479,9 @@ def _validate_job_payload(
             "template_path": validation_result.template_path,
             "scene_class": validation_result.scene_class,
             "schema_id": validation_result.schema_id,
+            "render_engine": validation_result.render_engine,
+            "engine_family": validation_result.engine_family,
+            "runtime": validation_result.runtime,
             "resolved_from": validation_result.resolved_from,
             "used_alias": validation_result.used_alias,
             "language": artifact.language,
@@ -2490,6 +2504,12 @@ def _render_artifact_with_retry(
     render_meta = dict(artifact.render_meta_json or {})
     template_path = str(render_meta.get("template_path", "")).strip()
     scene_class = str(render_meta.get("scene_class", "GeneratedTemplate")).strip()
+    render_engine = str(render_meta.get("render_engine", "")).strip().lower() or (
+        "remotion" if artifact.template_id.startswith("remotion.") else "manim"
+    )
+    runtime = render_meta.get("runtime")
+    if not isinstance(runtime, dict):
+        runtime = {}
     if not template_path:
         raise RenderEngineError(
             code="render_error",
@@ -2504,7 +2524,10 @@ def _render_artifact_with_retry(
             job=job,
             artifact=artifact,
             progress=60,
-            message=f"Running Manim render attempt {attempt}/{attempts_limit}.",
+            message=(
+                f"Running {render_engine} render attempt "
+                f"{attempt}/{attempts_limit}."
+            ),
         )
         try:
             output = render_template_scene(
@@ -2516,6 +2539,9 @@ def _render_artifact_with_retry(
                 quality_profile=artifact.quality_profile,
                 timeout_seconds=timeout_seconds,
                 settings=settings,
+                template_id=artifact.template_id,
+                render_engine=render_engine,
+                runtime=runtime,
             )
             return output, attempt
         except RenderEngineError as exc:
@@ -2645,14 +2671,22 @@ def _attach_render_output_to_artifact(
     attempts_used: int,
 ) -> None:
     render_meta = dict(artifact.render_meta_json or {})
+    render_engine = str(render_meta.get("render_engine", "")).strip().lower() or (
+        "remotion" if artifact.template_id.startswith("remotion.") else "manim"
+    )
     render_meta.update(
         {
             "local_render_video_path": render_output.video_path,
             "relative_render_video_path": render_output.relative_video_path,
             "render_attempts_used": attempts_used,
             "render_completed_at": datetime.now(UTC).isoformat(),
-            "manim_stdout_tail": render_output.stdout,
-            "manim_stderr_tail": render_output.stderr,
+            "render_engine": render_engine,
+            "render_stdout_tail": render_output.stdout,
+            "render_stderr_tail": render_output.stderr,
+            "manim_stdout_tail": render_output.stdout if render_engine == "manim" else "",
+            "manim_stderr_tail": render_output.stderr if render_engine == "manim" else "",
+            "remotion_stdout_tail": render_output.stdout if render_engine == "remotion" else "",
+            "remotion_stderr_tail": render_output.stderr if render_engine == "remotion" else "",
         }
     )
     artifact.render_meta_json = render_meta

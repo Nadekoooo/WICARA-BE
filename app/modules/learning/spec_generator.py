@@ -322,8 +322,7 @@ def _global_router_candidates() -> list[str]:
         rows = registered_template_ids()
     except TemplateRegistryError:
         return []
-    candidates = [item for item in rows if item.startswith("manim.")]
-    return sorted(set(candidates))
+    return sorted(set(rows))
 
 
 def _select_template_id_with_gemini(

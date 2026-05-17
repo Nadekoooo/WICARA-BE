@@ -1,44 +1,111 @@
 {
-  "id": "spec_43_remotion_chem_organic_structure_v1",
+  "id": "remotion_v2_043_organic_structure_functional_group",
   "row_index": 43,
   "concept_type": "organic_structure_functional_group",
+  "concept_type_label_id": "Kimia karbon, hidrokarbon, gugus fungsi, dan polimer",
   "template_id": "remotion.chem_organic_structure.v1",
+  "component": "OrganicStructureVideo",
+  "archetype": "organic_structure",
+  "domain": "chemistry",
   "media_engine_family": "remotion_svg",
-  "audience_level": "sma",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Struktur Organik dan Gugus Fungsi",
-  "subtitle": "Kerangka karbon dan gugus fungsi menentukan nama, reaktivitas, dan sifat senyawa organik.",
+  "durationInFrames": 1350,
+  "title": "Kimia karbon, hidrokarbon, gugus fungsi, dan polimer",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `organic_structure_functional_group`.",
+  "keyIdea": "Gugus fungsi menentukan sifat khas senyawa organik.",
   "steps": [
     {
-      "title": "Lihat kerangka karbon",
-      "body": "Senyawa organik disusun oleh rantai atau cincin karbon."
+      "id": "carbon",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Senyawa organik punya kerangka karbon",
+      "narration": "Atom karbon dapat membentuk rantai, cabang, atau cincin."
     },
     {
-      "title": "Sorot gugus fungsi",
-      "body": "Gugus fungsi memberi sifat khas pada senyawa."
+      "id": "chain",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Kerangka menjadi struktur utama",
+      "narration": "Kerangka karbon menentukan bentuk dasar senyawa."
     },
     {
-      "title": "Bandingkan contoh",
-      "body": "Perbedaan gugus fungsi menjelaskan perbedaan sifat dan kegunaan."
+      "id": "group",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Gugus fungsi disorot",
+      "narration": "Bagian tertentu dari molekul memberi sifat kimia yang khas."
+    },
+    {
+      "id": "compare",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Beberapa gugus dibandingkan",
+      "narration": "Alkohol, asam karboksilat, dan keton memiliki gugus fungsi berbeda."
+    },
+    {
+      "id": "property",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Gugus fungsi memengaruhi sifat",
+      "narration": "Titik didih, kelarutan, dan reaktivitas dipengaruhi oleh gugus fungsi."
+    },
+    {
+      "id": "polymer",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Struktur juga menjelaskan polimer",
+      "narration": "Pengulangan unit organik dapat membentuk polimer."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Struktur menjelaskan fungsi",
+      "narration": "Mengenali struktur membantu memprediksi sifat dan kegunaan senyawa organik."
     }
   ],
-  "summary": "Konsep ini layak punya template sendiri karena menuntut fokus pada struktur dan penyorotan gugus fungsi.",
-  "examples": [
-    {
-      "name": "Etanol",
-      "group": "-OH"
-    },
-    {
-      "name": "Asam asetat",
-      "group": "-COOH"
-    },
-    {
-      "name": "Propanon",
-      "group": "C=O"
+  "visual": {
+    "molecules": [
+      {
+        "name": "Etanol",
+        "group": "-OH"
+      },
+      {
+        "name": "Asam asetat",
+        "group": "-COOH"
+      },
+      {
+        "name": "Propanon",
+        "group": "C=O"
+      }
+    ]
+  },
+  "summarySequence": [
+    "Karbon",
+    "Rantai",
+    "Gugus fungsi",
+    "Perbandingan",
+    "Sifat",
+    "Kegunaan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
     }
-  ]
+  }
 }

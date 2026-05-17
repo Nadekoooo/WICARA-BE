@@ -1,20 +1,21 @@
 {
-  "name": "wicara-remotion-templates",
+  "name": "wicara-remotion-v2-animated-templates",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
-    "dev": "remotion studio src/index.ts",
-    "render:list": "node scripts/list-templates.mjs",
-    "typecheck": "tsc --noEmit"
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "list": "node scripts/list-specs.mjs"
   },
   "dependencies": {
+    "@remotion/cli": "^4.0.268",
+    "remotion": "^4.0.268",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "remotion": "^4.0.268"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "typescript": "^5.8.3",
     "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "typescript": "^5.8.3"
+    "@types/react-dom": "^18.3.0"
   }
 }

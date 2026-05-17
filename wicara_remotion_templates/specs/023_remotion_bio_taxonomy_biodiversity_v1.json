@@ -1,42 +1,109 @@
 {
-  "id": "spec_23_remotion_bio_taxonomy_biodiversity_v1",
+  "id": "remotion_v2_023_biodiversity_classification_conservation",
   "row_index": 23,
   "concept_type": "biodiversity_classification_conservation",
+  "concept_type_label_id": "Keanekaragaman, klasifikasi, dan konservasi",
   "template_id": "remotion.bio_taxonomy_biodiversity.v1",
+  "component": "TaxonomyBiodiversityVideo",
+  "archetype": "taxonomy_biodiversity",
+  "domain": "biology",
   "media_engine_family": "remotion_svg",
-  "audience_level": "smp",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Keanekaragaman, Klasifikasi, dan Konservasi",
-  "subtitle": "Makhluk hidup dapat dikelompokkan berdasarkan ciri, dan keanekaragaman hayati perlu dijaga melalui konservasi.",
+  "durationInFrames": 1350,
+  "title": "Keanekaragaman, klasifikasi, dan konservasi",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `biodiversity_classification_conservation`.",
+  "keyIdea": "Klasifikasi menata keragaman, konservasi menjaga keberlangsungannya.",
   "steps": [
     {
-      "title": "Kelompokkan makhluk hidup",
-      "body": "Klasifikasi membantu menata keragaman organisme."
+      "id": "diversity",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Keanekaragaman terlihat di alam",
+      "narration": "Makhluk hidup memiliki bentuk, habitat, dan peran yang sangat beragam."
     },
     {
-      "title": "Amati tingkat keanekaragaman",
-      "body": "Keanekaragaman dapat dilihat pada gen, spesies, dan ekosistem."
+      "id": "group",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Ciri digunakan untuk mengelompokkan",
+      "narration": "Organisme dikelompokkan berdasarkan ciri yang mirip."
     },
     {
-      "title": "Pahami konservasi",
-      "body": "Perlindungan habitat penting untuk menjaga keanekaragaman hayati."
+      "id": "levels",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Klasifikasi bertingkat",
+      "narration": "Taksonomi menyusun organisme dari kelompok umum ke kelompok yang lebih khusus."
+    },
+    {
+      "id": "habitat",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Habitat menyimpan keragaman",
+      "narration": "Setiap habitat mendukung kombinasi organisme yang berbeda."
+    },
+    {
+      "id": "threat",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Ancaman mengurangi keragaman",
+      "narration": "Kerusakan habitat dapat menurunkan jumlah spesies."
+    },
+    {
+      "id": "conserve",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Konservasi menjaga kehidupan",
+      "narration": "Konservasi dilakukan untuk melindungi habitat dan organisme."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Klasifikasi dan konservasi saling melengkapi",
+      "narration": "Kita mengelompokkan makhluk hidup untuk memahami dan menjaganya."
     }
   ],
-  "summary": "Taksonomi dan konservasi saling melengkapi untuk memahami sekaligus menjaga kehidupan di Bumi.",
-  "levels": [
-    "Kingdom",
-    "Filum",
-    "Kelas",
-    "Ordo",
-    "Famili"
+  "visual": {
+    "levels": [
+      "Kingdom",
+      "Filum",
+      "Kelas",
+      "Ordo",
+      "Famili"
+    ],
+    "habitats": [
+      "Hutan",
+      "Laut",
+      "Savana"
+    ]
+  },
+  "summarySequence": [
+    "Keragaman",
+    "Ciri",
+    "Taksonomi",
+    "Habitat",
+    "Ancaman",
+    "Konservasi"
   ],
-  "biodiversity_examples": [
-    "Hutan hujan",
-    "Terumbu karang",
-    "Savana"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

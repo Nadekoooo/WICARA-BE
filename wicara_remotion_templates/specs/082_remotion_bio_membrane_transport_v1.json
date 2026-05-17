@@ -1,40 +1,107 @@
 {
-  "id": "spec_82_remotion_bio_membrane_transport_v1",
+  "id": "remotion_v2_082_membrane_transport_model",
   "row_index": 82,
   "concept_type": "membrane_transport_model",
+  "concept_type_label_id": "Transpor membran, osmosis, dan difusi",
   "template_id": "remotion.bio_membrane_transport.v1",
+  "component": "MembraneTransportVideo",
+  "archetype": "membrane_transport",
+  "domain": "biology",
   "media_engine_family": "remotion_svg",
-  "audience_level": "sma",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Transpor Membran, Difusi, dan Osmosis",
-  "subtitle": "Zat dapat melintasi membran melalui mekanisme pasif maupun aktif, termasuk difusi dan osmosis.",
+  "durationInFrames": 1350,
+  "title": "Transpor membran, osmosis, dan difusi",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `membrane_transport_model`.",
+  "keyIdea": "Membran sel selektif: tidak semua zat lewat dengan cara yang sama.",
   "steps": [
     {
-      "title": "Amati membran",
-      "body": "Membran sel bersifat selektif permeabel."
+      "id": "membrane",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Membran membatasi sel",
+      "narration": "Membran sel memisahkan bagian dalam dan luar sel."
     },
     {
-      "title": "Bandingkan mekanisme",
-      "body": "Tidak semua zat bergerak dengan cara yang sama."
+      "id": "gradient",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Ada perbedaan konsentrasi",
+      "narration": "Zat cenderung bergerak dari konsentrasi tinggi ke rendah."
     },
     {
-      "title": "Pahami gradien",
-      "body": "Perbedaan konsentrasi mendorong perpindahan zat."
+      "id": "diffusion",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Difusi memindahkan partikel kecil",
+      "narration": "Partikel tertentu dapat berdifusi melewati membran."
+    },
+    {
+      "id": "osmosis",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Osmosis memindahkan air",
+      "narration": "Air bergerak melalui membran semipermeabel menuju daerah yang lebih pekat."
+    },
+    {
+      "id": "channel",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Protein kanal membantu transport",
+      "narration": "Beberapa zat membutuhkan protein khusus untuk melewati membran."
+    },
+    {
+      "id": "active",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Transpor aktif memakai energi",
+      "narration": "Transpor aktif dapat memindahkan zat melawan gradien konsentrasi."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Transport menjaga keseimbangan sel",
+      "narration": "Perpindahan zat membantu sel mempertahankan kondisi internal."
     }
   ],
-  "summary": "Visual dua kompartemen dan partikel bergerak dibutuhkan untuk menjelaskan arah transpor secara intuitif.",
-  "mechanisms": [
+  "visual": {
+    "mechanisms": [
+      "Difusi",
+      "Osmosis",
+      "Transpor aktif"
+    ],
+    "particles": [
+      "Air",
+      "Ion",
+      "Glukosa"
+    ]
+  },
+  "summarySequence": [
+    "Membran",
+    "Gradien",
     "Difusi",
     "Osmosis",
-    "Transpor aktif"
+    "Kanal",
+    "Energi"
   ],
-  "particles": [
-    "Air",
-    "Ion",
-    "Glukosa"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

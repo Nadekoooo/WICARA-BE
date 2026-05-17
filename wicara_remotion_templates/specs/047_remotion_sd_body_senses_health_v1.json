@@ -1,42 +1,108 @@
 {
-  "id": "spec_47_remotion_sd_body_senses_health_v1",
+  "id": "remotion_v2_047_body_senses_health",
   "row_index": 47,
   "concept_type": "body_senses_health",
+  "concept_type_label_id": "Tubuh, pancaindra, kesehatan, dan sistem tubuh awal",
   "template_id": "remotion.sd_body_senses_health.v1",
+  "component": "BodySensesHealthVideo",
+  "archetype": "body_senses",
+  "domain": "sd_science",
   "media_engine_family": "remotion_or_rive",
-  "audience_level": "sd",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Tubuh, Pancaindra, dan Kesehatan",
-  "subtitle": "Anak belajar fungsi anggota tubuh dan pancaindra sekaligus kebiasaan menjaga kesehatan.",
+  "durationInFrames": 1350,
+  "title": "Tubuh, pancaindra, kesehatan, dan sistem tubuh awal",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `body_senses_health`.",
+  "keyIdea": "Pancaindra menerima rangsang dan tubuh perlu dijaga agar tetap sehat.",
   "steps": [
     {
-      "title": "Kenali pancaindra",
-      "body": "Setiap indra memiliki fungsi khusus."
+      "id": "body",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Kenali tubuh sendiri",
+      "narration": "Tubuh memiliki bagian-bagian yang membantu kita beraktivitas."
     },
     {
-      "title": "Hubungkan ke tubuh",
-      "body": "Pancaindra adalah bagian dari tubuh yang perlu dirawat."
+      "id": "stimulus",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Lingkungan memberi rangsang",
+      "narration": "Cahaya, bunyi, bau, rasa, dan sentuhan diterima oleh indra."
     },
     {
-      "title": "Latih kebiasaan sehat",
-      "body": "Kesehatan tubuh dijaga melalui kebiasaan baik sehari-hari."
+      "id": "sense",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Pancaindra menerima informasi",
+      "narration": "Setiap indra memiliki fungsi yang berbeda."
+    },
+    {
+      "id": "brain",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Informasi dikirim ke otak",
+      "narration": "Otak membantu menafsirkan informasi dari indra."
+    },
+    {
+      "id": "response",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Tubuh memberi respons",
+      "narration": "Kita dapat bergerak atau mengambil keputusan setelah menerima informasi."
+    },
+    {
+      "id": "health",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Kebiasaan sehat menjaga tubuh",
+      "narration": "Makan sehat, mencuci tangan, dan tidur cukup membantu tubuh bekerja baik."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Indra dan kesehatan saling terkait",
+      "narration": "Pancaindra membantu mengenal dunia, dan kesehatan membuat fungsi tubuh tetap optimal."
     }
   ],
-  "summary": "Template dibuat child-friendly dengan tokoh tubuh sederhana dan kartu kebiasaan sehat.",
-  "senses": [
-    "Mata",
-    "Telinga",
-    "Hidung",
-    "Lidah",
-    "Kulit"
+  "visual": {
+    "senses": [
+      "Mata",
+      "Telinga",
+      "Hidung",
+      "Lidah",
+      "Kulit"
+    ],
+    "habits": [
+      "Makan sehat",
+      "Cuci tangan",
+      "Tidur cukup"
+    ]
+  },
+  "summarySequence": [
+    "Rangsang",
+    "Indra",
+    "Otak",
+    "Respons",
+    "Kebiasaan sehat"
   ],
-  "habits": [
-    "Makan sehat",
-    "Cuci tangan",
-    "Tidur cukup"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

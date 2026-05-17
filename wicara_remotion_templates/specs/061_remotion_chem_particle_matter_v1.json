@@ -1,40 +1,107 @@
 {
-  "id": "spec_61_remotion_chem_particle_matter_v1",
+  "id": "remotion_v2_061_matter_property_change_model",
   "row_index": 61,
   "concept_type": "matter_property_change_model",
+  "concept_type_label_id": "Materi, sifat, klasifikasi, dan perubahan",
   "template_id": "remotion.chem_particle_matter.v1",
+  "component": "ParticleMatterStatesVideo",
+  "archetype": "particle_matter",
+  "domain": "chemistry",
   "media_engine_family": "remotion_svg",
-  "audience_level": "smp",
   "language": "id",
   "fps": 30,
   "width": 1280,
   "height": 720,
-  "durationInFrames": 270,
-  "title": "Materi, Sifat, dan Perubahan",
-  "subtitle": "Sifat materi dan perubahan fisika/kimia dapat dijelaskan melalui model partikel.",
+  "durationInFrames": 1350,
+  "title": "Materi, sifat, klasifikasi, dan perubahan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `matter_property_change_model`.",
+  "keyIdea": "Sifat zat dapat dijelaskan dari susunan dan gerak partikelnya.",
   "steps": [
     {
-      "title": "Amati sifat zat",
-      "body": "Zat memiliki sifat yang dapat diamati, seperti bentuk dan volume."
+      "id": "matter",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Materi tersusun dari partikel",
+      "narration": "Zat dapat dimodelkan sebagai kumpulan partikel kecil."
     },
     {
-      "title": "Gunakan model partikel",
-      "body": "Model partikel menjelaskan mengapa zat berperilaku berbeda."
+      "id": "solid",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Padat tersusun rapat",
+      "narration": "Pada zat padat, partikel tersusun rapat dan hanya bergetar di tempat."
     },
     {
-      "title": "Bedakan perubahan",
-      "body": "Sebagian perubahan hanya fisika, sebagian lain melibatkan perubahan kimia."
+      "id": "liquid",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Cair lebih mudah bergerak",
+      "narration": "Pada zat cair, partikel lebih bebas bergeser."
+    },
+    {
+      "id": "gas",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Gas bergerak berjauhan",
+      "narration": "Pada gas, partikel berjauhan dan bergerak cepat."
+    },
+    {
+      "id": "heat",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Energi mengubah gerak partikel",
+      "narration": "Pemanasan membuat partikel bergerak lebih cepat."
+    },
+    {
+      "id": "change",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Perubahan wujud terjadi",
+      "narration": "Perubahan susunan dan gerak partikel menjelaskan perubahan wujud."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Model partikel menjelaskan sifat zat",
+      "narration": "Dari model mikro, kita bisa memahami sifat makroskopik materi."
     }
   ],
-  "summary": "Template partikel ini tepat untuk konsep perubahan materi karena menekankan hubungan antara tampilan makro dan model mikro.",
-  "states": [
+  "visual": {
+    "states": [
+      "Padat",
+      "Cair",
+      "Gas"
+    ],
+    "changes": [
+      "Mencair",
+      "Menguap",
+      "Mengembun"
+    ]
+  },
+  "summarySequence": [
+    "Partikel",
     "Padat",
     "Cair",
-    "Gas"
+    "Gas",
+    "Energi",
+    "Perubahan wujud"
   ],
-  "changes": [
-    "Mencair",
-    "Menguap",
-    "Membeku"
-  ]
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
 }

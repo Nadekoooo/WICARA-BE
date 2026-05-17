@@ -62,6 +62,52 @@ class Settings(BaseSettings):
             "MEDIA_RENDER_MAX_ATTEMPTS",
         ),
     )
+    media_remotion_project_dir: str = Field(
+        default="wicara_remotion_templates",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_PROJECT_DIR",
+            "MEDIA_REMOTION_PROJECT_DIR",
+        ),
+    )
+    media_remotion_entry: str = Field(
+        default="src/index.ts",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_ENTRY",
+            "MEDIA_REMOTION_ENTRY",
+        ),
+    )
+    media_remotion_timeout_seconds: int = Field(
+        default=600,
+        ge=60,
+        le=3600,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_TIMEOUT_SECONDS",
+            "MEDIA_REMOTION_TIMEOUT_SECONDS",
+        ),
+    )
+    media_npx_binary: str = Field(
+        default="npx",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_NPX_BINARY",
+            "MEDIA_NPX_BINARY",
+        ),
+    )
+    media_node_binary: str = Field(
+        default="node",
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_NODE_BINARY",
+            "MEDIA_NODE_BINARY",
+        ),
+    )
+    media_remotion_concurrency: int = Field(
+        default=2,
+        ge=1,
+        le=16,
+        validation_alias=AliasChoices(
+            "WICARA_MEDIA_REMOTION_CONCURRENCY",
+            "MEDIA_REMOTION_CONCURRENCY",
+        ),
+    )
     media_tts_provider: str = Field(
         default="gtts_voiceover",
         validation_alias=AliasChoices(

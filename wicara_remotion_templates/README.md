@@ -1,40 +1,54 @@
-# Remotion Template Bundle for All Remotion Concepts
+# WICARA Remotion v2 Animated Template Bundle
 
-Bundle ini berisi template Remotion + sample spec JSON untuk **semua concept row** yang secara prioritas seharusnya memakai Remotion / Rive / Remotion-or-Manim.
+Bundle ini adalah rewrite dari template Remotion lama agar sesuai standar video edukasi:
 
-## Isi
-- `src/helpers.tsx` — helper UI dan layout Remotion
-- `src/templates.tsx` — semua template component Remotion
-- `src/registry.tsx` — registry composition untuk Remotion Studio
-- `src/index.ts` — entry point `registerRoot`
-- `specs/` — sample JSON per concept row
-- `docs/REMOTION_TEMPLATE_CONTRACTS.md` — kontrak field dan notes per template
-- `docs/REUSE_RATIONALE.md` — justifikasi reuse yang memang make sense
-- `docs/remotion_template_index.csv` — index row → template/component
-- `package.json`, `tsconfig.json`
+- bukan slide/card statis,
+- memakai actor dan event,
+- motion berbasis frame Remotion,
+- ada active narration panel,
+- ada state transition,
+- ada final summary overlay,
+- spec JSON lengkap untuk semua concept Remotion.
 
-## Cara pakai
-1. Install dependency:
-   ```bash
-   npm install
-   ```
-2. Jalankan studio:
-   ```bash
-   npm run dev
-   ```
-3. Buka composition sesuai row / template yang ingin di-render.
+## Cakupan
 
-## Catatan desain
-- Template dibedakan berdasarkan morfologi visual utama: network, flow, timeline, cycle, labeling, lab setup, molecular view, particle view, dsb.
-- Reuse hanya dilakukan bila bentuk visual inti benar-benar sama.
-- Sample spec sudah ditulis dalam Bahasa Indonesia dan bisa dipakai sebagai titik awal untuk generator LLM/spec-filling.
+- Total concept Remotion: **43**
+- Source: `concept_type_priority(4).csv`
+- Semua spec ada di `specs/*.json`
+- Registry composition ada di `src/registry.tsx`
 
-## Backend integration notes
-- Folder ini dipakai backend sebagai runtime project untuk render template `remotion.*`.
-- Render command baseline (akan dipanggil worker backend):
-  ```bash
-  npx remotion render src/index.ts <composition_id> <output_file.mp4> --props=<json_props>
-  ```
-- Source mapping template -> composition ada di:
-- `docs/remotion_template_index.csv`
-- `src/registry.tsx`
+## Cara menjalankan
+
+```bash
+npm install
+npm run studio
+```
+
+Untuk cek daftar composition/spec:
+
+```bash
+npm run list
+```
+
+## Struktur
+
+```text
+src/
+  primitives/
+    Biology.tsx
+    Chemistry.tsx
+    Earth.tsx
+    Layout.tsx
+  Templates.tsx
+  registry.tsx
+  index.ts
+specs/
+docs/
+  REMOTION_V2_TEMPLATE_CONTRACTS.md
+  REUSE_RATIONALE.md
+  QUALITY_GATE.md
+```
+
+## Catatan penting
+
+File `src/shims.d.ts` disediakan agar `tsc --noEmit` bisa dipakai di environment tanpa install dependency. Di project Remotion asli, setelah `npm install`, dependency React/Remotion akan dipakai normal.

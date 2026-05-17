@@ -26,6 +26,9 @@ class TemplateValidationResult:
     template_path: str
     scene_class: str
     schema_id: str
+    render_engine: str
+    engine_family: str | None
+    runtime: dict[str, Any]
     resolved_from: str
     used_alias: bool
 
@@ -59,6 +62,30 @@ class StepSpec(BaseModel):
     body: str = Field(..., min_length=1, max_length=800)
     narration: str = Field(default="", max_length=1200)
     model_config = ConfigDict(extra="allow")
+
+
+class RemotionStepSpec(BaseModel):
+    id: str = Field(default="", max_length=64)
+    start: int = Field(default=0, ge=0)
+    duration: int = Field(default=0, ge=0)
+    title: str = Field(..., min_length=1, max_length=180)
+    narration: str = Field(default="", max_length=2000)
+    body: str = Field(default="", max_length=2000)
+    model_config = ConfigDict(extra="allow")
+
+    @model_validator(mode="after")
+    def normalize_step_payload(self) -> RemotionStepSpec:
+        narration = str(self.narration or "").strip()
+        body = str(self.body or "").strip()
+        if not narration and body:
+            self.narration = body
+            narration = self.narration
+        if not body and narration:
+            self.body = narration
+        if not self.id:
+            slug = "".join(ch.lower() if ch.isalnum() else "_" for ch in self.title).strip("_")
+            self.id = slug[:64] if slug else "step"
+        return self
 
 
 class NarrationSegmentSpec(BaseModel):
@@ -163,6 +190,14 @@ class RemotionGenericTemplateSpec(BaseModel):
     template_contract_version: str = Field(default="v1", min_length=1, max_length=16)
     phase: str = Field(default="D", min_length=1, max_length=16)
     audience_level: str = Field(default="smp", min_length=1, max_length=16)
+    id: str = Field(default="", max_length=160)
+    row_index: int = Field(default=0, ge=0)
+    concept_type: str = Field(default="", max_length=160)
+    concept_type_label_id: str = Field(default="", max_length=255)
+    component: str = Field(default="", max_length=120)
+    archetype: str = Field(default="", max_length=120)
+    domain: str = Field(default="", max_length=80)
+    media_engine_family: str = Field(default="remotion_svg", max_length=80)
     language: str = Field(
         default="id",
         min_length=2,
@@ -171,16 +206,35 @@ class RemotionGenericTemplateSpec(BaseModel):
     )
     title: str = Field(..., min_length=1, max_length=255)
     subtitle: str = Field(default="", max_length=255)
-    steps: list[StepSpec] = Field(..., min_length=1, max_length=16)
-    summary: str = Field(..., min_length=1, max_length=2000)
+    key_idea: str = Field(
+        default="",
+        max_length=400,
+        alias="keyIdea",
+        validation_alias=AliasChoices("keyIdea", "key_idea"),
+    )
+    steps: list[RemotionStepSpec] = Field(..., min_length=1, max_length=24)
+    summary: str = Field(default="", max_length=2000)
+    summary_sequence: list[str] = Field(
+        default_factory=list,
+        max_length=48,
+        alias="summarySequence",
+        validation_alias=AliasChoices("summarySequence", "summary_sequence"),
+    )
     fps: int = Field(default=30, ge=12, le=120)
     width: int = Field(default=1280, ge=320, le=4096)
     height: int = Field(default=720, ge=240, le=4096)
     duration_in_frames: int = Field(
-        default=270,
+        default=900,
         ge=30,
         le=10800,
+        alias="durationInFrames",
         validation_alias=AliasChoices("durationInFrames", "duration_in_frames"),
+    )
+    visual: dict[str, Any] = Field(default_factory=dict)
+    quality_intent: dict[str, Any] = Field(
+        default_factory=dict,
+        alias="qualityIntent",
+        validation_alias=AliasChoices("qualityIntent", "quality_intent"),
     )
     voiceover_script: str = Field(default="", max_length=6000)
     intro_narration: str = Field(default="", max_length=1200)
@@ -208,6 +262,69 @@ class RemotionGenericTemplateSpec(BaseModel):
             if base:
                 normalized = base
         return normalized[:16]
+
+    @model_validator(mode="after")
+    def normalize_remotion_contract(self) -> RemotionGenericTemplateSpec:
+        timeline_intro = 90
+        timeline_outro = 120
+        step_count = len(self.steps)
+        if step_count <= 0:
+            return self
+
+        minimum_step_duration = 120
+        has_explicit_timeline = all(step.duration > 0 for step in self.steps) and any(
+            step.start > 0 for step in self.steps
+        )
+        if not has_explicit_timeline:
+            usable = max(
+                self.duration_in_frames - timeline_intro - timeline_outro,
+                minimum_step_duration * step_count,
+            )
+            per_step = max(minimum_step_duration, usable // step_count)
+            cursor = timeline_intro
+            for index, step in enumerate(self.steps):
+                step.start = cursor
+                if index == step_count - 1:
+                    remaining = max(self.duration_in_frames - cursor - timeline_outro, minimum_step_duration)
+                    step.duration = remaining
+                else:
+                    step.duration = per_step
+                cursor += step.duration
+
+        for index, step in enumerate(self.steps, start=1):
+            if not step.id or step.id == "step":
+                step.id = f"step_{index:02d}"
+            if not str(step.narration or "").strip():
+                fallback_text = str(step.body or "").strip() or str(step.title or "").strip()
+                step.narration = fallback_text
+            if not str(step.body or "").strip():
+                step.body = str(step.narration or "").strip()
+
+        if not self.summary_sequence:
+            self.summary_sequence = [str(step.title) for step in self.steps if str(step.title).strip()]
+
+        if not str(self.key_idea or "").strip():
+            if self.summary_sequence:
+                self.key_idea = str(self.summary_sequence[0])
+            elif str(self.summary or "").strip():
+                self.key_idea = str(self.summary)
+            else:
+                self.key_idea = str(self.subtitle or self.title)
+
+        if not str(self.summary or "").strip():
+            self.summary = " -> ".join(self.summary_sequence[:6]) if self.summary_sequence else str(self.title)
+
+        if not str(self.voiceover_script or "").strip():
+            self.voiceover_script = " ".join(
+                str(step.narration or "").strip() for step in self.steps if str(step.narration or "").strip()
+            ).strip()
+
+        max_end = max(step.start + step.duration for step in self.steps)
+        required_frames = max_end + timeline_outro
+        if self.duration_in_frames < required_frames:
+            self.duration_in_frames = required_frames
+
+        return self
 
 
 class NumberRangeSpec(BaseModel):
@@ -512,6 +629,9 @@ def validate_template_spec(
         template_path=resolved.entry.template_path,
         scene_class=resolved.entry.scene_class,
         schema_id=resolved.entry.schema_id,
+        render_engine=resolved.entry.render_engine,
+        engine_family=resolved.entry.engine_family,
+        runtime=dict(resolved.entry.runtime or {}),
         resolved_from=resolved.resolved_from,
         used_alias=resolved.used_alias,
     )
