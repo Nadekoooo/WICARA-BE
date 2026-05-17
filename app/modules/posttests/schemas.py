@@ -1,0 +1,89 @@
+from __future__ import annotations
+
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, Field, model_validator
+
+
+class PosttestStartRequest(BaseModel):
+    learning_goal_id: UUID | None = None
+    track_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def require_target(self) -> "PosttestStartRequest":
+        if self.learning_goal_id is None and self.track_id is None:
+            raise ValueError("learning_goal_id or track_id is required.")
+        return self
+
+
+class PosttestOptionRead(BaseModel):
+    id: UUID
+    label: str
+    text: str
+
+
+class PosttestQuestionRead(BaseModel):
+    id: UUID
+    concept_id: UUID | None = None
+    concept_code: str
+    concept_title: str
+    difficulty: str
+    prompt: str
+    helper: str = ""
+    options: list[PosttestOptionRead]
+    progress: dict[str, Any] = Field(default_factory=dict)
+
+
+class PosttestNodeResultRead(BaseModel):
+    concept_id: UUID | None = None
+    concept_code: str
+    concept_title: str
+    total_questions: int
+    answered_count: int
+    correct_count: int
+    scaled_score: float
+    passed: bool
+    retake_required: bool
+
+
+class PosttestSessionRead(BaseModel):
+    session_id: UUID
+    learning_goal_id: UUID | None = None
+    track_id: UUID | None = None
+    status: str
+    current_question: PosttestQuestionRead | None = None
+    questions: list[PosttestQuestionRead] = Field(default_factory=list)
+    node_results: list[PosttestNodeResultRead]
+    question_count: int
+    total_questions: int
+
+
+class PosttestSubmitAnswerRequest(BaseModel):
+    question_id: UUID
+    selected_option_id: UUID | None = None
+    option_id: UUID | None = None
+    confidence: int = Field(default=0, ge=0, le=10)
+
+    @model_validator(mode="after")
+    def require_selected_option(self) -> "PosttestSubmitAnswerRequest":
+        if self.selected_option_id is None and self.option_id is not None:
+            self.selected_option_id = self.option_id
+        if self.selected_option_id is None:
+            raise ValueError("selected_option_id is required.")
+        return self
+
+
+class PosttestAnswerResponse(BaseModel):
+    attempt_id: UUID
+    is_correct: bool
+    node_result: PosttestNodeResultRead
+    next_question: PosttestQuestionRead | None = None
+    completed: bool = False
+
+
+class PosttestFinalizeResponse(BaseModel):
+    session_id: UUID
+    status: str
+    node_results: list[PosttestNodeResultRead]
+    retake_required_concepts: list[str]
