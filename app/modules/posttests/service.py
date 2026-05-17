@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -33,6 +33,12 @@ class DuplicateQuestionAttempt(Exception):
     pass
 
 
+REMEDIATION_NODE_STATUSES = {"gap", "fragile", "partial", "probably_gap"}
+POSTTEST_PASS_SCORE = 7.0
+POSTTEST_QUESTIONS_PER_NODE = 3
+POSTTEST_MAX_QUESTIONS = 10
+
+
 class AdaptivePosttestService:
     def __init__(self, *, generation_service: AdaptivePretestGenerationService | None = None) -> None:
         self.generation_service = generation_service or AdaptivePretestGenerationService()
@@ -55,10 +61,8 @@ class AdaptivePosttestService:
 
         diagnosis = (goal.metadata_json or {}).get("diagnosis", {})
         nodes = diagnosis.get("nodes", []) if isinstance(diagnosis, dict) else []
-        selected_nodes = [
-            node for node in nodes
-            if isinstance(node, dict) and str(node.get("status")) in {"gap", "fragile", "partial"}
-        ]
+        remediation_nodes = _remediation_nodes(nodes)
+        selected_nodes = remediation_nodes[:_max_nodes_per_posttest()]
         if not selected_nodes:
             raise ValueError("No remediation nodes found from pretest diagnosis.")
 
@@ -75,10 +79,21 @@ class AdaptivePosttestService:
             title=f"Adaptive posttest: {goal.normalized_topic}",
             status="active",
             source="adaptive_generated",
-            metadata_json={"source": "adaptive_generated", "generation": "adaptive_node_posttest_v1"},
+            metadata_json={
+                "source": "adaptive_generated",
+                "generation": "adaptive_node_posttest_v1",
+                "question_limit": POSTTEST_MAX_QUESTIONS,
+                "questions_per_node": POSTTEST_QUESTIONS_PER_NODE,
+                "available_node_count": len(remediation_nodes),
+                "selected_node_count": len(selected_nodes),
+                "omitted_node_count": max(0, len(remediation_nodes) - len(selected_nodes)),
+            },
             decision_state_json={},
             graph_scope_json={},
-            max_questions=max(3, len(selected_nodes) * 3),
+            max_questions=min(
+                POSTTEST_MAX_QUESTIONS,
+                len(selected_nodes) * POSTTEST_QUESTIONS_PER_NODE,
+            ),
             max_depth=0,
             max_nodes_visited=len(selected_nodes),
         )
@@ -119,7 +134,7 @@ class AdaptivePosttestService:
                 item["concept_code"]: {
                     "concept_id": item["concept_id"],
                     "concept_title": item["concept_title"],
-                    "total_questions": 3,
+                    "total_questions": len(item["question_ids"]),
                     "answered_count": 0,
                     "correct_count": 0,
                     "scaled_score": 0.0,
@@ -219,12 +234,7 @@ class AdaptivePosttestService:
 
         node_state["answered_count"] = int(node_state.get("answered_count", 0)) + 1
         node_state["correct_count"] = int(node_state.get("correct_count", 0)) + (1 if is_correct else 0)
-        total_questions = max(1, int(node_state.get("total_questions", 3)))
-        scaled_score = round((int(node_state["correct_count"]) / total_questions) * 10, 1)
-        passed = scaled_score >= 7.0 and int(node_state["answered_count"]) >= total_questions
-        node_state["scaled_score"] = scaled_score
-        node_state["passed"] = passed
-        node_state["retake_required"] = not passed
+        _refresh_node_result_score(node_state)
 
         question_queue = [str(item) for item in state.get("question_queue", [])]
         current_index = int(state.get("current_index", 0)) + 1
@@ -257,8 +267,12 @@ class AdaptivePosttestService:
         state = assessment.decision_state_json or {}
         node_results = state.get("node_results", {}) if isinstance(state.get("node_results"), dict) else {}
         now_iso = datetime.now(UTC).isoformat()
+        already_finalized = bool((assessment.metadata_json or {}).get("posttest_finalized_at"))
 
         for concept_code, payload in node_results.items():
+            if not isinstance(payload, dict):
+                continue
+            _refresh_node_result_score(payload)
             concept = _concept_by_code(session, concept_code)
             if concept is None:
                 continue
@@ -273,8 +287,18 @@ class AdaptivePosttestService:
                     evidence_count=0,
                 )
                 session.add(concept_state)
+            scaled_mastery = _clamp01(float(payload.get("scaled_score") or 0.0) / 10.0)
             concept_state.status = "mastered" if payload.get("passed") is True else "review_due"
+            concept_state.mastery_score = scaled_mastery
+            concept_state.confidence_score = scaled_mastery
+            if not already_finalized:
+                concept_state.evidence_count = (
+                    concept_state.evidence_count or 0
+                ) + int(payload.get("answered_count") or 0)
             concept_state.last_evaluated_at = datetime.now(UTC)
+            concept_state.next_review_at = datetime.now(UTC) + (
+                timedelta(days=7) if payload.get("passed") is True else timedelta(days=1)
+            )
 
         assessment.status = "completed"
         assessment.completed_at = assessment.completed_at or datetime.now(UTC)
@@ -446,6 +470,64 @@ def _node_result_read(concept_code: str, payload: dict[str, Any]) -> PosttestNod
 def _node_results_read(state: dict[str, Any]) -> list[PosttestNodeResultRead]:
     node_results = state.get("node_results", {}) if isinstance(state.get("node_results"), dict) else {}
     return [_node_result_read(code, payload) for code, payload in node_results.items() if isinstance(payload, dict)]
+
+
+def _remediation_nodes(nodes: object) -> list[dict[str, Any]]:
+    if not isinstance(nodes, list):
+        return []
+    selected = [
+        node
+        for node in nodes
+        if isinstance(node, dict)
+        and str(node.get("status")) in REMEDIATION_NODE_STATUSES
+    ]
+    return sorted(selected, key=_posttest_node_priority)
+
+
+def _posttest_node_priority(node: dict[str, Any]) -> tuple[int, int, int, str]:
+    role_priority = 0 if str(node.get("role")) == "target" else 1
+    status_priority = {
+        "gap": 0,
+        "probably_gap": 1,
+        "fragile": 2,
+        "partial": 3,
+    }.get(str(node.get("status")), 99)
+    try:
+        depth_priority = -int(node.get("depth") or 0)
+    except (TypeError, ValueError):
+        depth_priority = 0
+    return role_priority, status_priority, depth_priority, str(node.get("concept_code") or "")
+
+
+def _max_nodes_per_posttest() -> int:
+    return max(1, POSTTEST_MAX_QUESTIONS // POSTTEST_QUESTIONS_PER_NODE)
+
+
+def _refresh_node_result_score(payload: dict[str, Any]) -> None:
+    total_questions = max(1, int(payload.get("total_questions") or 3))
+    answered_count = max(0, int(payload.get("answered_count") or 0))
+    correct_count = max(0, int(payload.get("correct_count") or 0))
+    scaled_score = _posttest_scaled_score(
+        correct_count=correct_count,
+        total_questions=total_questions,
+    )
+    passed = answered_count >= total_questions and scaled_score >= POSTTEST_PASS_SCORE
+    payload["total_questions"] = total_questions
+    payload["answered_count"] = answered_count
+    payload["correct_count"] = correct_count
+    payload["scaled_score"] = scaled_score
+    payload["passed"] = passed
+    payload["retake_required"] = not passed
+
+
+def _posttest_scaled_score(*, correct_count: int, total_questions: int) -> float:
+    if total_questions <= 0:
+        return 0.0
+    return float(round((max(0, correct_count) / total_questions) * 10))
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
 
 
 def _concept_by_code(session: Session, concept_code: str) -> KnowledgeConcept | None:
