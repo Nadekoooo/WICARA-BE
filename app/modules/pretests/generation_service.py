@@ -20,7 +20,7 @@ from app.modules.learning.models import (
 )
 from app.modules.pretests.question_validator import QuestionValidator
 
-PACK_PROMPT_VERSION = "adaptive_node_pack_v5_retry_validated"
+PACK_PROMPT_VERSION = "adaptive_node_pack_v6_flexible_subject_tasks"
 DEFAULT_PACK_GENERATION_MAX_ATTEMPTS = 4
 
 
@@ -475,11 +475,12 @@ Each question object must contain:
 
 Exactly one option must be correct per question.
 Do not invent a new concept_code.
-Make every question a concrete problem to solve, not a definition quiz or vague theory check.
+Make every question a concrete task for the learner, not a definition quiz or vague theory check.
 Do not ask about test-taking strategy, "which step is best", or generic concept recognition.
 Options must be concrete final answers, not descriptions of strategies.
-For math concepts, use numeric/algebraic tasks with a definite answer.
+For math concepts, prefer numeric/algebraic tasks with a definite answer.
 For calculus/derivative concepts, ask users to compute derivatives, slopes, tangent values, or apply derivative rules.
+For non-math concepts, use a short applied scenario, source snippet, observation, or case; the answer should still be checkable.
 Use lightweight Markdown when useful:
 - inline math may use $...$
 - display math may use $$...$$

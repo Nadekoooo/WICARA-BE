@@ -41,8 +41,6 @@ class QuestionValidator:
             raise QuestionValidationError("Generated question is missing prompt.")
         if _looks_like_vague_theory_check(prompt):
             raise QuestionValidationError("Generated question must be a concrete problem, not a vague theory check.")
-        if _is_math_concept(concept_code) and not _looks_like_concrete_problem(prompt):
-            raise QuestionValidationError("Math pretest prompt must ask a concrete solvable problem with data/math notation.")
         if not str(question.get("explanation", "")).strip():
             raise QuestionValidationError("Generated question is missing explanation.")
         if not str(question.get("expected_reasoning", "")).strip():
@@ -93,33 +91,6 @@ def _looks_like_vague_theory_check(prompt: str) -> bool:
     return any(fragment in normalized for fragment in banned_fragments)
 
 
-def _looks_like_concrete_problem(prompt: str) -> bool:
-    normalized = prompt.lower()
-    has_math_or_data = bool(
-        re.search(r"(\d|\$|\\frac|\\begin|[=+\-*/^×]|baris|kolom|data|nilai)", prompt)
-    )
-    has_task = any(
-        fragment in normalized
-        for fragment in (
-            "hitung",
-            "berapa",
-            "tentukan",
-            "diketahui",
-            "jika",
-            "selesaikan",
-            "hasil",
-            "adalah",
-            "calculate",
-            "solve",
-            "find",
-            "determine",
-            "given",
-            "what is",
-        )
-    )
-    return has_math_or_data and has_task
-
-
 def _looks_like_meta_strategy_option(option_text: str) -> bool:
     normalized = option_text.lower()
     banned_fragments = (
@@ -141,11 +112,6 @@ def _looks_like_meta_strategy_option(option_text: str) -> bool:
         "select the formula",
     )
     return any(fragment in normalized for fragment in banned_fragments)
-
-
-def _is_math_concept(concept_code: str) -> bool:
-    normalized = concept_code.lower()
-    return normalized.startswith("math") or ".math" in normalized or "matematika" in normalized
 
 
 def _normalize_option_text(option_text: str) -> str:
