@@ -6,12 +6,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.language import preferred_language_code
+from app.core.language import normalize_language_code, preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.models import KnowledgeConcept
 from app.modules.evidence.models import ImageAsset
 from app.modules.learning.models import (
     AssessmentAttempt,
+    AssessmentOption,
     AssessmentQuestion,
     AssessmentQuestionPack,
     AssessmentSession,
@@ -20,7 +21,11 @@ from app.modules.learning.models import (
 from app.modules.pretests.decision_engine import PretestDecisionEngine
 from app.modules.pretests.diagnosis_service import PATH_OPTIONS, PretestDiagnosisService
 from app.modules.pretests.evidence_evaluator import PretestEvidenceEvaluator
-from app.modules.pretests.generation_service import AdaptivePretestGenerationService
+from app.modules.pretests.generation_service import (
+    AdaptivePretestGenerationService,
+    _concept_prompt_description,
+    _concept_prompt_title,
+)
 from app.modules.pretests.graph_scope_builder import GraphScopeBuilder
 from app.modules.pretests.schemas import (
     PretestAnswerResponse,
@@ -35,7 +40,7 @@ class DuplicateQuestionAttempt(Exception):
     pass
 
 
-PRETEST_NODE_DIFFICULTIES = ("easy", "medium", "hard")
+PRETEST_NODE_DIFFICULTIES = ["easy", "medium", "hard"]
 
 
 class AdaptivePretestService:
@@ -73,38 +78,44 @@ class AdaptivePretestService:
         )
         if goal is None:
             return None
-        if goal.status not in {"confirmed", "pretest_in_progress"}:
-            raise ValueError("Learning goal is not ready for pretest.")
+        if goal.status in {"archived", "cancelled"}:
+            raise ValueError("Learning goal is not active.")
         if goal.target_concept_id is None:
             raise ValueError("Learning goal has no target concept.")
 
         target = session.get(KnowledgeConcept, goal.target_concept_id)
         if target is None:
             raise ValueError("Target concept was not found.")
+        effective_depth = min(int(depth), 2)
+        effective_max_questions = max(1, int(max_questions))
+        effective_max_nodes_visited = max(1, min(int(max_nodes_visited), max(1, effective_max_questions // 2)))
+        language = _goal_language(goal, user=user)
         graph_scope = self.graph_builder.build(
             session,
             target_concept_id=target.id,
-            max_depth=depth,
+            max_depth=effective_depth,
         )
+        graph_scope = _localized_graph_scope(session, graph_scope, language=language)
+        target_title = _localized_concept_title(target, language=language)
         assessment = AssessmentSession(
             user_id=user.id,
             learning_goal_id=goal.id,
             track_id=goal.track.id if goal.track else None,
             target_concept_id=target.id,
             session_type="pretest",
-            title=f"Adaptive pretest: {target.title}",
+            title=f"Adaptive pretest: {target_title}",
             status="active",
             source="adaptive_generated",
             graph_scope_json=graph_scope,
             decision_state_json={},
-            max_depth=depth,
-            max_questions=max_questions,
-            max_nodes_visited=max_nodes_visited,
+            max_depth=effective_depth,
+            max_questions=effective_max_questions,
+            max_nodes_visited=effective_max_nodes_visited,
             metadata_json={
                 "source": "adaptive_generated",
                 "generation": "fresh_ai_questions",
                 "question_reuse": "disabled",
-                "learner_language": _preferred_language(user),
+                "learner_language": language,
             },
         )
         session.add(assessment)
@@ -120,14 +131,15 @@ class AdaptivePretestService:
         question = target_questions["medium"]
         decision_state = {
             "target_concept_code": target.code,
+            "learner_language": language,
             "current_concept_code": target.code,
             "current_difficulty": "medium",
             "current_pack_id": None,
             "current_question_id": str(question.id),
             "question_count": 1,
-            "max_questions": max_questions,
-            "max_depth": depth,
-            "max_nodes_visited": max_nodes_visited,
+            "max_questions": effective_max_questions,
+            "max_depth": effective_depth,
+            "max_nodes_visited": effective_max_nodes_visited,
             "max_questions_per_node": 2,
             "confidence_threshold": 0.95,
             "probe_queue": self.graph_builder.build_probe_queue(graph_scope),
@@ -143,7 +155,6 @@ class AdaptivePretestService:
             "stop_reason": None,
         }
         assessment.decision_state_json = decision_state
-        goal.status = "pretest_in_progress"
         session.commit()
         return self.read(session, user=user, session_id=assessment.id)
 
@@ -157,14 +168,20 @@ class AdaptivePretestService:
         assessment = _load_assessment(session, user=user, session_id=session_id)
         if assessment is None:
             return None
-        state = assessment.decision_state_json or {}
+        state = _read_state_with_effective_limits(assessment)
         current_question = None
         question_id = state.get("current_question_id")
         if question_id and assessment.status in {"active", "awaiting_answer"}:
             question = _question_by_id(assessment, str(question_id))
             if question is not None:
-                current_question = _question_to_read(session, question, state=state)
+                current_question = _question_to_read(
+                    session,
+                    question,
+                    state=state,
+                    language=_assessment_language(assessment, user=user),
+                )
         target = session.get(KnowledgeConcept, assessment.target_concept_id) if assessment.target_concept_id else None
+        language = _assessment_language(assessment, user=user)
         return PretestSessionRead(
             session_id=assessment.id,
             learning_goal_id=assessment.learning_goal_id,
@@ -172,13 +189,13 @@ class AdaptivePretestService:
             target_concept={
                 "concept_id": str(target.id) if target else None,
                 "concept_code": target.code if target else "",
-                "title": target.title if target else "",
+                "title": _localized_concept_title(target, language=language) if target else "",
             },
             graph_scope=assessment.graph_scope_json or {},
             decision_state=state,
             current_question=current_question,
             question_count=int(state.get("question_count", 0)),
-            max_questions=assessment.max_questions,
+            max_questions=int(state.get("max_questions", assessment.max_questions)),
         )
 
     def submit_answer(
@@ -198,6 +215,7 @@ class AdaptivePretestService:
             return None
         if assessment.status not in {"active", "awaiting_answer"}:
             raise ValueError("Pretest is not active.")
+        assessment_state = _normalize_assessment_limits(assessment)
         question = _question_by_id(assessment, str(question_id))
         if question is None:
             raise LookupError("Question was not found in this pretest session.")
@@ -216,9 +234,7 @@ class AdaptivePretestService:
             if asset is None or asset.user_id != user.id:
                 raise LookupError("Canvas asset was not found.")
 
-        evaluation = self.evidence_evaluator.evaluate(
-            session,
-            question=question,
+        evaluation = _mcq_only_evaluation(
             selected_option=option,
             typed_reasoning=typed_reasoning,
             canvas_asset_id=canvas_asset_id,
@@ -252,12 +268,15 @@ class AdaptivePretestService:
                 "reasoning_signal": evaluation["reasoning_signal"],
                 "reasoning_feedback": evaluation["reasoning_feedback"],
                 "reasoning_evaluation_source": evaluation["reasoning_evaluation_source"],
+                "evidence_deferred": bool(typed_reasoning.strip() or used_canvas or canvas_asset_id is not None),
+                "evidence_analysis_mode": "deferred_pretest_finalize",
             },
         )
         session.add(attempt)
+        session.flush()
 
         state = self.decision_engine.record_attempt(
-            assessment.decision_state_json or {},
+            assessment_state,
             concept_code=str(question.metadata_json.get("concept_code") or _concept_code(session, question)),
             difficulty=question.difficulty_label.lower(),
             is_correct=bool(evaluation["is_correct"]),
@@ -268,6 +287,8 @@ class AdaptivePretestService:
             canvas_score=evaluation["canvas_score"],
             diagnostic_signal=str(evaluation["diagnostic_signal"]),
             reasoning_signal=str(evaluation["reasoning_signal"]),
+            attempt_id=str(attempt.id),
+            evidence_deferred=bool(typed_reasoning.strip() or used_canvas or canvas_asset_id is not None),
         )
         state, next_action = self.decision_engine.decide(
             state,
@@ -304,7 +325,12 @@ class AdaptivePretestService:
             attempt_id=attempt.id,
             evaluation=_evaluation_to_read(evaluation),
             next_action=next_action,
-            next_question=_question_to_read(session, next_question, state=assessment.decision_state_json or {}),
+            next_question=_question_to_read(
+                session,
+                next_question,
+                state=assessment.decision_state_json or {},
+                language=_assessment_language(assessment, user=user),
+            ),
         )
 
     def finalize(
@@ -317,7 +343,7 @@ class AdaptivePretestService:
         assessment = _load_assessment(session, user=user, session_id=session_id)
         if assessment is None:
             return None
-        state = assessment.decision_state_json or {}
+        state = _normalize_assessment_limits(assessment)
         stop_reason = str(state.get("stop_reason") or "manual_finalize")
         diagnosis = self.diagnosis_service.finalize(
             session,
@@ -363,10 +389,12 @@ class AdaptivePretestService:
                 concept=concept,
                 node_role="goal" if concept_code == state.get("target_concept_code") else "prerequisite",
             )
-            generated_questions[concept_code] = {
-                item_difficulty: str(node_question.id)
-                for item_difficulty, node_question in node_questions.items()
-            }
+            generated_questions.setdefault(concept_code, {}).update(
+                {
+                    node_difficulty: str(node_question.id)
+                    for node_difficulty, node_question in node_questions.items()
+                }
+            )
             question = node_questions[difficulty]
         state["current_concept_code"] = concept_code
         state["current_difficulty"] = difficulty
@@ -389,15 +417,16 @@ class AdaptivePretestService:
             session,
             assessment=assessment,
             concept=concept,
-            difficulties=list(PRETEST_NODE_DIFFICULTIES),
+            difficulties=PRETEST_NODE_DIFFICULTIES,
             assessment_type="pretest",
-            language=_preferred_language(user),
+            language=_assessment_language(assessment, user=user),
             node_role=node_role,
         )
-        return {
-            question.difficulty_label.lower(): question
-            for question in questions
-        }
+        by_difficulty = {question.difficulty_label.lower(): question for question in questions}
+        missing = [difficulty for difficulty in PRETEST_NODE_DIFFICULTIES if difficulty not in by_difficulty]
+        if missing:
+            raise LookupError(f"Generated pretest node pack is missing: {', '.join(missing)}")
+        return by_difficulty
 
 
 def _active_pretest_for_goal(
@@ -463,18 +492,55 @@ def _question_from_generated_node(
     return _question_by_id(assessment, str(question_id))
 
 
+def _read_state_with_effective_limits(assessment: AssessmentSession) -> dict[str, Any]:
+    state = {**(assessment.decision_state_json or {})}
+    max_questions, max_nodes_visited = _effective_limits(assessment, state)
+    state["max_questions"] = max_questions
+    state["max_nodes_visited"] = max_nodes_visited
+    return state
+
+
+def _normalize_assessment_limits(assessment: AssessmentSession) -> dict[str, Any]:
+    state = {**(assessment.decision_state_json or {})}
+    max_questions, max_nodes_visited = _effective_limits(assessment, state)
+    assessment.max_questions = max_questions
+    assessment.max_nodes_visited = max_nodes_visited
+    state["max_questions"] = max_questions
+    state["max_nodes_visited"] = max_nodes_visited
+    assessment.decision_state_json = state
+    return state
+
+
+def _effective_limits(assessment: AssessmentSession, state: dict[str, Any]) -> tuple[int, int]:
+    max_questions = _positive_int(state.get("max_questions"), assessment.max_questions or 10)
+    requested_nodes = _positive_int(state.get("max_nodes_visited"), assessment.max_nodes_visited or 5)
+    max_nodes_visited = max(1, min(requested_nodes, max(1, max_questions // 2)))
+    return max_questions, max_nodes_visited
+
+
+def _positive_int(value: object, fallback: int) -> int:
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return max(1, int(fallback))
+
+
 def _question_to_read(
     session: Session,
     question: AssessmentQuestion,
     *,
     state: dict[str, Any],
+    language: str,
 ) -> PretestQuestionRead:
     concept = session.get(KnowledgeConcept, question.concept_id) if question.concept_id else None
+    localized_topic = question.topic or (
+        _localized_concept_title(concept, language=language) if concept else ""
+    )
     return PretestQuestionRead(
         id=question.id,
         pack_id=question.pack_id,
         concept_code=concept.code if concept else str(question.metadata_json.get("concept_code", "")),
-        concept_title=concept.title if concept else question.topic,
+        concept_title=localized_topic,
         difficulty=question.difficulty_label.lower(),
         prompt=question.prompt,
         helper=question.helper_text,
@@ -505,6 +571,36 @@ def _evaluation_to_read(evaluation: dict[str, Any]) -> PretestEvaluationRead:
     )
 
 
+def _mcq_only_evaluation(
+    *,
+    selected_option: AssessmentOption,
+    typed_reasoning: str,
+    canvas_asset_id: UUID | None,
+    used_canvas: bool,
+) -> dict[str, Any]:
+    is_correct = bool(selected_option.is_correct)
+    answer_score = 1.0 if is_correct else 0.0
+    has_evidence = bool(typed_reasoning.strip() or used_canvas or canvas_asset_id is not None)
+    canvas_status = None
+    if canvas_asset_id is not None:
+        canvas_status = "stored_not_evaluated"
+    elif used_canvas:
+        canvas_status = "client_canvas_not_uploaded"
+    return {
+        "is_correct": is_correct,
+        "answer_score": answer_score,
+        "reasoning_score": None,
+        "canvas_score": None,
+        "canvas_status": canvas_status,
+        "evidence_score": answer_score,
+        "diagnostic_signal": "evidence_pending" if has_evidence else ("correct_mcq_only" if is_correct else "concept_gap_likely"),
+        "reasoning_signal": "deferred" if typed_reasoning.strip() else "not_provided",
+        "reasoning_feedback": "",
+        "reasoning_evaluation_source": "deferred_pretest_finalize" if has_evidence else "none",
+        "confidence": 0.0,
+    }
+
+
 def _concept_by_code(session: Session, concept_code: str) -> KnowledgeConcept | None:
     return session.scalar(select(KnowledgeConcept).where(KnowledgeConcept.code == concept_code))
 
@@ -516,3 +612,54 @@ def _concept_code(session: Session, question: AssessmentQuestion) -> str:
 
 def _preferred_language(user: UserAccount) -> str:
     return preferred_language_code(user)
+
+
+def _goal_language(goal: LearningGoal, *, user: UserAccount) -> str:
+    metadata = goal.metadata_json or {}
+    return normalize_language_code(metadata.get("language") or _preferred_language(user))
+
+
+def _assessment_language(assessment: AssessmentSession, *, user: UserAccount) -> str:
+    metadata = assessment.metadata_json or {}
+    state = assessment.decision_state_json or {}
+    return normalize_language_code(
+        metadata.get("learner_language")
+        or state.get("learner_language")
+        or _preferred_language(user)
+    )
+
+
+def _localized_graph_scope(
+    session: Session,
+    graph_scope: dict[str, Any],
+    *,
+    language: str,
+) -> dict[str, Any]:
+    localized = {**graph_scope}
+    nodes: list[dict[str, Any]] = []
+    for raw_node in graph_scope.get("nodes", []):
+        if not isinstance(raw_node, dict):
+            continue
+        node = {**raw_node}
+        concept = None
+        concept_id = node.get("concept_id")
+        if concept_id:
+            try:
+                concept = session.get(KnowledgeConcept, UUID(str(concept_id)))
+            except Exception:
+                concept = None
+        if concept is not None:
+            title = _localized_concept_title(concept, language=language)
+            node["title"] = title
+            node["description"] = _concept_prompt_description(
+                concept,
+                language=language,
+                title=title,
+            )
+        nodes.append(node)
+    localized["nodes"] = nodes
+    return localized
+
+
+def _localized_concept_title(concept: KnowledgeConcept, *, language: str) -> str:
+    return _concept_prompt_title(concept, language=language)

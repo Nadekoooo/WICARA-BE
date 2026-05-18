@@ -4,6 +4,27 @@ import re
 from typing import Any
 
 VALID_DIFFICULTIES = {"easy", "medium", "hard"}
+VALID_QUESTION_TYPES = {
+    "multiple_choice",
+    "direct_computation",
+    "concept_recognition",
+    "word_problem",
+    "equation_representation",
+    "error_analysis",
+    "missing_value",
+    "strategy_comparison",
+    "table_interpretation",
+    "multi_step_application",
+    "concept_application",
+}
+HARD_QUESTION_TYPES = {
+    "word_problem",
+    "error_analysis",
+    "missing_value",
+    "strategy_comparison",
+    "table_interpretation",
+    "multi_step_application",
+}
 
 
 class QuestionValidationError(ValueError):
@@ -41,14 +62,36 @@ class QuestionValidator:
             raise QuestionValidationError("Generated question is missing prompt.")
         if _looks_like_vague_theory_check(prompt):
             raise QuestionValidationError("Generated question must be a concrete problem, not a vague theory check.")
+        question_type = str(question.get("question_type") or "").strip().lower()
+        if question_type not in VALID_QUESTION_TYPES:
+            raise QuestionValidationError("Generated question is missing or has unsupported question_type.")
+        difficulty_reason = str(question.get("difficulty_reason") or "").strip()
+        if not difficulty_reason:
+            raise QuestionValidationError("Generated question is missing difficulty_reason.")
         if not str(question.get("explanation", "")).strip():
             raise QuestionValidationError("Generated question is missing explanation.")
         if not str(question.get("expected_reasoning", "")).strip():
             raise QuestionValidationError("Generated question is missing expected reasoning.")
+        if difficulty in {"medium", "hard"} and _looks_like_direct_computation_only(
+            prompt,
+            question_type=question_type,
+        ):
+            raise QuestionValidationError("Medium/hard questions must not be direct computation only.")
+        if difficulty == "hard" and question_type not in HARD_QUESTION_TYPES:
+            raise QuestionValidationError("Hard questions must require deeper reasoning, not basic recognition.")
+        if difficulty == "hard" and question_type != "error_analysis" and not _has_multi_step_reasoning_signal(
+            prompt=prompt,
+            expected_reasoning=str(question.get("expected_reasoning") or ""),
+            difficulty_reason=difficulty_reason,
+        ):
+            raise QuestionValidationError("Hard questions need multi-step, transfer, table, strategy, or misconception reasoning.")
 
         options = question.get("options")
         if not isinstance(options, list) or len(options) != 4:
             raise QuestionValidationError("Generated question must have exactly 4 options.")
+        rationales = question.get("distractor_rationales")
+        if not isinstance(rationales, dict):
+            raise QuestionValidationError("Generated question is missing distractor_rationales.")
         correct_count = 0
         labels: set[str] = set()
         option_texts: set[str] = set()
@@ -68,10 +111,12 @@ class QuestionValidator:
             if normalized_option_text in option_texts:
                 raise QuestionValidationError("Generated option texts must be unique.")
             option_texts.add(normalized_option_text)
-            if _looks_like_meta_strategy_option(option_text):
+            if question_type != "strategy_comparison" and _looks_like_meta_strategy_option(option_text):
                 raise QuestionValidationError("Generated options must be concrete answers, not test-taking strategies.")
             if option.get("is_correct") is True:
                 correct_count += 1
+            if not str(rationales.get(label) or "").strip():
+                raise QuestionValidationError("Generated distractor_rationales must cover every option label.")
         if correct_count != 1:
             raise QuestionValidationError("Generated question must have exactly 1 correct option.")
 
@@ -116,3 +161,81 @@ def _looks_like_meta_strategy_option(option_text: str) -> bool:
 
 def _normalize_option_text(option_text: str) -> str:
     return re.sub(r"\s+", " ", option_text.strip().lower())
+
+
+def _looks_like_direct_computation_only(prompt: str, *, question_type: str) -> bool:
+    if question_type == "direct_computation":
+        return True
+    normalized = " ".join(prompt.lower().split())
+    direct_markers = (
+        "what is",
+        "calculate",
+        "compute",
+        "hitung",
+        "berapa hasil",
+        "tentukan hasil",
+    )
+    has_direct_marker = any(marker in normalized for marker in direct_markers)
+    has_operation = bool(re.search(r"\d+\s*(?:\\times|x|×|\*|\+|-|:|/|\\div)\s*\d+", normalized))
+    contextual_terms = (
+        "rani",
+        "budi",
+        "siti",
+        "andi",
+        "box",
+        "bag",
+        "row",
+        "table",
+        "student",
+        "teacher",
+        "kotak",
+        "kantong",
+        "baris",
+        "murid",
+        "siswa",
+        "guru",
+        "cerita",
+        "which equation",
+        "persamaan",
+        "mistake",
+        "kesalahan",
+    )
+    return has_direct_marker and has_operation and not any(term in normalized for term in contextual_terms)
+
+
+def _has_multi_step_reasoning_signal(
+    *,
+    prompt: str,
+    expected_reasoning: str,
+    difficulty_reason: str,
+) -> bool:
+    combined = f"{prompt} {expected_reasoning} {difficulty_reason}".lower()
+    signals = (
+        "multi-step",
+        "two-step",
+        "3",
+        "lebih dari satu",
+        "beberapa langkah",
+        "langkah",
+        "first",
+        "then",
+        "next",
+        "kemudian",
+        "lalu",
+        "setelah",
+        "error analysis",
+        "misconception",
+        "miskonsepsi",
+        "strategy",
+        "strategi",
+        "table",
+        "tabel",
+        "compare",
+        "bandingkan",
+        "missing value",
+        "nilai yang hilang",
+        "inverse",
+        "kebalikan",
+        "transfer",
+    )
+    return any(signal in combined for signal in signals)

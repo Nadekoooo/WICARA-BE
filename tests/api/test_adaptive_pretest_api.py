@@ -201,7 +201,7 @@ def test_pretest_start_is_idempotent_and_generates_fresh_target_question(client)
     with _session_for_client(client) as session:
         questions = first.json()["decision_state"]["generated_questions"]
         target_code = first.json()["target_concept"]["concept_code"]
-        assert set(questions[target_code]) == {"easy", "medium", "hard"}
+        assert set(questions[target_code]) == {"medium"}
         assert questions[target_code]["medium"] == first.json()["current_question"]["id"]
         stored_question = session.get(AssessmentQuestion, UUID(first.json()["current_question"]["id"]))
         assert stored_question is not None
@@ -255,7 +255,7 @@ def test_answers_generate_fresh_next_questions_and_reject_duplicate(client):
 
     with _session_for_client(client) as session:
         questions = list(session.scalars(select(AssessmentQuestion).where(AssessmentQuestion.session_id == UUID(payload["session_id"]))))
-        assert len(questions) == 6
+        assert len(questions) == 3
         assert all(question.metadata_json.get("non_reusable") is True for question in questions)
 
 
@@ -284,16 +284,17 @@ def test_finalize_and_path_selection_create_track(client):
     target_metric = done.json()["diagnosis"]["target"]
     assert target_metric["answer_percent"] == 100
     assert target_metric["evidence_percent"] == 100
-    assert target_metric["score_percent"] == 90
+    assert target_metric["score_percent"] == 100
+    assert target_metric["mastery_estimate_percent"] == 90
     assert target_metric["confidence_percent"] == 68
-    assert target_metric["metric_source"] == "adaptive_pretest_diagnosis"
+    assert target_metric["metric_source"] == "official_mcq"
 
     dashboard = client.get(f"/api/v1/learning-goals/{learning_goal_id}/assessment-dashboard")
     assert dashboard.status_code == 200
     dashboard_payload = dashboard.json()
     assert dashboard_payload["state"] == "diagnosed"
     assert dashboard_payload["pretest"]["recommended_path"] == "review_only"
-    assert dashboard_payload["pretest"]["nodes"][0]["metric_source"] == "adaptive_pretest_diagnosis"
+    assert dashboard_payload["pretest"]["nodes"][0]["metric_source"] == "official_mcq"
     assert dashboard_payload["comparison"]["available"] is False
 
     path = client.post(
@@ -365,7 +366,7 @@ def test_cancel_abandons_active_pretest_and_releases_lock(client):
     assert confirm.status_code == 200
 
 
-def test_posttest_three_of_five_does_not_pass_even_with_strong_reasoning(client, monkeypatch):
+def test_posttest_six_of_ten_does_not_pass_even_with_strong_reasoning(client, monkeypatch):
     monkeypatch.setenv("WICARA_PRETEST_LLM_EVALUATION", "0")
     _override_account(client)
     learning_goal_id, concept_id, concept_code = _goal_with_posttest_node(client)
@@ -373,11 +374,11 @@ def test_posttest_three_of_five_does_not_pass_even_with_strong_reasoning(client,
     start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
     assert start.status_code == 200
     payload = start.json()
-    assert payload["total_questions"] == 5
+    assert payload["total_questions"] == 10
 
     answer = None
     for index, question in enumerate(payload["questions"]):
-        is_correct = index < 3
+        is_correct = index < 6
         answer_payload = {
             "question_id": question["id"],
             "selected_option_id": _option_id_for_question(client, question["id"], correct=is_correct),
@@ -423,22 +424,23 @@ def test_posttest_three_of_five_does_not_pass_even_with_strong_reasoning(client,
         assert state.status == "review_due"
 
 
-def test_posttest_five_of_five_passes_and_marks_concept_mastered(client):
+def test_posttest_seven_of_ten_passes_and_marks_concept_mastered(client):
     _override_account(client)
     learning_goal_id, concept_id, _concept_code = _goal_with_posttest_node(client)
 
     start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
     assert start.status_code == 200
     payload = start.json()
-    assert payload["total_questions"] == 5
+    assert payload["total_questions"] == 10
 
     answer = None
-    for question in payload["questions"]:
+    for index, question in enumerate(payload["questions"]):
+        is_correct = index < 7
         answer = client.post(
             f"/api/v1/posttests/{payload['session_id']}/answers",
             json={
                 "question_id": question["id"],
-                "selected_option_id": _option_id_for_question(client, question["id"], correct=True),
+                "selected_option_id": _option_id_for_question(client, question["id"], correct=is_correct),
                 "confidence": 9,
             },
         )
@@ -446,9 +448,9 @@ def test_posttest_five_of_five_passes_and_marks_concept_mastered(client):
 
     assert answer is not None
     node_result = answer.json()["node_result"]
-    assert node_result["answer_percent"] == 100
-    assert node_result["score_percent"] == 100
-    assert node_result["scaled_score"] == 10
+    assert node_result["answer_percent"] == 70
+    assert node_result["score_percent"] == 70
+    assert node_result["scaled_score"] == 7
     assert node_result["passed"] is True
 
     final = client.post(f"/api/v1/posttests/{payload['session_id']}/finalize")
@@ -461,7 +463,7 @@ def test_posttest_five_of_five_passes_and_marks_concept_mastered(client):
     assert dashboard_payload["state"] == "mastered"
     assert dashboard_payload["posttest"]["passed"] is True
     assert dashboard_payload["posttest"]["passed_node_count"] == 1
-    assert dashboard_payload["posttest"]["nodes"][0]["score_percent"] == 100
+    assert dashboard_payload["posttest"]["nodes"][0]["score_percent"] == 70
 
     with _session_for_client(client) as session:
         state = session.scalar(
@@ -472,7 +474,7 @@ def test_posttest_five_of_five_passes_and_marks_concept_mastered(client):
         )
         assert state is not None
         assert state.status == "mastered"
-        assert state.mastery_score == 1.0
+        assert state.mastery_score == 0.7
 
 
 def test_posttest_accepts_canvas_asset_without_numeric_canvas_score(client):

@@ -31,7 +31,7 @@ def _active_goal_conflict(exc: ActiveLearningGoalExists) -> HTTPException:
         status_code=status.HTTP_409_CONFLICT,
         detail={
             "error": "ACTIVE_LEARNING_GOAL_EXISTS",
-            "message": "You already have an active session goal for this node.",
+            "message": "An active learning goal already exists.",
             "active_goal": exc.active_goal.model_dump(mode="json"),
         },
     )

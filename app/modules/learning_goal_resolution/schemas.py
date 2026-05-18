@@ -85,7 +85,7 @@ class ActiveLearningGoalResponse(BaseModel):
 
 class ActiveLearningGoalConflict(BaseModel):
     error: str = "ACTIVE_LEARNING_GOAL_EXISTS"
-    message: str = "You already have an active session goal for this node."
+    message: str = "An active learning goal already exists."
     active_goal: ActiveGoalRead
 
 

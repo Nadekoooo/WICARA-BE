@@ -7,14 +7,20 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class PosttestStartRequest(BaseModel):
+    workspace_session_id: UUID | None = None
     learning_goal_id: UUID | None = None
     track_id: UUID | None = None
     module_id: UUID | None = None
 
     @model_validator(mode="after")
     def require_target(self) -> "PosttestStartRequest":
-        if self.learning_goal_id is None and self.track_id is None and self.module_id is None:
-            raise ValueError("learning_goal_id, track_id, or module_id is required.")
+        if (
+            self.workspace_session_id is None
+            and self.learning_goal_id is None
+            and self.track_id is None
+            and self.module_id is None
+        ):
+            raise ValueError("workspace_session_id, learning_goal_id, track_id, or module_id is required.")
         return self
 
 
@@ -57,6 +63,9 @@ class PosttestSessionRead(BaseModel):
     session_id: UUID
     learning_goal_id: UUID | None = None
     track_id: UUID | None = None
+    workspace_session_id: UUID | None = None
+    posttest_source: str = ""
+    language: str = "id"
     status: str
     current_question: PosttestQuestionRead | None = None
     questions: list[PosttestQuestionRead] = Field(default_factory=list)

@@ -21,6 +21,8 @@ class PretestDecisionEngine:
         canvas_score: float | None = None,
         diagnostic_signal: str = "",
         reasoning_signal: str = "",
+        attempt_id: str | None = None,
+        evidence_deferred: bool = False,
     ) -> dict[str, Any]:
         next_state = deepcopy(state)
         node_results = next_state.setdefault("node_results", {})
@@ -40,6 +42,8 @@ class PretestDecisionEngine:
                 "confidence": round(float(confidence), 4),
                 "diagnostic_signal": diagnostic_signal,
                 "reasoning_signal": reasoning_signal,
+                "attempt_id": attempt_id,
+                "evidence_deferred": evidence_deferred,
             }
         )
         node_state["status"] = _node_status(node_state)
@@ -87,7 +91,9 @@ class PretestDecisionEngine:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         target = str(state["target_concept_code"])
         if last_difficulty == "medium":
-            return state, _ask(target, "hard" if last_is_correct else "easy", "target_medium_correct" if last_is_correct else "target_medium_wrong")
+            if last_is_correct:
+                return state, _ask(target, "hard", "target_medium_correct")
+            return state, _ask(target, "easy", "target_medium_wrong")
         if last_difficulty == "hard":
             reason = "target_ready" if last_is_correct else "target_reinforcement"
             state["stop_reason"] = reason
@@ -107,11 +113,13 @@ class PretestDecisionEngine:
         graph_scope: dict[str, Any],
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         if last_difficulty == "medium":
-            return state, _ask(
-                last_concept_code,
-                "hard" if last_is_correct else "easy",
-                "prerequisite_medium_correct" if last_is_correct else "prerequisite_medium_wrong",
-            )
+            if last_is_correct:
+                return state, _ask(
+                    last_concept_code,
+                    "hard",
+                    "prerequisite_medium_correct",
+                )
+            return state, _ask(last_concept_code, "easy", "prerequisite_medium_wrong")
         if last_difficulty == "hard":
             return self._ask_next_prerequisite(
                 state,

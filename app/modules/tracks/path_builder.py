@@ -40,8 +40,8 @@ class TrackBuilderService:
         )
         if goal is None:
             return None
-        if goal.status not in {"diagnosed", "in_progress"}:
-            raise ValueError("Path selection requires a diagnosed learning goal.")
+        if goal.status in {"archived", "cancelled"}:
+            raise ValueError("Path selection requires an active learning goal.")
 
         concepts = _concepts_for_path(session, goal=goal, path_option=path_option)
         track = goal.track
@@ -51,10 +51,10 @@ class TrackBuilderService:
                 user_id=user.id,
                 learning_goal_id=goal.id,
                 title=title,
-                subtitle="Adaptive path from pretest diagnosis",
+                subtitle="Learning path from selected goal",
                 status="active",
                 progress_percent=0,
-                metadata_json={"source": "adaptive_path_selection", "path_option": path_option},
+                metadata_json={"source": "goal_path_selection", "path_option": path_option},
             )
             session.add(track)
             session.flush()
@@ -62,7 +62,7 @@ class TrackBuilderService:
             track.status = "active"
             track.metadata_json = {
                 **(track.metadata_json or {}),
-                "source": "adaptive_path_selection",
+                "source": "goal_path_selection",
                 "path_option": path_option,
             }
             for module in list(track.modules):
@@ -130,25 +130,11 @@ def _concepts_for_path(
     goal: LearningGoal,
     path_option: str,
 ) -> list[KnowledgeConcept]:
-    diagnosis = (goal.metadata_json or {}).get("diagnosis", {})
-    nodes = diagnosis.get("nodes", []) if isinstance(diagnosis, dict) else []
     target = session.get(KnowledgeConcept, goal.target_concept_id) if goal.target_concept_id else None
     concept_codes: list[str] = []
 
-    if path_option in {"review_only", "target_reinforcement", "target_from_basics", "target_intro"}:
-        if target:
-            concept_codes.append(target.code)
-    elif path_option == "repair_prerequisites":
-        for node in nodes:
-            if node.get("role") == "prerequisite" and node.get("status") in {"gap", "fragile", "partial"}:
-                concept_codes.append(str(node.get("concept_code")))
-        if target:
-            concept_codes.append(target.code)
-    elif path_option == "full_foundation_path":
-        for node in sorted(nodes, key=lambda item: int(item.get("depth", 0)), reverse=True):
-            concept_codes.append(str(node.get("concept_code")))
-        if target:
-            concept_codes.append(target.code)
+    if target:
+        concept_codes.append(target.code)
 
     seen: set[str] = set()
     ordered_codes = [code for code in concept_codes if code and not (code in seen or seen.add(code))]
@@ -175,7 +161,7 @@ def _module_payloads(
             {
                 "concept": None,
                 "title": goal.normalized_topic,
-                "description": "Continue from the adaptive diagnosis.",
+                "description": "Continue from the selected learning goal.",
                 "minutes": 12,
                 "difficulty": "Medium",
             }
