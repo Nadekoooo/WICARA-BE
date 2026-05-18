@@ -32,6 +32,8 @@ _DEFAULT_MODEL = "gemini-2.5-flash"
 _MAX_ATTEMPTS = 3
 _SPEC_MAX_OUTPUT_TOKENS = 8192
 _PREVIOUS_RESPONSE_FEEDBACK_LIMIT = 1800
+_VALIDATION_FEEDBACK_LIMIT = 24
+_VALIDATION_FEEDBACK_ITEM_LIMIT = 280
 _ROOT_DIR = Path(__file__).resolve().parents[3]
 _SAMPLE_SPECS_DIR = _ROOT_DIR / "wicara_mvp_10_manim_templates" / "specs" / "samples"
 
@@ -158,6 +160,7 @@ def generate_spec_from_workspace_context(
     last_response: str | None = None
     validation_details: list[dict[str, Any]] = []
     final_ai_response: AIGenerationResponse | None = None
+    retry_history: list[dict[str, Any]] = []
 
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         user_instruction = _build_user_instruction(
@@ -166,9 +169,12 @@ def generate_spec_from_workspace_context(
             workspace_id=str(workspace.id),
             context_snapshot=context_snapshot,
             sample_spec=sample_spec,
+            attempt_number=attempt,
+            max_attempts=_MAX_ATTEMPTS,
             previous_error=last_error,
             validation_details=validation_details,
             previous_response=last_response,
+            retry_history=retry_history,
         )
         ai_response = _generate_with_gemini(user_instruction=user_instruction)
         final_ai_response = ai_response
@@ -184,6 +190,14 @@ def generate_spec_from_workspace_context(
                     "finish_reason": ai_response.finish_reason,
                 }
             ]
+            retry_history.append(
+                {
+                    "attempt": attempt,
+                    "error": str(exc),
+                    "validation_details": _compact_validation_details(validation_details),
+                    "response_excerpt": _feedback_response_excerpt(ai_response.text),
+                }
+            )
             last_response = _feedback_response_excerpt(ai_response.text)
             if attempt >= _MAX_ATTEMPTS:
                 raise
@@ -202,10 +216,24 @@ def generate_spec_from_workspace_context(
         except TemplateValidationError as exc:
             last_error = exc.message
             validation_details = exc.details
+            compact_details = _compact_validation_details(exc.details)
+            retry_history.append(
+                {
+                    "attempt": attempt,
+                    "error": exc.message,
+                    "validation_details": compact_details,
+                    "response_excerpt": _feedback_response_excerpt(ai_response.text),
+                }
+            )
             last_response = _feedback_response_excerpt(ai_response.text)
             if attempt >= _MAX_ATTEMPTS:
+                detail_summary = _validation_details_summary(compact_details)
                 raise WorkspaceContextSpecGenerationError(
-                    f"Gemini generated an invalid spec for {template_id}: {exc.message}"
+                    (
+                        f"Gemini generated an invalid spec for {template_id} after "
+                        f"{_MAX_ATTEMPTS} attempts: {exc.message}. "
+                        f"Failed fields: {detail_summary}"
+                    )
                 ) from exc
             continue
 
@@ -217,6 +245,15 @@ def generate_spec_from_workspace_context(
             quality_errors = [issue.message for issue in quality_result.errors]
             last_error = "Template quality lint failed."
             validation_details = quality_result.to_feedback_details()
+            compact_details = _compact_validation_details(validation_details)
+            retry_history.append(
+                {
+                    "attempt": attempt,
+                    "error": last_error,
+                    "validation_details": compact_details,
+                    "response_excerpt": _feedback_response_excerpt(ai_response.text),
+                }
+            )
             last_response = _feedback_response_excerpt(ai_response.text)
             if attempt >= _MAX_ATTEMPTS:
                 error_text = "; ".join(quality_errors) if quality_errors else "Unknown quality issue."
@@ -254,6 +291,7 @@ def generate_spec_from_workspace_context(
                 "warning_count": len(quality_result.warnings),
                 "metrics": quality_result.metrics,
             },
+            "retry_history": retry_history[-3:],
         }
         return WorkspaceGeneratedSpec(
             template_id=template_id,
@@ -400,14 +438,22 @@ def _build_user_instruction(
     workspace_id: str,
     context_snapshot: dict[str, Any],
     sample_spec: dict[str, Any],
+    attempt_number: int,
+    max_attempts: int,
     previous_error: str | None,
     validation_details: list[dict[str, Any]],
     previous_response: str | None,
+    retry_history: list[dict[str, Any]],
 ) -> str:
     base_payload: dict[str, Any] = {
         "task": "generate_template_spec_json",
         "template_id": template_id,
         "requested_language": requested_language or "en",
+        "attempt_context": {
+            "attempt_number": attempt_number,
+            "max_attempts": max_attempts,
+            "is_retry": attempt_number > 1,
+        },
         "output_contract": {
             "must_return_json_object": True,
             "must_include_language_field": True,
@@ -425,15 +471,19 @@ def _build_user_instruction(
             "Provide at least 2 instructional steps with narration on each step.",
             "Distribute explanation to step narration, not only intro.",
             "Do not return markdown.",
+            "If this is a retry, you MUST fix every validator issue listed in retry_feedback.",
         ],
         "context_snapshot": context_snapshot,
         "sample_spec_reference": sample_spec,
     }
     if previous_error:
+        compact_details = _compact_validation_details(validation_details)
         base_payload["retry_feedback"] = {
             "previous_error": previous_error,
-            "validation_details": validation_details,
+            "validation_details": compact_details,
+            "failed_fields_summary": _validation_details_summary(compact_details),
             "previous_response": previous_response,
+            "recent_retry_history": retry_history[-2:],
         }
     return json.dumps(base_payload, ensure_ascii=True, indent=2)
 
@@ -521,6 +571,35 @@ def _feedback_response_excerpt(raw_text: str) -> str:
     if len(text) <= _PREVIOUS_RESPONSE_FEEDBACK_LIMIT:
         return text
     return f"{text[:_PREVIOUS_RESPONSE_FEEDBACK_LIMIT]}...[truncated]"
+
+
+def _compact_validation_details(details: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    compact: list[dict[str, Any]] = []
+    for item in details[:_VALIDATION_FEEDBACK_LIMIT]:
+        path = str(item.get("path") or "spec_json").strip() or "spec_json"
+        message = str(item.get("message") or "Invalid value.").strip()
+        if len(message) > _VALIDATION_FEEDBACK_ITEM_LIMIT:
+            message = f"{message[:_VALIDATION_FEEDBACK_ITEM_LIMIT]}...[truncated]"
+        issue_type = str(item.get("type") or "validation_error").strip() or "validation_error"
+        compact.append(
+            {
+                "path": path,
+                "message": message,
+                "type": issue_type,
+            }
+        )
+    return compact
+
+
+def _validation_details_summary(details: list[dict[str, Any]]) -> str:
+    if not details:
+        return "n/a"
+    parts: list[str] = []
+    for item in details[:6]:
+        path = str(item.get("path") or "spec_json").strip() or "spec_json"
+        message = str(item.get("message") or "Invalid value.").strip()
+        parts.append(f"{path}: {message}")
+    return "; ".join(parts)
 
 
 def _extract_fenced_json(text: str) -> str:
