@@ -623,7 +623,13 @@ def submit_answer(
         evaluation_metadata_json={"source": "legacy_objective", "confidence": confidence},
     )
     session.add(attempt)
-    _update_mastery(session, user=user, question=question, is_correct=option.is_correct)
+    _update_mastery(
+        session,
+        user=user,
+        question=question,
+        is_correct=option.is_correct,
+        session_type=assessment.session_type,
+    )
     session.commit()
     session.refresh(attempt)
     return attempt, option.is_correct
@@ -1621,7 +1627,12 @@ def submit_daily_answer_response(
         attempt_id=attempt.id,
         is_correct=is_correct,
         next_review_label=_daily_next_review_label(
-            3 if is_correct else 1,
+            _daily_next_review_interval_for_attempt(
+                session,
+                user=user,
+                attempt=attempt,
+                fallback_days=3 if is_correct else 1,
+            ),
             language=language,
         ),
         mastery_delta=0.08 if is_correct else -0.04,
@@ -1779,7 +1790,7 @@ def _should_refresh_daily_assessment_from_bank(
     if int(attempt_count or 0) > 0:
         return False
 
-    if assessment.metadata_json.get("policy") != "personalized_daily_v2":
+    if assessment.metadata_json.get("policy") != "personalized_daily_ebbinghaus_v1":
         return True
 
     resolved_step = resolve_learner_step(session, user=user)
@@ -2604,6 +2615,8 @@ def _daily_action_title(
 
 def _daily_source(assessment: AssessmentSession) -> str:
     policy = assessment.metadata_json.get("policy")
+    if policy == "personalized_daily_ebbinghaus_v1":
+        return "question_bank_personalized_daily_ebbinghaus_v1"
     if policy == "personalized_daily_v2":
         return "question_bank_personalized_daily_v2"
     if policy == "spaced_repetition_mvp":
@@ -2613,6 +2626,12 @@ def _daily_source(assessment: AssessmentSession) -> str:
 
 def _daily_review_policy_basis(assessment: AssessmentSession, *, language: str = "en") -> str:
     policy = assessment.metadata_json.get("policy")
+    if policy == "personalized_daily_ebbinghaus_v1":
+        return _daily_copy(
+            language,
+            id_text="selector Ebbinghaus memakai review lama/jatuh tempo, lalu fallback ke goal jika data timestamp belum cukup",
+            en_text="Ebbinghaus selector using old or due review items, then goal fallback when timestamp data is insufficient",
+        )
     if policy == "personalized_daily_v2":
         return _daily_copy(
             language,
@@ -3095,8 +3114,11 @@ def _create_daily_assessment_from_bank(
 ) -> AssessmentSession:
     metadata = {
         "review_date": review_date,
-        "policy": "personalized_daily_v2",
+        "policy": "personalized_daily_ebbinghaus_v1",
         "selector_version": DAILY_SELECTOR_VERSION,
+        "selection_strategy": "ebbinghaus_review_queue",
+        "timestamp_sufficiency": _daily_timestamp_sufficiency(selected_questions),
+        "fallback_path": _daily_fallback_path(selected_questions),
         "track_resolution_strategy": "latest_non_completed_track_updated_at_desc",
         "resolved_at": datetime.now(UTC).isoformat(),
         "selected_subject_code": learner_step.subject.code,
@@ -3118,6 +3140,7 @@ def _create_daily_assessment_from_bank(
                 "question_bank_external_id": selected.item.external_id,
                 "concept_code": selected.item.concept_code,
                 "assessment_types": selected.item.assessment_types_json,
+                **selected.metadata_json,
             }
             for selected in selected_questions
         ],
@@ -3158,6 +3181,7 @@ def _create_daily_assessment_from_bank(
                 "selection_slot": selected.slot,
                 "selection_reason": selected.reason,
                 "selector_version": DAILY_SELECTOR_VERSION,
+                **selected.metadata_json,
                 "correct_option_key": item.answer_key,
             },
         )
@@ -3176,6 +3200,31 @@ def _create_daily_assessment_from_bank(
             )
     session.flush()
     return assessment
+
+
+def _daily_timestamp_sufficiency(selected_questions: list[SelectedQuestion]) -> str:
+    values = {
+        str(selected.metadata_json.get("timestamp_sufficiency"))
+        for selected in selected_questions
+    }
+    if values == {"sufficient"}:
+        return "sufficient"
+    if "sufficient" in values or "partial" in values:
+        return "partial"
+    return "insufficient"
+
+
+def _daily_fallback_path(selected_questions: list[SelectedQuestion]) -> str:
+    fallback_order = ["current_goal", "learning_goal", "subject_level"]
+    seen = {
+        str(selected.metadata_json.get("fallback_path"))
+        for selected in selected_questions
+        if selected.metadata_json.get("fallback_path")
+    }
+    for fallback in fallback_order:
+        if fallback in seen:
+            return fallback
+    return "none"
 
 
 def _create_track(
@@ -4033,6 +4082,7 @@ def _update_mastery(
     user: UserAccount,
     question: AssessmentQuestion,
     is_correct: bool,
+    session_type: str,
 ) -> None:
     if question.concept_id is None:
         return
@@ -4063,7 +4113,54 @@ def _update_mastery(
     state.status = "review_due" if not is_correct else ("mastered" if state.mastery_score >= 0.7 else "ready")
     state.evidence_count = (state.evidence_count or 0) + 1
     state.last_evaluated_at = datetime.now(UTC)
-    state.next_review_at = datetime.now(UTC) + (timedelta(days=3) if is_correct else timedelta(days=1))
+    interval_days = (
+        _spaced_review_interval_days(state=state, is_correct=is_correct)
+        if session_type == "daily_evaluation"
+        else (3 if is_correct else 1)
+    )
+    state.next_review_at = datetime.now(UTC) + timedelta(days=interval_days)
+
+
+def _spaced_review_interval_days(
+    *,
+    state: LearnerConceptState,
+    is_correct: bool,
+) -> int:
+    if not is_correct:
+        return 1
+    evidence_count = int(state.evidence_count or 0)
+    mastery_score = float(state.mastery_score or 0.0)
+    confidence_score = float(state.confidence_score or 0.0)
+    if evidence_count <= 1:
+        return 2
+    if evidence_count <= 3 or mastery_score < 0.7 or confidence_score < 0.65:
+        return 7
+    if evidence_count <= 5 or mastery_score < 0.85:
+        return 14
+    return 30
+
+
+def _daily_next_review_interval_for_attempt(
+    session: Session,
+    *,
+    user: UserAccount,
+    attempt: AssessmentAttempt,
+    fallback_days: int,
+) -> int:
+    question = session.get(AssessmentQuestion, attempt.question_id)
+    if question is None or question.concept_id is None:
+        return fallback_days
+    state = session.scalar(
+        select(LearnerConceptState).where(
+            LearnerConceptState.user_id == user.id,
+            LearnerConceptState.concept_id == question.concept_id,
+        )
+    )
+    if state is None or state.next_review_at is None:
+        return fallback_days
+    due_date = _as_utc(state.next_review_at).date()
+    today = datetime.now(UTC).date()
+    return max(1, (due_date - today).days)
 
 
 def _normalize_topic(raw_topic: str) -> str:

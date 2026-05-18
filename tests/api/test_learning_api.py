@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import Depends
@@ -16,6 +16,7 @@ from app.modules.learning.models import (
     AssessmentOption,
     AssessmentQuestion,
     AssessmentSession,
+    LearnerConceptState,
     LearningGoal,
     LearningTrack,
     TrackModule,
@@ -88,9 +89,9 @@ def test_daily_evaluation_returns_seeded_review_questions_and_persists_answer(cl
     assert response.status_code == 200
     payload = response.json()
     assert payload["session_id"]
-    assert payload["review_policy"]["strategy"] == "personalized_daily_v2"
+    assert payload["review_policy"]["strategy"] == "personalized_daily_ebbinghaus_v1"
     assert payload["language"] == "en"
-    assert payload["source"] == "question_bank_personalized_daily_v2"
+    assert payload["source"] == "question_bank_personalized_daily_ebbinghaus_v1"
     assert payload["review_due"]["due_count"] == 3
     assert payload["progress"] == {
         "current": 1,
@@ -121,7 +122,13 @@ def test_daily_evaluation_returns_seeded_review_questions_and_persists_answer(cl
         assert answer_response.status_code == 200
         answer_payload = answer_response.json()
         assert isinstance(answer_payload["is_correct"], bool)
-        assert answer_payload["next_review_label"] in {"Review tomorrow", "Review in 3 days"}
+        assert answer_payload["next_review_label"] in {
+            "Review tomorrow",
+            "Review in 2 days",
+            "Review in 7 days",
+            "Review in 14 days",
+            "Review in 30 days",
+        }
         assert answer_payload["completed"] == (index == len(payload["questions"]) - 1)
 
     result_response = client.get(f"/api/v1/daily-evaluations/{payload['session_id']}/result")
@@ -141,6 +148,55 @@ def test_daily_evaluation_returns_seeded_review_questions_and_persists_answer(cl
         "action_type": "navigate",
         "target": "/home",
     }
+
+
+def test_daily_evaluation_correct_answer_uses_ebbinghaus_review_interval(client):
+    _override_account(client, seed_question_bank=True)
+
+    response = client.get("/api/v1/daily-evaluations/today")
+    assert response.status_code == 200
+    payload = response.json()
+    question_payload = payload["questions"][0]
+
+    with _session_for_client(client) as session:
+        question = session.get(AssessmentQuestion, UUID(question_payload["id"]))
+        assert question is not None
+        assert question.concept_id is not None
+        correct_option = next(option for option in question.options if option.is_correct)
+        correct_option_id = str(correct_option.id)
+        concept_id = question.concept_id
+
+    answer_response = client.post(
+        f"/api/v1/daily-evaluations/{payload['session_id']}/answers",
+        json={
+            "question_id": question_payload["id"],
+            "option_id": correct_option_id,
+            "confidence": 8,
+        },
+    )
+
+    assert answer_response.status_code == 200
+    answer_payload = answer_response.json()
+    assert answer_payload["is_correct"] is True
+    assert answer_payload["next_review_label"] == "Review in 2 days"
+    with _session_for_client(client) as session:
+        state = session.scalar(
+            select(LearnerConceptState).where(
+                LearnerConceptState.user_id == ACCOUNT_ID,
+                LearnerConceptState.concept_id == concept_id,
+            )
+        )
+        assert state is not None
+        assert state.evidence_count == 1
+        assert state.last_evaluated_at is not None
+        assert state.next_review_at is not None
+        next_review_at = (
+            state.next_review_at.replace(tzinfo=UTC)
+            if state.next_review_at.tzinfo is None
+            else state.next_review_at
+        )
+        assert datetime.now(UTC) + timedelta(days=1, hours=20) <= next_review_at
+        assert next_review_at <= datetime.now(UTC) + timedelta(days=2, minutes=5)
 
 
 def test_daily_evaluation_uses_indonesian_question_bank_after_profile_switch(client):
@@ -501,6 +557,7 @@ def _create_test_track(session: Session, *, raw_topic: str) -> LearningTrack:
     goal = LearningGoal(
         user_id=account.id,
         subject_id=subject.id,
+        target_concept_id=concept.id,
         raw_topic=raw_topic,
         normalized_topic=raw_topic,
         status="pretest_ready",

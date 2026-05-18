@@ -80,9 +80,96 @@ def test_daily_selector_prioritizes_due_learner_concept(db_session):
     assert learner_step.subject.code == "matematika"
     assert learner_step.education_level == "junior_high"
     assert selected
-    assert selected[0].slot == "due_review"
+    assert selected[0].slot == "ebbinghaus_due_review"
     assert selected[0].item.concept_code == "bilangan_rasional"
+    assert selected[0].metadata_json["selection_strategy"] == "ebbinghaus_review_queue"
+    assert selected[0].metadata_json["timestamp_sufficiency"] == "sufficient"
+    assert selected[0].metadata_json["fallback_path"] == "none"
+    assert selected[0].metadata_json["forgetting_risk"] > 0
     assert "daily_quiz" in selected[0].item.assessment_types_json
+
+
+def test_daily_selector_uses_stale_timestamped_review_before_fallback(db_session):
+    seed_curriculum(db_session)
+    import_seed_directory(db_session)
+    user = _create_user_with_profile(db_session)
+    _subject, concept = _math_subject_and_concept(db_session)
+    db_session.add(
+        LearnerConceptState(
+            user_id=user.id,
+            concept_id=concept.id,
+            status="ready",
+            mastery_score=0.74,
+            confidence_score=0.78,
+            evidence_count=3,
+            last_evaluated_at=datetime.now(UTC) - timedelta(days=5),
+            next_review_at=None,
+        )
+    )
+    db_session.commit()
+    db_session.refresh(user)
+
+    _learner_step, selected = select_daily_questions(db_session, user=user)
+
+    assert selected
+    assert selected[0].slot == "ebbinghaus_stale_review"
+    assert selected[0].item.concept_id == concept.id
+    assert selected[0].metadata_json["elapsed_days"] >= 4.9
+    assert selected[0].metadata_json["fallback_path"] == "none"
+
+
+def test_daily_selector_prioritizes_due_review_over_current_goal_fallback(db_session):
+    seed_curriculum(db_session)
+    import_seed_directory(db_session)
+    user = _create_user_with_profile(db_session)
+    subject, active_concept = _math_subject_and_concept(db_session)
+    due_item = next(
+        item
+        for item in db_session.scalars(
+            select(QuestionBankItem)
+            .where(
+                QuestionBankItem.status == "active",
+                QuestionBankItem.subject_id == subject.id,
+                QuestionBankItem.education_level == "junior_high",
+                QuestionBankItem.concept_id.is_not(None),
+                QuestionBankItem.concept_id != active_concept.id,
+            )
+            .order_by(QuestionBankItem.external_id)
+        )
+        if "daily_quiz" in (item.assessment_types_json or [])
+        and item.question_type == "multiple_choice"
+    )
+    due_concept = db_session.get(KnowledgeConcept, due_item.concept_id)
+    assert due_concept is not None
+    _create_track_for_concept(
+        db_session,
+        user=user,
+        subject=subject,
+        concept=active_concept,
+        raw_topic="active rational number track",
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(
+        LearnerConceptState(
+            user_id=user.id,
+            concept_id=due_concept.id,
+            status="review_due",
+            mastery_score=0.42,
+            confidence_score=0.45,
+            evidence_count=1,
+            last_evaluated_at=datetime.now(UTC) - timedelta(days=3),
+            next_review_at=datetime.now(UTC) - timedelta(hours=6),
+        )
+    )
+    db_session.commit()
+    db_session.refresh(user)
+
+    learner_step, selected = select_daily_questions(db_session, user=user)
+
+    assert learner_step.active_concept_id == active_concept.id
+    assert selected
+    assert selected[0].slot == "ebbinghaus_due_review"
+    assert selected[0].item.concept_id == due_concept.id
 
 
 def test_daily_selector_uses_fallback_slot_when_no_personalized_state_exists(db_session):
@@ -93,7 +180,9 @@ def test_daily_selector_uses_fallback_slot_when_no_personalized_state_exists(db_
     _learner_step, selected = select_daily_questions(db_session, user=user)
 
     assert selected
-    assert {item.slot for item in selected} == {"fallback"}
+    assert {item.slot for item in selected} == {"subject_level_fallback"}
+    assert {item.metadata_json["timestamp_sufficiency"] for item in selected} == {"insufficient"}
+    assert {item.metadata_json["fallback_path"] for item in selected} == {"subject_level"}
 
 
 def test_daily_selector_resolves_latest_non_completed_track(db_session):
@@ -127,8 +216,10 @@ def test_daily_selector_resolves_latest_non_completed_track(db_session):
     assert learner_step.active_module_id is not None
     assert learner_step.active_concept_id == concept.id
     assert selected
-    assert selected[0].slot == "active_module"
+    assert selected[0].slot == "current_goal_fallback"
     assert selected[0].item.concept_id == concept.id
+    assert selected[0].metadata_json["timestamp_sufficiency"] == "insufficient"
+    assert selected[0].metadata_json["fallback_path"] == "current_goal"
 
 
 def test_question_bank_seeded_backfills_missing_preferred_language(db_session):
@@ -227,6 +318,7 @@ def _create_track_for_concept(
     goal = LearningGoal(
         user_id=user.id,
         subject_id=subject.id,
+        target_concept_id=concept.id,
         raw_topic=raw_topic,
         normalized_topic=raw_topic,
         status="pretest_ready",

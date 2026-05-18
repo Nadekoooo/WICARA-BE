@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,7 +33,9 @@ from app.modules.question_bank.models import (
 SUPPORTED_ASSESSMENT_TYPES = {"pretest", "daily_quiz", "posttest", "workspace_quiz"}
 SUPPORTED_DIFFICULTIES = {"easy", "medium", "hard"}
 SUPPORTED_STATUSES = {"draft", "reviewed", "active", "retired"}
-DAILY_SELECTOR_VERSION = "daily_v2.1"
+DAILY_SELECTOR_VERSION = "daily_ebbinghaus_v1"
+DAILY_STALE_REVIEW_MIN_DAYS = 2
+DAILY_LOW_MASTERY_THRESHOLD = 0.55
 
 
 @dataclass(frozen=True)
@@ -61,6 +64,19 @@ class SelectedQuestion:
     item: QuestionBankItem
     slot: str
     reason: str
+    metadata_json: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _EbbinghausCandidate:
+    state: LearnerConceptState
+    slot: str
+    reason: str
+    priority_score: float
+    estimated_retention: float
+    forgetting_risk: float
+    elapsed_days: float
+    scheduled_overdue_days: float
 
 
 def ensure_question_bank_seeded(
@@ -251,13 +267,43 @@ def select_daily_questions(
     candidates = _daily_candidates(session, step=step)
     recent_external_ids = _recent_bank_external_ids(session, user=user)
     selected: list[SelectedQuestion] = []
+    now = datetime.now(UTC)
 
-    slots = [
-        ("due_review", _first_concept_id(step.due_states), "Concept is due for spaced review."),
-        ("weak_concept", _first_concept_id(step.weak_states), "Concept has the weakest mastery signal."),
-        ("active_module", step.active_concept_id, "Concept matches the learner's current module."),
+    review_candidates = _ebbinghaus_review_candidates(candidates, step=step, now=now)
+    for review_candidate in review_candidates:
+        item = _pick_candidate(
+            candidates,
+            selected=selected,
+            concept_id=review_candidate.state.concept_id,
+            recent_external_ids=recent_external_ids,
+            preferred_language=step.preferred_language,
+            education_level=step.education_level,
+        )
+        if item is not None:
+            selected.append(
+                SelectedQuestion(
+                    item=item,
+                    slot=review_candidate.slot,
+                    reason=review_candidate.reason,
+                    metadata_json=_review_candidate_metadata(review_candidate),
+                )
+            )
+        if len(selected) >= limit:
+            return step, selected[:limit]
+
+    fallback_slots = [
+        (
+            "current_goal_fallback",
+            step.active_concept_id,
+            "Timestamped review queue is not enough; using the learner's current goal context.",
+        ),
+        (
+            "learning_goal_fallback",
+            _learning_goal_fallback_concept_id(session, user=user, step=step),
+            "Current goal did not fill the daily set; using the latest learning goal target.",
+        ),
     ]
-    for slot, concept_id, reason in slots:
+    for slot, concept_id, reason in fallback_slots:
         if concept_id is None:
             continue
         item = _pick_candidate(
@@ -269,7 +315,19 @@ def select_daily_questions(
             education_level=step.education_level,
         )
         if item is not None:
-            selected.append(SelectedQuestion(item=item, slot=slot, reason=reason))
+            selected.append(
+                SelectedQuestion(
+                    item=item,
+                    slot=slot,
+                    reason=reason,
+                    metadata_json=_fallback_candidate_metadata(
+                        slot=slot,
+                        timestamp_sufficiency=(
+                            "partial" if _has_ebbinghaus_selection(selected) else "insufficient"
+                        ),
+                    ),
+                )
+            )
         if len(selected) >= limit:
             return step, selected[:limit]
 
@@ -287,8 +345,14 @@ def select_daily_questions(
         selected.append(
             SelectedQuestion(
                 item=item,
-                slot="fallback",
-                reason="Fallback active daily question for the learner's subject and level.",
+                slot="subject_level_fallback",
+                reason="No matching timestamped or goal-specific review item; using subject and level fallback.",
+                metadata_json=_fallback_candidate_metadata(
+                    slot="subject_level_fallback",
+                    timestamp_sufficiency=(
+                        "partial" if _has_ebbinghaus_selection(selected) else "insufficient"
+                    ),
+                ),
             )
         )
     return step, selected[:limit]
@@ -345,6 +409,159 @@ def resolve_learner_step(session: Session, *, user: UserAccount) -> LearnerStep:
         due_states=due_states,
         weak_states=weak_states,
     )
+
+
+def _ebbinghaus_review_candidates(
+    candidates: list[QuestionBankItem],
+    *,
+    step: LearnerStep,
+    now: datetime,
+) -> list[_EbbinghausCandidate]:
+    candidate_concept_ids = {item.concept_id for item in candidates if item.concept_id is not None}
+    review_states = [
+        state
+        for state in {state.concept_id: state for state in [*step.due_states, *step.weak_states]}.values()
+        if state.concept_id in candidate_concept_ids and state.last_evaluated_at is not None
+    ]
+    scored: list[_EbbinghausCandidate] = []
+    for state in review_states:
+        last_evaluated_at = _as_utc(state.last_evaluated_at)
+        next_review_at = _as_utc(state.next_review_at)
+        elapsed_days = _elapsed_days(now, last_evaluated_at)
+        scheduled_overdue_days = (
+            max(0.0, _elapsed_days(now, next_review_at)) if next_review_at else 0.0
+        )
+        slot = ""
+        reason = ""
+        if next_review_at and next_review_at <= now:
+            slot = "ebbinghaus_due_review"
+            reason = "Concept is scheduled for review now based on the learner's spaced repetition state."
+        elif elapsed_days >= DAILY_STALE_REVIEW_MIN_DAYS:
+            slot = "ebbinghaus_stale_review"
+            reason = "Concept was evaluated long enough ago to be at forgetting risk."
+        elif (
+            (state.mastery_score or 0.0) <= DAILY_LOW_MASTERY_THRESHOLD
+            or (state.confidence_score or 0.0) <= DAILY_LOW_MASTERY_THRESHOLD
+        ):
+            slot = "weak_review_with_timestamp"
+            reason = "Concept has a timestamped weak mastery or confidence signal."
+        if not slot:
+            continue
+
+        estimated_retention = _estimated_retention(state, elapsed_days=elapsed_days)
+        forgetting_risk = 1.0 - estimated_retention
+        priority_score = (
+            scheduled_overdue_days * 100.0
+            + forgetting_risk * 50.0
+            + (1.0 - _clamp01(state.mastery_score or 0.0)) * 20.0
+            + (1.0 - _clamp01(state.confidence_score or 0.0)) * 10.0
+        )
+        scored.append(
+            _EbbinghausCandidate(
+                state=state,
+                slot=slot,
+                reason=reason,
+                priority_score=priority_score,
+                estimated_retention=estimated_retention,
+                forgetting_risk=forgetting_risk,
+                elapsed_days=elapsed_days,
+                scheduled_overdue_days=scheduled_overdue_days,
+            )
+        )
+    return sorted(
+        scored,
+        key=lambda item: (
+            -item.priority_score,
+            _date_sort_value(item.state.next_review_at),
+            _date_sort_value(item.state.last_evaluated_at),
+            str(item.state.concept_id),
+        ),
+    )
+
+
+def _review_candidate_metadata(candidate: _EbbinghausCandidate) -> dict[str, Any]:
+    return {
+        "selection_strategy": "ebbinghaus_review_queue",
+        "timestamp_sufficiency": "sufficient",
+        "fallback_path": "none",
+        "concept_id": str(candidate.state.concept_id),
+        "last_evaluated_at": _iso_or_none(candidate.state.last_evaluated_at),
+        "next_review_at": _iso_or_none(candidate.state.next_review_at),
+        "elapsed_days": round(candidate.elapsed_days, 4),
+        "scheduled_overdue_days": round(candidate.scheduled_overdue_days, 4),
+        "estimated_retention": round(candidate.estimated_retention, 4),
+        "forgetting_risk": round(candidate.forgetting_risk, 4),
+        "priority_score": round(candidate.priority_score, 4),
+        "mastery_score": round(float(candidate.state.mastery_score or 0.0), 4),
+        "confidence_score": round(float(candidate.state.confidence_score or 0.0), 4),
+        "evidence_count": int(candidate.state.evidence_count or 0),
+    }
+
+
+def _fallback_candidate_metadata(
+    *,
+    slot: str,
+    timestamp_sufficiency: str,
+) -> dict[str, Any]:
+    return {
+        "selection_strategy": "fallback_context",
+        "timestamp_sufficiency": timestamp_sufficiency,
+        "fallback_path": slot.removesuffix("_fallback"),
+    }
+
+
+def _learning_goal_fallback_concept_id(
+    session: Session,
+    *,
+    user: UserAccount,
+    step: LearnerStep,
+) -> UUID | None:
+    track = _active_track(session, user=user)
+    concept_id = track.learning_goal.target_concept_id if track and track.learning_goal else None
+    if concept_id == step.active_concept_id:
+        return None
+    return concept_id
+
+
+def _has_ebbinghaus_selection(selected: list[SelectedQuestion]) -> bool:
+    return any(
+        choice.slot.startswith("ebbinghaus_")
+        or choice.slot == "weak_review_with_timestamp"
+        for choice in selected
+    )
+
+
+def _estimated_retention(state: LearnerConceptState, *, elapsed_days: float) -> float:
+    retention_strength = 1.0 + float(state.evidence_count or 0) + round(_clamp01(state.mastery_score or 0.0) * 3)
+    return _clamp01(math.exp(-(max(0.0, elapsed_days) / max(1.0, retention_strength))))
+
+
+def _elapsed_days(now: datetime, then: datetime | None) -> float:
+    if then is None:
+        return 0.0
+    return max(0.0, (now - _as_utc(then)).total_seconds() / 86400.0)
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _date_sort_value(value: datetime | None) -> str:
+    normalized = _as_utc(value)
+    return normalized.isoformat() if normalized else "9999-12-31T23:59:59+00:00"
+
+
+def _iso_or_none(value: datetime | None) -> str | None:
+    normalized = _as_utc(value)
+    return normalized.isoformat() if normalized else None
+
+
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, float(value)))
 
 
 def default_seeds_dir() -> Path:
@@ -645,10 +862,6 @@ def _education_level_for_user(user: UserAccount) -> str:
 
 def _preferred_language_for_user(user: UserAccount) -> str:
     return preferred_language_code(user)
-
-
-def _first_concept_id(states: list[LearnerConceptState]) -> UUID | None:
-    return states[0].concept_id if states else None
 
 
 def _sha256(value: str) -> str:
