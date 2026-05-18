@@ -3,8 +3,9 @@ from __future__ import annotations
 from contextlib import contextmanager
 from uuid import UUID
 
+import pytest
 from fastapi import Depends
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
@@ -15,7 +16,7 @@ from app.modules.evidence.models import ImageAsset
 from app.modules.learning.models import (
     AssessmentAttempt,
     AssessmentOption,
-    AssessmentQuestionPack,
+    AssessmentQuestion,
     AssessmentSession,
     LearnerConceptState,
     LearningGoal,
@@ -24,6 +25,11 @@ from app.modules.learning.models import (
 from app.modules.learning_goal_resolution.models import LearningGoalResolution
 
 ACCOUNT_ID = UUID("33333333-3333-4333-8333-333333333333")
+
+
+@pytest.fixture(autouse=True)
+def _allow_dev_assessment_generation_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WICARA_ASSESSMENT_DEV_FALLBACK_QUESTIONS", "1")
 
 
 def test_resolve_does_not_create_goal_and_confirm_enforces_target_lock(client):
@@ -145,7 +151,7 @@ def test_resolve_allows_foundational_node_for_higher_grade_user(client):
     assert "fondasi" in payload["suggested_concept"]["level_note"]
 
 
-def test_pretest_start_is_idempotent_and_generates_target_pack(client):
+def test_pretest_start_is_idempotent_and_generates_fresh_target_question(client):
     _override_account(client)
     learning_goal_id = _confirmed_goal_id(client)
 
@@ -162,16 +168,19 @@ def test_pretest_start_is_idempotent_and_generates_target_pack(client):
     assert second.status_code == 200
     assert first.json()["session_id"] == second.json()["session_id"]
     assert first.json()["current_question"]["difficulty"] == "medium"
+    assert first.json()["current_question"]["pack_id"] is None
 
     with _session_for_client(client) as session:
-        packs = list(session.scalars(select(AssessmentQuestionPack)))
-        assert len(packs) == 1
-        questions = first.json()["decision_state"]["generated_packs"]
+        questions = first.json()["decision_state"]["generated_questions"]
         target_code = first.json()["target_concept"]["concept_code"]
-        assert set(questions[target_code]["questions"]) == {"easy", "medium", "hard"}
+        assert set(questions[target_code]) == {"easy", "medium", "hard"}
+        assert questions[target_code]["medium"] == first.json()["current_question"]["id"]
+        stored_question = session.get(AssessmentQuestion, UUID(first.json()["current_question"]["id"]))
+        assert stored_question is not None
+        assert stored_question.metadata_json["non_reusable"] is True
 
 
-def test_answers_select_from_pack_generate_prereq_pack_and_reject_duplicate(client):
+def test_answers_generate_fresh_next_questions_and_reject_duplicate(client):
     _override_account(client)
     learning_goal_id = _confirmed_goal_id(client)
     start = client.post("/api/v1/pretests/start", json={"learning_goal_id": learning_goal_id})
@@ -197,7 +206,7 @@ def test_answers_select_from_pack_generate_prereq_pack_and_reject_duplicate(clie
 
     assert answer.status_code == 200
     assert answer.json()["next_question"]["difficulty"] == "easy"
-    assert answer.json()["next_question"]["pack_id"] == question["pack_id"]
+    assert answer.json()["next_question"]["pack_id"] is None
     assert duplicate.status_code == 409
     assert duplicate.json()["detail"]["error"] == "QUESTION_ALREADY_ANSWERED"
 
@@ -217,7 +226,9 @@ def test_answers_select_from_pack_generate_prereq_pack_and_reject_duplicate(clie
     assert next_question["concept_code"] != question["concept_code"]
 
     with _session_for_client(client) as session:
-        assert session.scalar(select(func.count()).select_from(AssessmentQuestionPack)) == 2
+        questions = list(session.scalars(select(AssessmentQuestion).where(AssessmentQuestion.session_id == UUID(payload["session_id"]))))
+        assert len(questions) == 6
+        assert all(question.metadata_json.get("non_reusable") is True for question in questions)
 
 
 def test_finalize_and_path_selection_create_track(client):
@@ -326,7 +337,7 @@ def test_cancel_abandons_active_pretest_and_releases_lock(client):
     assert confirm.status_code == 200
 
 
-def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, monkeypatch):
+def test_posttest_three_of_five_does_not_pass_even_with_strong_reasoning(client, monkeypatch):
     monkeypatch.setenv("WICARA_PRETEST_LLM_EVALUATION", "0")
     _override_account(client)
     learning_goal_id, concept_id, concept_code = _goal_with_posttest_node(client)
@@ -334,11 +345,11 @@ def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, 
     start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
     assert start.status_code == 200
     payload = start.json()
-    assert payload["total_questions"] == 3
+    assert payload["total_questions"] == 5
 
     answer = None
     for index, question in enumerate(payload["questions"]):
-        is_correct = index < 2
+        is_correct = index < 3
         answer_payload = {
             "question_id": question["id"],
             "selected_option_id": _option_id_for_question(client, question["id"], correct=is_correct),
@@ -358,8 +369,7 @@ def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, 
     assert last["is_correct"] is False
     assert last["evaluation"]["is_correct"] is False
     assert last["evaluation"]["diagnostic_signal"] == "possible_careless_mistake"
-    assert last["node_result"]["answer_percent"] == 66.67
-    assert last["node_result"]["score_percent"] > 70
+    assert last["node_result"]["answer_percent"] == 60
     assert last["node_result"]["passed"] is False
 
     final = client.post(f"/api/v1/posttests/{payload['session_id']}/finalize")
@@ -371,7 +381,7 @@ def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, 
     dashboard_payload = dashboard.json()
     assert dashboard_payload["state"] == "needs_retake"
     assert dashboard_payload["posttest"]["passed"] is False
-    assert dashboard_payload["posttest"]["answer_percent"] == 66.67
+    assert dashboard_payload["posttest"]["answer_percent"] == 60
     assert dashboard_payload["posttest"]["retake_required_concepts"] == [concept_code]
 
     with _session_for_client(client) as session:
@@ -385,13 +395,14 @@ def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, 
         assert state.status == "review_due"
 
 
-def test_posttest_three_of_three_passes_and_marks_concept_mastered(client):
+def test_posttest_five_of_five_passes_and_marks_concept_mastered(client):
     _override_account(client)
     learning_goal_id, concept_id, _concept_code = _goal_with_posttest_node(client)
 
     start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
     assert start.status_code == 200
     payload = start.json()
+    assert payload["total_questions"] == 5
 
     answer = None
     for question in payload["questions"]:

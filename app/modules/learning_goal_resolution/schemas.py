@@ -28,7 +28,7 @@ class ResolveLearningGoalRequest(BaseModel):
     subject_code: str | None = None
     education_level: str | None = None
     grade_level: str | None = None
-    language: str = Field(default="id", min_length=2, max_length=16)
+    language: str | None = Field(default=None, min_length=2, max_length=16)
 
 
 class ResolveLearningGoalResponse(BaseModel):

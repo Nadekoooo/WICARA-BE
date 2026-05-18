@@ -14,7 +14,6 @@ from app.modules.curriculum.models import KnowledgeConcept
 from app.modules.evidence.models import ImageAsset
 from app.modules.learning.models import (
     AssessmentAttempt,
-    AssessmentOption,
     AssessmentQuestion,
     AssessmentQuestionPack,
     AssessmentSession,
@@ -38,10 +37,10 @@ class DuplicateQuestionAttempt(Exception):
     pass
 
 
-REMEDIATION_NODE_STATUSES = {"gap", "fragile", "partial", "probably_gap"}
+REMEDIATION_NODE_STATUSES = {"gap", "fragile", "partial"}
 POSTTEST_PASS_SCORE = PASS_PERCENT
-POSTTEST_QUESTIONS_PER_NODE = 3
-POSTTEST_MAX_QUESTIONS = 10
+POSTTEST_TARGET_DIFFICULTIES = ("medium", "medium", "medium", "hard", "hard")
+POSTTEST_PREREQUISITE_DIFFICULTIES = ("medium", "hard")
 
 
 class AdaptivePosttestService:
@@ -80,47 +79,19 @@ class AdaptivePosttestService:
         diagnosis = (goal.metadata_json or {}).get("diagnosis", {})
         nodes = diagnosis.get("nodes", []) if isinstance(diagnosis, dict) else []
         remediation_nodes = _remediation_nodes(nodes)
-        selected_nodes = remediation_nodes[:_max_nodes_per_posttest()]
-        if focus_concept_code:
-            focused = [
-                node
-                for node in remediation_nodes
-                if str(node.get("concept_code") or "").strip() == focus_concept_code
-            ]
-            if focused:
-                selected_nodes = focused[:_max_nodes_per_posttest()]
-            elif goal.target_concept_id:
-                concept = session.get(KnowledgeConcept, goal.target_concept_id)
-                if concept is not None and concept.code == focus_concept_code:
-                    selected_nodes = [
-                        {
-                            "concept_id": str(concept.id),
-                            "concept_code": concept.code,
-                            "title": concept.title,
-                            "role": "target",
-                            "status": "fragile",
-                            "depth": 0,
-                        }
-                    ]
-        if not selected_nodes and goal.target_concept_id is not None:
-            fallback_concept = session.get(KnowledgeConcept, goal.target_concept_id)
-            if fallback_concept is not None:
-                selected_nodes = [
-                    {
-                        "concept_id": str(fallback_concept.id),
-                        "concept_code": fallback_concept.code,
-                        "title": fallback_concept.title,
-                        "role": "target",
-                        "status": "fragile",
-                        "depth": 0,
-                    }
-                ]
+        selected_nodes = _select_posttest_nodes(
+            session,
+            goal=goal,
+            remediation_nodes=remediation_nodes,
+            focus_concept_code=focus_concept_code,
+        )
         if not selected_nodes:
             raise ValueError("No remediation nodes found from pretest diagnosis.")
 
         queue: list[dict[str, Any]] = []
         all_question_ids: list[str] = []
         language = _preferred_language(user)
+        total_question_count = sum(len(_posttest_difficulties_for_node(node)) for node in selected_nodes)
 
         assessment = AssessmentSession(
             user_id=user.id,
@@ -133,20 +104,24 @@ class AdaptivePosttestService:
             source="adaptive_generated",
             metadata_json={
                 "source": "adaptive_generated",
-                "generation": "adaptive_node_posttest_v1",
-                "question_limit": POSTTEST_MAX_QUESTIONS,
-                "questions_per_node": POSTTEST_QUESTIONS_PER_NODE,
+                "generation": "fresh_ai_posttest_v2",
+                "question_reuse": "disabled",
+                "question_limit": None,
+                "target_question_count": len(POSTTEST_TARGET_DIFFICULTIES),
+                "prerequisite_question_count": len(POSTTEST_PREREQUISITE_DIFFICULTIES),
+                "difficulty_policy": {
+                    "target": list(POSTTEST_TARGET_DIFFICULTIES),
+                    "prerequisite": list(POSTTEST_PREREQUISITE_DIFFICULTIES),
+                },
                 "available_node_count": len(remediation_nodes),
                 "selected_node_count": len(selected_nodes),
                 "omitted_node_count": max(0, len(remediation_nodes) - len(selected_nodes)),
                 "focus_concept_code": focus_concept_code,
+                "learner_language": language,
             },
             decision_state_json={},
             graph_scope_json={},
-            max_questions=min(
-                POSTTEST_MAX_QUESTIONS,
-                len(selected_nodes) * POSTTEST_QUESTIONS_PER_NODE,
-            ),
+            max_questions=total_question_count,
             max_depth=0,
             max_nodes_visited=len(selected_nodes),
         )
@@ -159,12 +134,14 @@ class AdaptivePosttestService:
             concept = _concept_by_code(session, concept_code)
             if concept is None:
                 continue
-            question_ids = self._ensure_three_medium_hard_questions(
+            question_ids = self._generate_posttest_questions(
                 session,
                 assessment=assessment,
                 concept=concept,
                 concept_title=concept_title,
+                node=node,
                 language=language,
+                diagnosis_context=_node_diagnosis_context(node),
             )
             queue.append(
                 {
@@ -459,85 +436,31 @@ class AdaptivePosttestService:
             retake_required_concepts=[item.concept_code for item in node_reads if item.retake_required],
         )
 
-    def _ensure_three_medium_hard_questions(
+    def _generate_posttest_questions(
         self,
         session: Session,
         *,
         assessment: AssessmentSession,
         concept: KnowledgeConcept,
         concept_title: str,
+        node: dict[str, Any],
         language: str,
+        diagnosis_context: str,
     ) -> list[str]:
-        pack = self.generation_service.ensure_pack(session, assessment=assessment, concept=concept, language=language)
-        selected_ids: list[str] = []
-        seen_prompts: set[str] = set()
-
-        for difficulty in ("hard", "medium"):
-            question = self.generation_service.question_for_difficulty(pack, difficulty=difficulty)
-            key = question.prompt.strip().lower()
-            if key not in seen_prompts:
-                seen_prompts.add(key)
-                selected_ids.append(str(question.id))
-
-        attempts = 0
-        while len(selected_ids) < 3 and attempts < 2:
-            attempts += 1
-            payload_pack, metadata = self.generation_service._generate_pack(concept=concept, language=language)
-            for difficulty in ("hard", "medium"):
-                payload = payload_pack[difficulty]
-                key = str(payload.get("prompt", "")).strip().lower()
-                if not key or key in seen_prompts:
-                    continue
-                question = AssessmentQuestion(
-                    session_id=assessment.id,
-                    pack_id=pack.id,
-                    concept_id=concept.id,
-                    step_label="Adaptive Posttest",
-                    topic=concept_title,
-                    prompt=str(payload["prompt"]),
-                    helper_text=str(payload.get("helper_text", "")),
-                    difficulty_label=difficulty,
-                    sort_order=len(assessment.questions) + 1,
-                    metadata_json={
-                        "source": "adaptive_generated_posttest",
-                        "concept_code": concept.code,
-                        "correct_option_key": _correct_label(payload),
-                        "explanation": payload.get("explanation", ""),
-                    },
-                    generation_source=str(metadata.get("generation_source") or "adaptive_generated_posttest"),
-                    generation_prompt_version="adaptive_posttest_v1",
-                    llm_metadata_json=metadata,
-                    expected_reasoning=str(payload.get("expected_reasoning", "")),
-                    rubric_json=payload.get("rubric", {}),
-                )
-                session.add(question)
-                session.flush()
-                for idx, option in enumerate(payload["options"], start=1):
-                    session.add(
-                        AssessmentOption(
-                            question_id=question.id,
-                            option_key=str(option["label"]),
-                            label=str(option["label"]),
-                            text=str(option["text"]),
-                            is_correct=bool(option["is_correct"]),
-                            sort_order=idx,
-                        )
-                    )
-                session.flush()
-                seen_prompts.add(key)
-                selected_ids.append(str(question.id))
-                if len(selected_ids) >= 3:
-                    break
-
-        if len(selected_ids) < 3:
-            question = self.generation_service.question_for_difficulty(pack, difficulty="easy")
-            key = question.prompt.strip().lower()
-            if key not in seen_prompts:
-                selected_ids.append(str(question.id))
-
-        if len(selected_ids) < 3:
-            raise ValueError(f"Could not generate 3 posttest questions for concept {concept.code}.")
-        return selected_ids[:3]
+        node_role = str(node.get("posttest_role") or node.get("role") or "prerequisite")
+        questions = self.generation_service.create_fresh_questions(
+            session,
+            assessment=assessment,
+            concept=concept,
+            difficulties=list(_posttest_difficulties_for_node(node)),
+            assessment_type="posttest",
+            language=language,
+            node_role="goal" if node_role == "target" else "prerequisite",
+            diagnosis_context=diagnosis_context,
+            step_label="Adaptive Posttest",
+            topic=concept_title,
+        )
+        return [str(question.id) for question in questions]
 
 
 def _resolve_goal_context(
@@ -699,23 +622,113 @@ def _remediation_nodes(nodes: object) -> list[dict[str, Any]]:
     return sorted(selected, key=_posttest_node_priority)
 
 
+def _select_posttest_nodes(
+    session: Session,
+    *,
+    goal: LearningGoal,
+    remediation_nodes: list[dict[str, Any]],
+    focus_concept_code: str | None,
+) -> list[dict[str, Any]]:
+    primary = _primary_posttest_node(
+        session,
+        goal=goal,
+        remediation_nodes=remediation_nodes,
+        focus_concept_code=focus_concept_code,
+    )
+    selected: list[dict[str, Any]] = []
+    if primary is not None:
+        selected.append({**primary, "posttest_role": "target"})
+    primary_code = str(primary.get("concept_code") or "") if primary else ""
+    for node in remediation_nodes:
+        concept_code = str(node.get("concept_code") or "").strip()
+        if not concept_code or concept_code == primary_code:
+            continue
+        selected.append({**node, "posttest_role": "prerequisite"})
+    return selected
+
+
+def _primary_posttest_node(
+    session: Session,
+    *,
+    goal: LearningGoal,
+    remediation_nodes: list[dict[str, Any]],
+    focus_concept_code: str | None,
+) -> dict[str, Any] | None:
+    if focus_concept_code:
+        focused = next(
+            (
+                node
+                for node in remediation_nodes
+                if str(node.get("concept_code") or "").strip() == focus_concept_code
+            ),
+            None,
+        )
+        if focused is not None:
+            return focused
+        focused_concept = _concept_by_code(session, focus_concept_code)
+        if focused_concept is not None:
+            return {
+                "concept_id": str(focused_concept.id),
+                "concept_code": focused_concept.code,
+                "title": focused_concept.title,
+                "role": "target",
+                "status": "fragile",
+                "depth": 0,
+            }
+    target_node = next(
+        (node for node in remediation_nodes if str(node.get("role")) == "target"),
+        None,
+    )
+    if target_node is not None:
+        return target_node
+    if goal.target_concept_id is None:
+        return remediation_nodes[0] if remediation_nodes else None
+    target_concept = session.get(KnowledgeConcept, goal.target_concept_id)
+    if target_concept is None:
+        return remediation_nodes[0] if remediation_nodes else None
+    return {
+        "concept_id": str(target_concept.id),
+        "concept_code": target_concept.code,
+        "title": target_concept.title,
+        "role": "target",
+        "status": "fragile",
+        "depth": 0,
+    }
+
+
+def _posttest_difficulties_for_node(node: dict[str, Any]) -> tuple[str, ...]:
+    return (
+        POSTTEST_TARGET_DIFFICULTIES
+        if str(node.get("posttest_role") or node.get("role")) == "target"
+        else POSTTEST_PREREQUISITE_DIFFICULTIES
+    )
+
+
+def _node_diagnosis_context(node: dict[str, Any]) -> str:
+    return (
+        f"concept_code={node.get('concept_code') or ''}; "
+        f"title={node.get('title') or ''}; "
+        f"role={node.get('role') or ''}; "
+        f"status={node.get('status') or ''}; "
+        f"depth={node.get('depth') or 0}; "
+        f"answer_percent={node.get('answer_percent') or ''}; "
+        f"evidence_percent={node.get('evidence_percent') or ''}; "
+        f"confidence_percent={node.get('confidence_percent') or ''}"
+    )
+
+
 def _posttest_node_priority(node: dict[str, Any]) -> tuple[int, int, int, str]:
     role_priority = 0 if str(node.get("role")) == "target" else 1
     status_priority = {
         "gap": 0,
-        "probably_gap": 1,
-        "fragile": 2,
-        "partial": 3,
+        "fragile": 1,
+        "partial": 2,
     }.get(str(node.get("status")), 99)
     try:
         depth_priority = -int(node.get("depth") or 0)
     except (TypeError, ValueError):
         depth_priority = 0
     return role_priority, status_priority, depth_priority, str(node.get("concept_code") or "")
-
-
-def _max_nodes_per_posttest() -> int:
-    return max(1, POSTTEST_MAX_QUESTIONS // POSTTEST_QUESTIONS_PER_NODE)
 
 
 def _refresh_node_result_score(payload: dict[str, Any]) -> None:
@@ -776,14 +789,7 @@ def _concept_code(session: Session, question: AssessmentQuestion) -> str:
     return concept.code if concept else ""
 
 
-def _correct_label(payload: dict[str, Any]) -> str:
-    for option in payload.get("options", []):
-        if option.get("is_correct") is True:
-            return str(option.get("label") or "")
-    return ""
-
-
 def _preferred_language(user: UserAccount) -> str:
     if user.learner_profile and user.learner_profile.preferred_language:
         return user.learner_profile.preferred_language
-    return "id"
+    return "en"

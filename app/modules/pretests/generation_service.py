@@ -21,7 +21,12 @@ from app.modules.learning.models import (
 from app.modules.pretests.question_validator import QuestionValidator
 
 PACK_PROMPT_VERSION = "adaptive_node_pack_v6_flexible_subject_tasks"
+FRESH_QUESTION_PROMPT_VERSION = "fresh_assessment_node_batch_v2"
 DEFAULT_PACK_GENERATION_MAX_ATTEMPTS = 4
+
+
+class AssessmentQuestionGenerationError(ValueError):
+    pass
 
 
 class AdaptivePretestGenerationService:
@@ -144,6 +149,174 @@ class AdaptivePretestGenerationService:
                 for question in pack.questions
             },
         }
+
+    def create_fresh_question(
+        self,
+        session: Session,
+        *,
+        assessment: AssessmentSession,
+        concept: KnowledgeConcept,
+        difficulty: str,
+        assessment_type: str,
+        language: str | None = None,
+        node_role: str = "goal",
+        prerequisite_context: str = "",
+        diagnosis_context: str = "",
+        step_label: str | None = None,
+        topic: str | None = None,
+    ) -> AssessmentQuestion:
+        questions = self.create_fresh_questions(
+            session,
+            assessment=assessment,
+            concept=concept,
+            difficulties=[difficulty],
+            assessment_type=assessment_type,
+            language=language,
+            node_role=node_role,
+            prerequisite_context=prerequisite_context,
+            diagnosis_context=diagnosis_context,
+            step_label=step_label,
+            topic=topic,
+        )
+        return questions[0]
+
+    def create_fresh_questions(
+        self,
+        session: Session,
+        *,
+        assessment: AssessmentSession,
+        concept: KnowledgeConcept,
+        difficulties: list[str],
+        assessment_type: str,
+        language: str | None = None,
+        node_role: str = "goal",
+        prerequisite_context: str = "",
+        diagnosis_context: str = "",
+        step_label: str | None = None,
+        topic: str | None = None,
+    ) -> list[AssessmentQuestion]:
+        created: list[AssessmentQuestion] = []
+        learner_language = _normalize_generation_language(language)
+        normalized_difficulties = [difficulty.strip().lower() for difficulty in difficulties]
+        previous_questions = _previous_question_summary(
+            session,
+            assessment=assessment,
+            concept=concept,
+        )
+        payloads, metadata = self._generate_fresh_questions(
+            concept=concept,
+            difficulties=normalized_difficulties,
+            assessment_type=assessment_type,
+            language=learner_language,
+            node_role=node_role,
+            prerequisite_context=prerequisite_context,
+            diagnosis_context=diagnosis_context,
+            previous_questions=previous_questions,
+        )
+        if len(payloads) != len(normalized_difficulties):
+            raise AssessmentQuestionGenerationError(
+                f"AI generated {len(payloads)} questions, expected {len(normalized_difficulties)}."
+            )
+        for index, (normalized_difficulty, payload) in enumerate(
+            zip(normalized_difficulties, payloads, strict=True),
+            start=1,
+        ):
+            self.validator.validate_question(
+                concept_code=concept.code,
+                difficulty=normalized_difficulty,
+                question=payload,
+            )
+            question = self._persist_question(
+                session,
+                assessment=assessment,
+                concept=concept,
+                payload=payload,
+                metadata={
+                    **metadata,
+                    "learner_language": learner_language,
+                    "assessment_type": assessment_type,
+                    "node_role": node_role,
+                    "non_reusable": True,
+                    "batch_index": index,
+                    "batch_size": len(normalized_difficulties),
+                    "difficulty_sequence": normalized_difficulties,
+                },
+                assessment_type=assessment_type,
+                step_label=step_label or (
+                    "Adaptive Posttest" if assessment_type == "posttest" else "Adaptive Pretest"
+                ),
+                topic=topic or concept.title,
+            )
+            created.append(question)
+        return created
+
+    def _persist_question(
+        self,
+        session: Session,
+        *,
+        assessment: AssessmentSession,
+        concept: KnowledgeConcept,
+        payload: dict[str, Any],
+        metadata: dict[str, Any],
+        assessment_type: str,
+        step_label: str,
+        topic: str,
+    ) -> AssessmentQuestion:
+        sort_order = int(
+            session.scalar(
+                select(func.count()).select_from(AssessmentQuestion).where(
+                    AssessmentQuestion.session_id == assessment.id
+                )
+            )
+            or 0
+        ) + 1
+        question = AssessmentQuestion(
+            session_id=assessment.id,
+            pack_id=None,
+            concept_id=concept.id,
+            step_label=step_label,
+            topic=topic,
+            prompt=str(payload["prompt"]),
+            helper_text=str(payload.get("helper_text", "")),
+            difficulty_label=str(payload["difficulty"]),
+            sort_order=sort_order,
+            metadata_json={
+                "source": "fresh_ai_assessment_question",
+                "assessment_type": assessment_type,
+                "concept_code": concept.code,
+                "correct_option_key": _correct_label(payload),
+                "explanation": payload["explanation"],
+                "learner_language": metadata.get("learner_language", "en"),
+                "node_role": metadata.get("node_role", ""),
+                "freshness_note": payload.get("freshness_note", ""),
+                "misconception_tags": payload.get("misconception_tags", []),
+                "non_reusable": True,
+            },
+            generation_source=str(metadata.get("generation_source") or "llm_generated"),
+            generation_prompt_version=FRESH_QUESTION_PROMPT_VERSION,
+            llm_metadata_json=metadata,
+            expected_reasoning=str(payload["expected_reasoning"]),
+            rubric_json=payload.get("rubric", {}),
+        )
+        session.add(question)
+        session.flush()
+        for sort_order, option in enumerate(payload["options"], start=1):
+            session.add(
+                AssessmentOption(
+                    question_id=question.id,
+                    option_key=str(option["label"]),
+                    label=str(option["label"]),
+                    text=str(option["text"]),
+                    is_correct=bool(option["is_correct"]),
+                    sort_order=sort_order,
+                )
+            )
+        session.flush()
+        return session.scalar(
+            select(AssessmentQuestion)
+            .where(AssessmentQuestion.id == question.id)
+            .options(selectinload(AssessmentQuestion.options))
+        ) or question
 
     def _fallback_pack(
         self,
@@ -363,6 +536,136 @@ class AdaptivePretestGenerationService:
             "validation_errors": validation_errors,
         }
 
+    def _generate_fresh_questions(
+        self,
+        *,
+        concept: KnowledgeConcept,
+        difficulties: list[str],
+        assessment_type: str,
+        language: str,
+        node_role: str,
+        prerequisite_context: str,
+        diagnosis_context: str,
+        previous_questions: list[str],
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        ai_questions, ai_metadata = self._try_generate_fresh_questions_with_ai(
+            concept=concept,
+            difficulties=difficulties,
+            assessment_type=assessment_type,
+            language=language,
+            node_role=node_role,
+            prerequisite_context=prerequisite_context,
+            diagnosis_context=diagnosis_context,
+            previous_questions=previous_questions,
+        )
+        if ai_questions is not None:
+            return ai_questions, ai_metadata
+        if _allow_dev_fallback_questions():
+            fallback_pack = self._fallback_pack(concept=concept, language=language)
+            fallback_questions = [
+                _dev_fallback_question_variant(
+                    fallback_pack[difficulty],
+                    variant_index=index,
+                    variant_count=_difficulty_occurrence_count(difficulties, difficulty),
+                )
+                for index, difficulty in enumerate(difficulties, start=1)
+            ]
+            return fallback_questions, {
+                "generation_source": "dev_fallback_generated",
+                "llm_provider": "deterministic",
+                "llm_model": "dev_template_v1",
+                "prompt_version": FRESH_QUESTION_PROMPT_VERSION,
+                "fallback_reason": ai_metadata,
+                "batch_size": len(difficulties),
+                "difficulty_sequence": difficulties,
+            }
+        reason = ai_metadata.get("reason") if isinstance(ai_metadata, dict) else None
+        raise AssessmentQuestionGenerationError(
+            reason or "AI assessment question generation failed. Please retry."
+        )
+
+    def _try_generate_fresh_questions_with_ai(
+        self,
+        *,
+        concept: KnowledgeConcept,
+        difficulties: list[str],
+        assessment_type: str,
+        language: str,
+        node_role: str,
+        prerequisite_context: str,
+        diagnosis_context: str,
+        previous_questions: list[str],
+    ) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
+        settings = get_ai_settings()
+        if not settings.gemini_api_key.strip():
+            return None, {"llm_attempted": False, "reason": "AI question generation requires a configured Gemini API key."}
+        try:
+            asyncio.get_running_loop()
+            return None, {"llm_attempted": False, "reason": "AI question generation cannot run inside an active event loop."}
+        except RuntimeError:
+            pass
+
+        validation_errors: list[str] = []
+        max_attempts = _max_generation_attempts()
+        for attempt in range(1, max_attempts + 1):
+            prompt = _fresh_question_prompt(
+                concept=concept,
+                difficulties=difficulties,
+                assessment_type=assessment_type,
+                language=language,
+                node_role=node_role,
+                prerequisite_context=prerequisite_context,
+                diagnosis_context=diagnosis_context,
+                previous_questions=previous_questions,
+                previous_errors=validation_errors,
+            )
+            try:
+                response = asyncio.run(
+                    ai_client.generate(
+                        system_instruction=_fresh_question_system_instruction(),
+                        user_instruction=prompt,
+                        params={"temperature": 0.25, "response_mime_type": "application/json"},
+                    )
+                )
+                payload = json.loads(response.text)
+                questions = _extract_fresh_questions_payload(payload)
+                if len(questions) != len(difficulties):
+                    validation_errors.append(
+                        f"attempt {attempt}: response must contain exactly {len(difficulties)} questions."
+                    )
+                    continue
+                normalized_questions = _normalize_fresh_questions_payload(
+                    questions,
+                    concept_code=concept.code,
+                    difficulties=difficulties,
+                )
+                for difficulty, question in zip(difficulties, normalized_questions, strict=True):
+                    self.validator.validate_question(
+                        concept_code=concept.code,
+                        difficulty=difficulty,
+                        question=question,
+                    )
+                _validate_unique_question_prompts(normalized_questions)
+                return normalized_questions, {
+                    "generation_source": "llm_generated",
+                    "llm_provider": response.provider,
+                    "llm_model": response.model,
+                    "attempt_count": attempt,
+                    "prompt_version": FRESH_QUESTION_PROMPT_VERSION,
+                    "previous_validation_errors": validation_errors,
+                    "batch_size": len(difficulties),
+                    "difficulty_sequence": difficulties,
+                }
+            except Exception as exc:
+                validation_errors.append(f"attempt {attempt}: {exc}")
+        return None, {
+            "llm_attempted": True,
+            "attempt_count": max_attempts,
+            "prompt_version": FRESH_QUESTION_PROMPT_VERSION,
+            "validation_errors": validation_errors,
+            "reason": "AI assessment question generation failed validation after bounded retries.",
+        }
+
 
 def _math_pack(
     *,
@@ -491,6 +794,223 @@ Options may also contain math notation.
 """.strip()
 
 
+def _fresh_question_system_instruction() -> str:
+    return """
+You are an expert STEAM assessment item writer.
+
+Generate fresh, high-quality multiple-choice assessment questions for one learner.
+The questions must diagnose or verify concept mastery, not test memorized wording.
+
+You must follow the requested learner language exactly.
+If the learner language is missing, use English.
+
+Return valid JSON only.
+Do not include markdown, commentary, or extra text.
+""".strip()
+
+
+def _fresh_question_prompt(
+    *,
+    concept: KnowledgeConcept,
+    difficulties: list[str],
+    assessment_type: str,
+    language: str,
+    node_role: str,
+    prerequisite_context: str,
+    diagnosis_context: str,
+    previous_questions: list[str],
+    previous_errors: list[str] | None = None,
+) -> str:
+    previous_question_text = "\n".join(f"- {item}" for item in previous_questions[-12:]) or "- none"
+    difficulty_sequence = ", ".join(difficulties)
+    retry_instruction = ""
+    if previous_errors:
+        compact_errors = "\n".join(f"- {error}" for error in previous_errors[-6:])
+        retry_instruction = f"""
+
+The previous generated question failed backend validation.
+Regenerate the full question and fix these validation errors:
+{compact_errors}
+""".rstrip()
+    posttest_rules = ""
+    if assessment_type == "posttest":
+        posttest_rules = """
+
+Posttest-specific rules:
+- Use only medium and hard questions.
+- Test mastery after learning, not recall from the pretest.
+- Prefer new contexts that require applying the same concept.
+""".rstrip()
+
+    return f"""
+Assessment type: {assessment_type}
+Learner language: {language}
+Concept code: {concept.code}
+Concept title: {concept.title}
+Concept description: {concept.description or ''}
+Node role: {node_role}
+Difficulty sequence, in exact output order: {difficulty_sequence}
+Question count: {len(difficulties)}
+
+Prerequisite context:
+{prerequisite_context or 'none'}
+
+Diagnosis context:
+{diagnosis_context or 'none'}
+
+Previous questions to avoid:
+{previous_question_text}
+
+Generate {len(difficulties)} fresh multiple-choice question(s).
+
+Language requirements:
+- Write all learner-facing text in {language}.
+- If the language is unknown, write in English.
+- Avoid unnecessary code-switching.
+- Keep concept terms understandable for this learner.
+
+Freshness requirements:
+- Do not reuse old stored questions.
+- Do not copy or lightly paraphrase previous session questions.
+- Avoid the same scenario, numbers, wording, or solution pattern already listed.
+- If a similar idea is unavoidable, change the representation and reasoning path.
+
+Question quality requirements:
+- Use concrete applied tasks, not vague theory checks.
+- Exactly one correct option per question.
+- Provide 4 answer options.
+- Distractors must be plausible and reveal misconceptions.
+- Options should be similar in length and style.
+- Do not use "all of the above" or "none of the above".
+- Do not make the correct answer obvious by wording length or detail.
+- Avoid trick questions and ambiguous wording.
+- Use age-appropriate, curriculum-appropriate language.
+
+Difficulty rules:
+- Easy: direct recognition or basic one-step application.
+- Medium: normal application requiring understanding, not recall.
+- Hard: transfer, multi-step reasoning, or misconception-sensitive application.
+{posttest_rules}
+
+Before returning JSON, internally verify:
+- exactly one correct answer
+- no duplicate questions
+- requested language is followed
+- each question difficulty matches the requested sequence
+- output schema is valid
+
+Return exactly {len(difficulties)} question objects in the same order as the requested difficulty sequence.
+Return JSON shaped exactly as:
+{{
+  "questions": [
+    {{
+      "stem": "string",
+      "difficulty": "easy | medium | hard",
+      "options": [
+        {{"id": "A", "text": "string"}},
+        {{"id": "B", "text": "string"}},
+        {{"id": "C", "text": "string"}},
+        {{"id": "D", "text": "string"}}
+      ],
+      "correct_option_id": "A",
+      "expected_reasoning": "string",
+      "explanation": "string",
+      "misconception_tags": ["string"],
+      "freshness_note": "short note explaining how this differs from prior session questions"
+    }}
+  ]
+}}
+{retry_instruction}
+""".strip()
+
+
+def _extract_fresh_questions_payload(payload: Any) -> list[Any]:
+    if isinstance(payload, dict):
+        questions = payload.get("questions")
+        if isinstance(questions, list):
+            return questions
+        if all(key in payload for key in ("stem", "options", "correct_option_id")):
+            return [payload]
+    return []
+
+
+def _normalize_fresh_question_payload(
+    payload: Any,
+    *,
+    concept_code: str,
+    difficulty: str,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise QuestionGenerationPayloadError("Question payload must be an object.")
+    correct_option_id = str(payload.get("correct_option_id") or payload.get("correct_option_key") or "").strip()
+    raw_options = payload.get("options")
+    if not isinstance(raw_options, list):
+        raise QuestionGenerationPayloadError("Question options must be an array.")
+    options: list[dict[str, Any]] = []
+    for index, option in enumerate(raw_options):
+        if not isinstance(option, dict):
+            raise QuestionGenerationPayloadError("Each option must be an object.")
+        label = str(option.get("label") or option.get("id") or chr(ord("A") + index)).strip()
+        text = str(option.get("text") or "").strip()
+        options.append(
+            {
+                "label": label,
+                "text": text,
+                "is_correct": bool(option.get("is_correct") is True or label == correct_option_id),
+            }
+        )
+    return {
+        "concept_code": concept_code,
+        "difficulty": str(payload.get("difficulty") or difficulty).strip().lower(),
+        "question_type": "multiple_choice",
+        "prompt": str(payload.get("prompt") or payload.get("stem") or "").strip(),
+        "helper_text": str(payload.get("helper_text") or "").strip(),
+        "options": options,
+        "explanation": str(payload.get("explanation") or "").strip(),
+        "expected_reasoning": str(payload.get("expected_reasoning") or "").strip(),
+        "freshness_note": str(payload.get("freshness_note") or "").strip(),
+        "misconception_tags": payload.get("misconception_tags") if isinstance(payload.get("misconception_tags"), list) else [],
+        "rubric": payload.get("rubric") if isinstance(payload.get("rubric"), dict) else {
+            "correct_answer_score": 1.0,
+            "reasoning_score_available": True,
+            "canvas_score_available": False,
+        },
+    }
+
+
+def _normalize_fresh_questions_payload(
+    questions: list[Any],
+    *,
+    concept_code: str,
+    difficulties: list[str],
+) -> list[dict[str, Any]]:
+    if len(questions) != len(difficulties):
+        raise QuestionGenerationPayloadError(
+            f"Expected {len(difficulties)} questions, got {len(questions)}."
+        )
+    return [
+        _normalize_fresh_question_payload(
+            question,
+            concept_code=concept_code,
+            difficulty=difficulty,
+        )
+        for question, difficulty in zip(questions, difficulties, strict=True)
+    ]
+
+
+def _validate_unique_question_prompts(questions: list[dict[str, Any]]) -> None:
+    seen: set[str] = set()
+    for question in questions:
+        normalized = " ".join(str(question.get("prompt") or "").lower().split())
+        if normalized in seen:
+            raise QuestionGenerationPayloadError("Generated questions must not duplicate prompts in the same batch.")
+        seen.add(normalized)
+
+
+class QuestionGenerationPayloadError(ValueError):
+    pass
+
+
 def _correct_label(payload: dict[str, Any]) -> str:
     for option in payload["options"]:
         if option.get("is_correct") is True:
@@ -513,3 +1033,77 @@ def _max_generation_attempts() -> int:
         return max(1, min(8, int(raw_value)))
     except ValueError:
         return DEFAULT_PACK_GENERATION_MAX_ATTEMPTS
+
+
+def _previous_question_summary(
+    session: Session,
+    *,
+    assessment: AssessmentSession,
+    concept: KnowledgeConcept,
+) -> list[str]:
+    current_rows = list(
+        session.scalars(
+            select(AssessmentQuestion.prompt)
+            .where(AssessmentQuestion.session_id == assessment.id)
+            .order_by(AssessmentQuestion.sort_order)
+        )
+    )
+    historical_rows = list(
+        session.scalars(
+            select(AssessmentQuestion.prompt)
+            .join(AssessmentSession, AssessmentQuestion.session_id == AssessmentSession.id)
+            .where(
+                AssessmentSession.user_id == assessment.user_id,
+                AssessmentQuestion.concept_id == concept.id,
+                AssessmentQuestion.session_id != assessment.id,
+            )
+            .order_by(AssessmentQuestion.sort_order.desc())
+            .limit(20)
+        )
+    )
+    values = [str(item).strip() for item in [*current_rows, *historical_rows] if str(item).strip()]
+    return list(dict.fromkeys(values))
+
+
+def _normalize_generation_language(language: str | None) -> str:
+    normalized = (language or "").strip()
+    if not normalized:
+        return "English"
+    lowered = normalized.lower()
+    if lowered in {"en", "eng", "english"}:
+        return "English"
+    if lowered in {"id", "ind", "indo", "indonesian", "bahasa indonesia", "bahasa"}:
+        return "Indonesian"
+    return normalized
+
+
+def _difficulty_occurrence_count(difficulties: list[str], difficulty: str) -> int:
+    return sum(1 for item in difficulties if item == difficulty)
+
+
+def _dev_fallback_question_variant(
+    question: dict[str, Any],
+    *,
+    variant_index: int,
+    variant_count: int,
+) -> dict[str, Any]:
+    if variant_count <= 1:
+        return {
+            **question,
+            "freshness_note": "Development fallback question; not reusable in production.",
+            "misconception_tags": [],
+        }
+    return {
+        **question,
+        "prompt": f"{question['prompt']} (Development variant {variant_index})",
+        "freshness_note": "Development fallback variant; not reusable in production.",
+        "misconception_tags": [],
+    }
+
+
+def _allow_dev_fallback_questions() -> bool:
+    return os.getenv("WICARA_ASSESSMENT_DEV_FALLBACK_QUESTIONS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }

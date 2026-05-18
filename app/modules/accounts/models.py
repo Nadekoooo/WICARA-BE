@@ -68,7 +68,7 @@ class LearnerProfile(Base):
     country_name: Mapped[str] = mapped_column(String(80), nullable=False, default="")
     education_level: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     grade_level: Mapped[str] = mapped_column(String(64), nullable=False, default="")
-    preferred_language: Mapped[str] = mapped_column(String(16), nullable=False, default="id")
+    preferred_language: Mapped[str] = mapped_column(String(16), nullable=False, default="en")
     study_goal: Mapped[str] = mapped_column(Text, nullable=False, default="")
     daily_study_time_label: Mapped[str] = mapped_column(String(80), nullable=False, default="")
     selected_subjects: Mapped[list[str]] = mapped_column(
