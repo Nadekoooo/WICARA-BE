@@ -54,6 +54,58 @@ def test_curriculum_seed_creates_required_prerequisite_edge(db_session):
     assert edge.weight == 0.85
 
 
+def test_curriculum_seed_preserves_bilingual_metadata(db_session):
+    seed_curriculum(db_session)
+
+    subject = db_session.scalar(select(Subject).where(Subject.code == "matematika"))
+    concept = db_session.scalar(
+        select(KnowledgeConcept).where(
+            KnowledgeConcept.code == "km_d_matematika_bilangan_bulat"
+        )
+    )
+    edge = db_session.scalar(
+        select(ConceptEdge)
+        .join(
+            KnowledgeConcept,
+            ConceptEdge.from_concept_id == KnowledgeConcept.id,
+        )
+        .where(KnowledgeConcept.code == "km_d_matematika_bilangan_bulat")
+    )
+
+    assert subject.metadata_json["name_id"] == "Matematika"
+    assert subject.metadata_json["name_en"] == "Mathematics"
+    assert subject.metadata_json["graph"]["groups"][0]["label_en"] == "Phase A / Algebra"
+    assert concept.title == "Bilangan bulat"
+    assert concept.metadata_json["label_id"] == "Bilangan bulat"
+    assert concept.metadata_json["label_en"] == "Integers"
+    assert concept.metadata_json["description_en"].startswith("Understand and apply")
+    assert concept.metadata_json["domain_en"] == "Numbers"
+    assert concept.metadata_json["translation_status"]["en"] == "machine_draft"
+    assert edge is not None
+    assert edge.metadata_json["source_curriculum_graph"].endswith(".json")
+
+
+def test_curriculum_seed_generates_english_label_when_seed_copies_indonesian(
+    db_session,
+):
+    seed_curriculum(db_session)
+
+    concept = db_session.scalar(
+        select(KnowledgeConcept).where(
+            KnowledgeConcept.code == "km_d_matematika_bilangan_desimal"
+        )
+    )
+
+    assert concept is not None
+    assert concept.title == "Bilangan desimal"
+    assert concept.metadata_json["label_id"] == "Bilangan desimal"
+    assert concept.metadata_json["label_en"] == "Decimal numbers"
+    assert concept.en_desc == (
+        "Build understanding of Decimal numbers within Numbers for "
+        "Phase D / SMP/MTs / grades 7-9."
+    )
+
+
 def test_curriculum_seed_marks_removed_concepts_as_stale(db_session, tmp_path):
     legacy_graph_path = tmp_path / "legacy_graph.json"
     legacy_graph_path.write_text(

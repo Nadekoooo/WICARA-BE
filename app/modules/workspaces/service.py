@@ -572,7 +572,13 @@ def _apply_workspace_context(
             )
             or "general_steam",
             "active_template_id": (
-                str((concept.metadata_json or {}).get("template_id") or "").strip().lower()
+                str(
+                    (concept.metadata_json or {}).get("template_id")
+                    or (concept.metadata_json or {}).get("default_template_id")
+                    or ""
+                )
+                .strip()
+                .lower()
                 if concept is not None
                 else str(metadata.get("active_template_id") or "").strip().lower()
             )
