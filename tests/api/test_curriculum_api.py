@@ -58,6 +58,33 @@ def test_get_knowledge_map_returns_mobile_ready_kurikulum_graph(client, seeded_c
     ) in edges
 
 
+def test_get_knowledge_map_localizes_english_graph_fields(client, seeded_curriculum):
+    response = client.get("/api/v1/knowledge-map?subject=matematika&locale=en")
+
+    assert response.status_code == 200
+    payload = response.json()
+    nodes_by_id = {node["id"]: node for node in payload["nodes"]}
+
+    assert payload["subject"]["name"] == "Mathematics"
+    assert payload["graph"]["title"] == "Kurikulum Merdeka Mathematics Knowledge Map"
+    assert payload["groups"][0] == {"label": "Phase A / Algebra", "x": 28.0}
+    assert nodes_by_id["km_d_matematika_bilangan_bulat"]["label"] == "Integers"
+    assert (
+        nodes_by_id["km_d_matematika_bilangan_bulat"]["description"]
+        == "Understand and apply integer concepts aligned with Kurikulum Merdeka Phase D learning outcomes."
+    )
+    assert nodes_by_id["km_d_matematika_bilangan_desimal"]["label"] == (
+        "Decimal numbers"
+    )
+    assert nodes_by_id["km_d_matematika_bilangan_bulat"]["metadata"]["locale"] == "en"
+
+
+def test_get_knowledge_map_rejects_unsupported_locale(client, seeded_curriculum):
+    response = client.get("/api/v1/knowledge-map?subject=matematika&locale=fr")
+
+    assert response.status_code == 422
+
+
 def test_get_knowledge_map_supports_math_alias(client, seeded_curriculum):
     response = client.get("/api/v1/knowledge-map?subject=math")
 
@@ -196,6 +223,21 @@ def test_get_concept_detail_returns_mock_mastery_and_relations(
     related_ids = {item["id"] for item in payload["related_concepts"]}
     assert "km_d_matematika_bilangan_bulat" in prerequisite_ids
     assert "km_d_matematika_bilangan_irasional" in related_ids
+
+
+def test_get_concept_detail_localizes_english_relations(client, seeded_curriculum):
+    response = client.get(
+        "/api/v1/knowledge-map/concepts/km_d_matematika_bilangan_rasional"
+        "?subject=matematika&locale=en"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["concept"]["label"] == "Rational numbers"
+    assert payload["subject"]["name"] == "Mathematics"
+    prerequisites = {item["id"]: item for item in payload["prerequisites"]}
+    assert prerequisites["km_d_matematika_bilangan_bulat"]["label"] == "Integers"
 
 
 def test_get_concept_detail_allows_foundation_node_in_integrated_subject_context(

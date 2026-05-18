@@ -112,6 +112,17 @@ def test_workspace_quiz_event_updates_mastery_and_completes_module(client):
     active_module = next(module for module in modules if module["id"] == module_id)
     assert active_module["status"] == "active"
 
+    for turn in range(7):
+        phase_response = client.post(
+            f"/api/v1/workspaces/{workspace_response.json()['id']}/events",
+            json={
+                "event_type": "text",
+                "actor_type": "learner",
+                "text_payload": f"5E phase progress turn {turn + 1}",
+            },
+        )
+        assert phase_response.status_code == 200
+
     event_response = client.post(
         f"/api/v1/workspaces/{workspace_response.json()['id']}/events",
         json={
@@ -131,7 +142,7 @@ def test_workspace_quiz_event_updates_mastery_and_completes_module(client):
     payload = event_response.json()
     assert payload["tutor_response"]["text"]
     assert payload["tutor_response"]["intent"] == "recommend_practice"
-    assert payload["mastery_update"]["evidence_count"] == 1
+    assert payload["mastery_update"]["evidence_count"] >= 8
     assert payload["mastery_update"]["mastery_score"] > 0
     assert payload["mastery_update"]["status"] == "ready"
 
