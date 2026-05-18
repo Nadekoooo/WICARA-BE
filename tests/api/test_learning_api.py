@@ -186,6 +186,21 @@ def test_weekly_report_returns_richer_learning_report_payload(client):
     assert payload["unlocked_this_week"]["count"] >= 1
     assert payload["upcoming_recommendations"][0]["action_type"] == "review"
     assert payload["consistency_summary"]["title"] == "Consistency is compounding."
+    assert payload["data_quality"]["coverage_status"] in {
+        "seeded_baseline",
+        "partial_history",
+        "evidence_backed",
+    }
+    assert payload["data_quality"]["confidence_label"] in {"low", "medium", "high"}
+    assert payload["effort_impact"]["efficiency_label"] in {
+        "no_signal",
+        "steady",
+        "high_leverage",
+        "needs_focus",
+    }
+    assert len(payload["weekly_timeline"]) == 4
+    assert set(payload["weekly_narrative"]) == {"improved", "stagnant", "focus"}
+    assert isinstance(payload["concept_movers"], list)
 
 
 def test_weekly_report_range_uses_selected_dates_and_attempt_scores(client):
@@ -220,6 +235,8 @@ def test_weekly_report_range_uses_selected_dates_and_attempt_scores(client):
     assert 0 <= payload["score"] <= 100
     assert payload["performance_groups"][0]["label"] == "Overall"
     assert payload["upcoming_recommendations"][0]["title"].startswith("Review:")
+    assert payload["effort_impact"]["attempt_count"] == len(daily["questions"])
+    assert payload["data_quality"]["attempts_covered"] == len(daily["questions"])
 
 
 def test_weekly_report_exposes_paired_pretest_posttest_gain(client):
@@ -237,6 +254,7 @@ def test_weekly_report_exposes_paired_pretest_posttest_gain(client):
     assert payload["posttest_score_percent"] == 100
     assert payload["learning_gain_percent"] == 100
     assert payload["paired_concept_count"] == 1
+    assert payload["data_quality"]["paired_concepts"] == 1
 
 
 def test_weekly_report_range_rejects_invalid_dates(client):
