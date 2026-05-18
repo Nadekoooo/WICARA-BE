@@ -26,6 +26,7 @@ from app.modules.learning_goal_resolution.candidate_retriever import (
     ConceptCandidate,
     score_to_confidence,
 )
+from app.modules.learning_goal_resolution.description_cleaner import course_description_only
 from app.modules.learning_goal_resolution.models import LearningGoalResolution
 from app.modules.learning_goal_resolution.level_context import (
     grade_relation_for_concept,
@@ -54,6 +55,8 @@ from app.modules.workspaces.models import WorkspaceSession
 ACTIVE_GOAL_STATUSES = {"confirmed", "pretest_in_progress", "diagnosed", "in_progress"}
 INACTIVE_GOAL_STATUSES = {"completed", "cancelled", "archived"}
 EXACT_MATCH_CONFIDENCE_THRESHOLD = 0.75
+DETERMINISTIC_EXACT_SCORE_THRESHOLD = 16.0
+DEFAULT_RESOLVE_SUBJECT_CODE = "math"
 
 
 class ActiveLearningGoalExists(Exception):
@@ -96,7 +99,7 @@ class GoalResolverService:
     ) -> ResolveLearningGoalResponse:
         _ensure_curriculum(session)
         response_language = _preferred_response_language(user=user, requested_language=language)
-        explicit_subject_code = subject_code
+        explicit_subject_code = DEFAULT_RESOLVE_SUBJECT_CODE
         attempt = await self._resolve_progressively(
             session,
             raw_query=raw_query,
@@ -104,7 +107,7 @@ class GoalResolverService:
             education_level=education_level,
             grade_level=grade_level,
             language=response_language,
-            allow_cross_subject=explicit_subject_code is None,
+            allow_cross_subject=False,
         )
         if attempt is None:
             clarification = _localized_message(
@@ -115,7 +118,7 @@ class GoalResolverService:
             resolution = LearningGoalResolution(
                 user_id=user.id,
                 raw_query=raw_query.strip(),
-                subject_code=subject_code or "",
+                subject_code=explicit_subject_code,
                 education_level=education_level or "",
                 grade_level=grade_level or "",
                 language=response_language,
@@ -205,7 +208,7 @@ class GoalResolverService:
             graph_focus=_graph_focus(selected=selected, alternatives=alternatives),
             can_expand_scope=_can_expand_scope(
                 attempt.scope,
-                allow_cross_subject=explicit_subject_code is None,
+                allow_cross_subject=False,
             ),
             candidate_debug=_candidate_debug(candidates, scope=attempt.scope, language=response_language),
         )
@@ -750,8 +753,9 @@ class GoalResolverService:
             language=language,
             allow_cross_subject=allow_cross_subject,
         ):
-            candidates = self.retriever.scope_candidates(
+            candidates = self.retriever.search(
                 session,
+                query=raw_query,
                 subject_code=scope["subject_code"],
                 education_level=education_level,
                 grade_level=grade_level,
@@ -768,10 +772,31 @@ class GoalResolverService:
             )
             llm_status = _normalized_llm_status(llm_result)
             selected = _validated_candidate(llm_result, candidates)
+            deterministic_selected = _deterministic_exact_candidate(candidates)
+            if deterministic_selected is not None and (
+                llm_status != "exact_match" or selected is None
+            ):
+                selected = deterministic_selected
+                llm_status = "exact_match"
+                llm_result = {
+                    **llm_result,
+                    "selected_concept_code": selected.concept.code,
+                    "confidence": max(
+                        score_to_confidence(selected.score),
+                        EXACT_MATCH_CONFIDENCE_THRESHOLD,
+                    ),
+                    "deterministic_override": "strong_query_match",
+                }
             fallback_candidate = selected or candidates[0]
+            fallback_confidence = score_to_confidence(fallback_candidate.score)
+            if llm_status == "exact_match" and selected is not None:
+                fallback_confidence = max(
+                    fallback_confidence,
+                    EXACT_MATCH_CONFIDENCE_THRESHOLD,
+                )
             confidence = _coerce_confidence(
                 llm_result.get("confidence"),
-                fallback=0.0,
+                fallback=fallback_confidence,
             )
             alternatives = _validated_alternatives(llm_result, candidates, selected=selected)
 
@@ -882,6 +907,15 @@ def _validated_candidate(
     if not selected_code:
         return None
     return next((candidate for candidate in candidates if candidate.concept.code == selected_code), None)
+
+
+def _deterministic_exact_candidate(candidates: list[ConceptCandidate]) -> ConceptCandidate | None:
+    if not candidates:
+        return None
+    candidate = candidates[0]
+    if candidate.score < DETERMINISTIC_EXACT_SCORE_THRESHOLD:
+        return None
+    return candidate
 
 
 def _validated_alternatives(
@@ -1089,12 +1123,13 @@ def _snapshot_score(snapshot: dict[str, Any]) -> float:
 
 
 def _coerce_confidence(value: Any, *, fallback: float) -> float:
+    fallback_confidence = max(0.0, min(0.99, float(fallback or 0.0)))
     if value is None:
-        return score_to_confidence(float(fallback or 0.0))
+        return fallback_confidence
     try:
         confidence = float(value)
     except (TypeError, ValueError):
-        return score_to_confidence(float(fallback or 0.0))
+        return fallback_confidence
     if confidence > 1.0:
         return score_to_confidence(confidence)
     return max(0.0, min(0.99, confidence))
@@ -1159,12 +1194,13 @@ def _concept_display_description(
             or _metadata_text(metadata, "en_desc")
         )
         if description:
-            return description
+            return course_description_only(description)
         return f"Understand and apply {title}."
-    return (
+    return course_description_only(
         concept.id_desc
         or _metadata_text(metadata, "description_id")
         or concept.description
+        or ""
     )
 
 
@@ -1191,6 +1227,8 @@ def _concept_to_read(
         language=language,
         title=display_title,
     )
+    id_description = course_description_only(concept.id_desc or concept.description or "")
+    en_description = course_description_only(concept.en_desc or "")
     relation = grade_relation_for_concept(
         concept,
         education_level=education_level,
@@ -1201,8 +1239,8 @@ def _concept_to_read(
         concept_code=concept.code,
         title=display_title,
         description=display_description,
-        id_desc=concept.id_desc or concept.description,
-        en_desc=display_description if _is_english_language(language) else concept.en_desc,
+        id_desc=id_description,
+        en_desc=display_description if _is_english_language(language) else en_description,
         subject_code=subject.code if subject else "",
         subject=_subject_display_name(subject, language=language) if subject else "",
         grade_band=concept.grade_band,
@@ -1355,10 +1393,10 @@ def _resolution_subject_code(
 
 def _candidate_limit_for_scope(scope_name: str) -> int:
     if scope_name == "all_subjects_all_grades":
-        return 500
+        return 80
     if scope_name == "same_subject_all_grades":
-        return 240
-    return 180
+        return 60
+    return 40
 
 
 def _can_expand_scope(scope_name: str, *, allow_cross_subject: bool) -> bool:

@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 
+from app.core.language import is_indonesian_language
+from app.modules.curriculum.kurikulum_merdeka import translate_curriculum_label_to_english
 from app.modules.learning_goal_resolution.candidate_retriever import ConceptCandidate
+from app.modules.learning_goal_resolution.description_cleaner import course_description_only
 
 
-PROMPT_VERSION = "goal_resolver_v4_llm_scope_nodes"
+PROMPT_VERSION = "goal_resolver_v5_localized_nodes"
 
 
 def build_goal_resolution_prompt(
@@ -15,19 +18,9 @@ def build_goal_resolution_prompt(
     language: str,
     search_scope: str,
 ) -> str:
+    response_language = "id" if is_indonesian_language(language) else "en"
     node_payload = [
-        {
-            "concept_code": candidate.concept.code,
-            "title": candidate.concept.title,
-            "subject_code": candidate.concept.subject.code if candidate.concept.subject else "",
-            "grade_band": candidate.concept.grade_band or "",
-            "description_id": _compact(candidate.concept.id_desc or candidate.concept.description or ""),
-            "description_en": _compact(candidate.concept.en_desc or ""),
-            "domain": _metadata_text(candidate, "domain"),
-            "element": _metadata_text(candidate, "element"),
-            "concept_family": _metadata_text(candidate, "concept_family"),
-            "concept_type": _metadata_text(candidate, "concept_type"),
-        }
+        _node_payload(candidate, language=response_language)
         for candidate in candidates
     ]
     return f"""
@@ -36,6 +29,9 @@ You resolve a learner's free-text learning goal to an existing knowledge_concept
 Rules:
 - Choose only from the provided nodes.
 - Do not invent concept_code values.
+- The learner query may be written in English or Indonesian.
+- Available nodes are already localized to the learner response language.
+- Use the localized node title and description to understand each candidate.
 - Return status="exact_match" only when one node directly teaches the requested learning goal.
 - Return status="ambiguous" when multiple nodes are plausible, the query is too broad, or the query could mean different curriculum concepts.
 - Return status="no_match" when no node directly represents the goal in this node list.
@@ -52,7 +48,7 @@ User query:
 {raw_query}
 
 Learner response language:
-{language or "en"}
+{response_language}
 
 Search scope:
 {search_scope}
@@ -60,6 +56,52 @@ Search scope:
 Available nodes:
 {json.dumps(node_payload, ensure_ascii=False)}
 """.strip()
+
+
+def _node_payload(candidate: ConceptCandidate, *, language: str) -> dict[str, str]:
+    concept = candidate.concept
+    title = _localized_title(candidate, language=language)
+    return {
+        "concept_code": concept.code,
+        "title": title,
+        "grade_band": concept.grade_band or "",
+        "description": _compact(
+            _localized_description(candidate, language=language, title=title)
+        ),
+    }
+
+
+def _localized_title(candidate: ConceptCandidate, *, language: str) -> str:
+    concept = candidate.concept
+    label_id = _metadata_text(candidate, "label_id") or concept.title
+    if is_indonesian_language(language):
+        return label_id
+    explicit = _metadata_text(candidate, "label_en")
+    if explicit and explicit.casefold() != label_id.casefold():
+        return explicit
+    return translate_curriculum_label_to_english(label_id) or explicit or label_id
+
+
+def _localized_description(
+    candidate: ConceptCandidate,
+    *,
+    language: str,
+    title: str,
+) -> str:
+    concept = candidate.concept
+    if is_indonesian_language(language):
+        return course_description_only(
+            concept.id_desc
+            or _metadata_text(candidate, "description_id")
+            or concept.description
+            or ""
+        )
+    return course_description_only(
+        concept.en_desc
+        or _metadata_text(candidate, "description_en")
+        or _metadata_text(candidate, "en_desc")
+        or f"Understand and apply {title}."
+    )
 
 
 def _compact(value: str, *, max_length: int = 180) -> str:
