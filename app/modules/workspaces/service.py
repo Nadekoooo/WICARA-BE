@@ -47,6 +47,13 @@ _PILOT_TEMPLATE_ID = "manim.number_line_quantity.v1"
 _PHASE_SEQUENCE = ("engage", "explore", "explain", "elaborate", "evaluate")
 _DEFAULT_PHASE_MIN_TURNS: dict[str, int] = {
     "engage": 1,
+    "explore": 1,
+    "explain": 1,
+    "elaborate": 1,
+    "evaluate": 1,
+}
+_LEGACY_DEFAULT_PHASE_MIN_TURNS: dict[str, int] = {
+    "engage": 1,
     "explore": 2,
     "explain": 2,
     "elaborate": 2,
@@ -870,6 +877,12 @@ def _phase_min_turns(metadata: dict[str, Any]) -> dict[str, int]:
     resolved = dict(_DEFAULT_PHASE_MIN_TURNS)
     value = metadata.get("phase_min_turns")
     if isinstance(value, dict):
+        normalized_input = {
+            phase: _safe_int(value.get(phase), _DEFAULT_PHASE_MIN_TURNS[phase])
+            for phase in _PHASE_SEQUENCE
+        }
+        if normalized_input == _LEGACY_DEFAULT_PHASE_MIN_TURNS:
+            return dict(_DEFAULT_PHASE_MIN_TURNS)
         for phase in _PHASE_SEQUENCE:
             candidate = _safe_int(value.get(phase), resolved[phase])
             resolved[phase] = max(1, candidate)

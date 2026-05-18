@@ -29,7 +29,7 @@ from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 _PROMPT_VERSION = "workspace_context_spec_gemini_v1"
 _ROUTER_PROMPT_VERSION = "workspace_context_template_router_gemini_v1"
 _DEFAULT_MODEL = "gemini-2.5-flash"
-_MAX_ATTEMPTS = 2
+_MAX_ATTEMPTS = 3
 _SPEC_MAX_OUTPUT_TOKENS = 8192
 _PREVIOUS_RESPONSE_FEEDBACK_LIMIT = 1800
 _ROOT_DIR = Path(__file__).resolve().parents[3]
