@@ -191,7 +191,7 @@ async def append_workspace_event(
         if topic_title:
             workspace.current_topic = topic_title
 
-    # Call Gemini before saving so audit info goes into event metadata
+    # Call AI before saving so audit info goes into event metadata.
     tutor_response, ai_audit = await generate_tutor_response(
         workspace=workspace,
         event_type=normalized_event_type,
@@ -859,7 +859,7 @@ def _posttest_trigger_payload(workspace: WorkspaceSession) -> dict[str, Any] | N
     return None
 
 
-# _deterministic_tutor_response removed: Gemini is now the primary tutor via tutor.py
+# _deterministic_tutor_response removed: AI generation is now the primary tutor via tutor.py
 # Fallback logic lives in app.modules.workspaces.tutor._fallback_response
 
 

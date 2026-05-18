@@ -15,7 +15,6 @@ dependencies = [
   "python-dotenv>=1.0",
   "python-multipart>=0.0.9",
   "rapidfuzz>=3.9",
-  "google-generativeai>=0.5",
   "psycopg[binary]>=3.1",
   "sqlalchemy>=2.0,<3.0",
   "uvicorn[standard]>=0.29",

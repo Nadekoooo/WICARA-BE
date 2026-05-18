@@ -160,7 +160,7 @@ The adaptive engines consume `input_events`, not only chat messages. This allows
 | Task Queue | Celery + Redis | Handles OCR, Manim rendering, TTS generation, FFmpeg compression, report generation, and async LLM jobs. |
 | Database | PostgreSQL | Stores student profiles, sessions, mastery state, Educational Knowledge Graph, curriculum binding, canvas snapshots, and assessment attempts. |
 | Cache | Redis | LLM response cache, session cache, media status cache, rate limiting, and animation availability. |
-| LLM | Google Gemini | Multilingual explanation generation, intent parsing, AI grading, and local analogy generation. |
+| LLM | OpenRouter Gemma | Multilingual explanation generation, intent parsing, AI grading, and local analogy generation. |
 | OCR | Google Vision API, with Tesseract fallback for MVP/local testing | Extracts text from question photos, screenshots, and rendered canvas snapshots. |
 | Animation | Manim | Code-generated, parameterized mathematical animations. |
 | Voiceover | Google Cloud TTS | Per-language voiceover with SSML support and timing control. |
@@ -311,7 +311,7 @@ WICARA's main instructional loop follows the **5E STEAM model**:
 |---|---|---|
 | **Engage** | Introduce the concept with local context or a real-world problem. | Market price changes, scooter speed, crop yield, mobile data usage. |
 | **Explore** | Let the student interact with examples before formal explanation. | Student predicts a pattern or tries a small canvas problem. |
-| **Explain** | Tutor explains the concept in the student's language. | Gemini generates a Bahasa Indonesia explanation with a local analogy. |
+| **Explain** | Tutor explains the concept in the student's language. | OpenRouter generates a Bahasa Indonesia explanation with a local analogy. |
 | **Elaborate** | Student applies the concept in a new but related context. | Practice question, visual exploration, Manim animation. |
 | **Evaluate** | Check understanding and update mastery. | Micro-quiz, canvas solution, short essay, or mixed input. |
 

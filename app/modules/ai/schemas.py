@@ -5,7 +5,7 @@ import binascii
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.modules.ai.errors import AIInputError
 
@@ -75,41 +75,11 @@ class AIGenerationParams(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
-    max_tokens: int | None = Field(
-        default=None,
-        gt=0,
-        validation_alias=AliasChoices("max_tokens", "maxOutputTokens"),
-        serialization_alias="maxOutputTokens",
-    )
-    top_p: float | None = Field(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        validation_alias=AliasChoices("top_p", "topP"),
-        serialization_alias="topP",
-    )
-    top_k: int | None = Field(
-        default=None,
-        gt=0,
-        validation_alias=AliasChoices("top_k", "topK"),
-        serialization_alias="topK",
-    )
-    candidate_count: int | None = Field(
-        default=None,
-        gt=0,
-        validation_alias=AliasChoices("candidate_count", "candidateCount"),
-        serialization_alias="candidateCount",
-    )
-    stop_sequences: list[str] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("stop_sequences", "stopSequences"),
-        serialization_alias="stopSequences",
-    )
-    response_mime_type: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("response_mime_type", "responseMimeType"),
-        serialization_alias="responseMimeType",
-    )
+    max_tokens: int | None = Field(default=None, gt=0)
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+    top_k: int | None = Field(default=None, gt=0)
+    stop: str | list[str] | None = None
+    response_format: dict[str, Any] | None = None
 
 
 class AIGenerationRequest(BaseModel):
