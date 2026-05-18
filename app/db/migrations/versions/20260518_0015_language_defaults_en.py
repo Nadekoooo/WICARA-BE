@@ -1,6 +1,6 @@
 """set language column defaults to english
 
-Revision ID: 20260518_0015_language_defaults_en
+Revision ID: 20260518_0015_lang_defaults
 Revises: 20260517_0014_bilingual_fix
 Create Date: 2026-05-18 00:15:00
 """
@@ -13,7 +13,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "20260518_0015_language_defaults_en"
+revision: str = "20260518_0015_lang_defaults"
 down_revision: str | Sequence[str] | None = "20260517_0014_bilingual_fix"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

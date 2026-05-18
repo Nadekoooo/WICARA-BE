@@ -430,6 +430,93 @@ class GoalResolverService:
             ),
         )
 
+    def create_from_concept(
+        self,
+        session: Session,
+        *,
+        user: UserAccount,
+        concept_id: UUID | None,
+        concept_code: str | None,
+        subject_code: str | None,
+        language: str | None,
+    ) -> ConfirmLearningGoalResponse:
+        _ensure_curriculum(session)
+        if concept_id is None and not (concept_code or "").strip():
+            raise ValueError("Select either concept_id or concept_code.")
+
+        response_language = _preferred_response_language(
+            user=user,
+            requested_language=language,
+        )
+        concept = _concept_from_direct_selection(
+            session,
+            concept_id=concept_id,
+            concept_code=concept_code,
+            subject_code=subject_code,
+        )
+        if concept is None:
+            raise ValueError("Selected concept was not found.")
+
+        active_for_target = _active_goal_for_target(
+            session,
+            user=user,
+            target_concept_id=concept.id,
+        )
+        if active_for_target is not None:
+            raise ActiveLearningGoalExists(
+                _active_goal_to_read(
+                    session,
+                    active_for_target,
+                    language=response_language,
+                )
+            )
+
+        subject = session.get(Subject, concept.subject_id)
+        title = _concept_display_title(concept, language=response_language)
+        goal = LearningGoal(
+            user_id=user.id,
+            subject_id=concept.subject_id,
+            target_concept_id=concept.id,
+            resolution_id=None,
+            raw_topic=title,
+            normalized_topic=title,
+            status="confirmed",
+            metadata_json={
+                "source": "direct_concept_selection",
+                "subject_code": subject.code if subject else (subject_code or ""),
+                "language": response_language,
+            },
+        )
+        session.add(goal)
+        try:
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            active_after_race = _active_goal_for_target(
+                session,
+                user=user,
+                target_concept_id=concept.id,
+            )
+            if active_after_race is not None:
+                raise ActiveLearningGoalExists(
+                    _active_goal_to_read(
+                        session,
+                        active_after_race,
+                        language=response_language,
+                    )
+                ) from exc
+            raise
+
+        return ConfirmLearningGoalResponse(
+            learning_goal_id=goal.id,
+            status=goal.status,
+            target_concept=_concept_to_read(
+                ConceptCandidate(concept=concept, score=1.0),
+                confidence=1.0,
+                language=response_language,
+            ),
+        )
+
     def get_active_goal(
         self,
         session: Session,
@@ -900,6 +987,33 @@ def _concept_from_selection(
     if not code:
         return None
     return session.scalar(select(KnowledgeConcept).where(KnowledgeConcept.code == code))
+
+
+def _concept_from_direct_selection(
+    session: Session,
+    *,
+    concept_id: UUID | None,
+    concept_code: str | None,
+    subject_code: str | None,
+) -> KnowledgeConcept | None:
+    normalized_subject = canonical_subject_code(subject_code or "") if subject_code else ""
+    if concept_id is not None:
+        concept = session.get(KnowledgeConcept, concept_id)
+        if concept is None or not normalized_subject:
+            return concept
+        subject = concept.subject
+        return concept if subject is not None and subject.code == normalized_subject else None
+
+    code = (concept_code or "").strip()
+    if not code:
+        return None
+    query = select(KnowledgeConcept).where(KnowledgeConcept.code == code)
+    if normalized_subject:
+        query = query.join(Subject).where(Subject.code == normalized_subject)
+    concepts = list(session.scalars(query.limit(2)))
+    if len(concepts) > 1:
+        raise ValueError("subject_code is required when concept_code is ambiguous.")
+    return concepts[0] if concepts else None
 
 
 def _concept_allowed_for_resolution(

@@ -60,6 +60,13 @@ class SelectResolvedConceptRequest(BaseModel):
     concept_code: str | None = None
 
 
+class CreateLearningGoalFromConceptRequest(BaseModel):
+    concept_id: UUID | None = None
+    concept_code: str | None = None
+    subject_code: str | None = None
+    language: str | None = Field(default=None, min_length=2, max_length=16)
+
+
 class ActiveGoalRead(BaseModel):
     id: UUID
     status: str
