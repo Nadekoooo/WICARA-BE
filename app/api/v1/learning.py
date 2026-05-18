@@ -187,7 +187,10 @@ def media_artifacts(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.MediaArtifactListResponse:
-    return service.list_media_artifacts(session, user=account)
+    return _retry_after_connection_drop(
+        session,
+        lambda: service.list_media_artifacts(session, user=account),
+    )
 
 
 @router.get("/media-artifacts/{artifact_id}", response_model=schemas.MediaArtifactRead)
@@ -196,7 +199,10 @@ def media_artifact_detail(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.MediaArtifactRead:
-    artifact = service.get_media_artifact(session, user=account, artifact_id=artifact_id)
+    artifact = _retry_after_connection_drop(
+        session,
+        lambda: service.get_media_artifact(session, user=account, artifact_id=artifact_id),
+    )
     if artifact is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -214,7 +220,10 @@ def media_artifact_status(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.MediaArtifactStatusResponse:
-    artifact = service.get_media_artifact_status(session, user=account, artifact_id=artifact_id)
+    artifact = _retry_after_connection_drop(
+        session,
+        lambda: service.get_media_artifact_status(session, user=account, artifact_id=artifact_id),
+    )
     if artifact is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -2281,21 +2281,28 @@ def _ensure_sample_media_artifacts(session: Session, *, user: UserAccount) -> No
             has_changes = True
             continue
 
-        existing.track_id = track.id if track else existing.track_id
-        existing.module_id = module.id if module else existing.module_id
-        existing.concept_id = module.concept_id if module else existing.concept_id
-        existing.artifact_type = "video"
-        existing.title = str(sample["title"])
-        existing.subtitle = str(sample["subtitle"])
-        existing.status = "ready"
-        existing.duration_seconds = int(sample["duration_seconds"])
-        existing.playback_url = playback_url
-        existing.transcript = str(sample["transcript"])
-        existing.notes_json = list(sample["notes"])
+        updates = {
+            "track_id": track.id if track else existing.track_id,
+            "module_id": module.id if module else existing.module_id,
+            "concept_id": module.concept_id if module else existing.concept_id,
+            "artifact_type": "video",
+            "title": str(sample["title"]),
+            "subtitle": str(sample["subtitle"]),
+            "status": "ready",
+            "duration_seconds": int(sample["duration_seconds"]),
+            "playback_url": playback_url,
+            "transcript": str(sample["transcript"]),
+            "notes_json": list(sample["notes"]),
+        }
+        for field_name, value in updates.items():
+            if getattr(existing, field_name) != value:
+                setattr(existing, field_name, value)
+                has_changes = True
         metadata = dict(existing.metadata_json or {})
-        metadata["seed_source"] = seed_source
-        existing.metadata_json = metadata
-        has_changes = True
+        if metadata.get("seed_source") != seed_source:
+            metadata["seed_source"] = seed_source
+            existing.metadata_json = metadata
+            has_changes = True
 
     if has_changes:
         session.commit()
