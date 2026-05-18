@@ -10,8 +10,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
+from app.core.language import normalize_language_code, preferred_language_code
 from app.modules.accounts.models import UserAccount
-from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
+from app.modules.assessments.metrics import attempt_answer_score, attempt_evidence_score
+from app.modules.curriculum.kurikulum_merdeka import (
+    canonical_subject_code,
+    translate_curriculum_label_to_english,
+)
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
 from app.modules.learning.job_queue import build_media_job_queue_adapter
@@ -28,6 +33,11 @@ from app.modules.learning.models import (
     TrackModule,
 )
 from app.modules.learning.schemas import (
+    AssessmentDashboardActionRead,
+    AssessmentDashboardComparisonRead,
+    AssessmentDashboardPosttestRead,
+    AssessmentDashboardPretestRead,
+    AssessmentDashboardResponse,
     AnimationJobStatusResponse,
     AnimationQueueResponse,
     ActionRead,
@@ -69,6 +79,7 @@ from app.modules.learning.schemas import (
     WeeklyReportResponse,
     ProgressRead,
 )
+from app.modules.posttests.schemas import PosttestNodeResultRead
 from app.modules.learning.render_engine import (
     RenderEngineError,
     RenderOutput,
@@ -267,6 +278,61 @@ def read_learning_goal(
     )
 
 
+def get_assessment_dashboard(
+    session: Session,
+    *,
+    user: UserAccount,
+    learning_goal_id: UUID,
+) -> AssessmentDashboardResponse | None:
+    goal = session.scalar(
+        select(LearningGoal)
+        .where(LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id)
+        .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+    )
+    if goal is None:
+        return None
+
+    target = session.get(KnowledgeConcept, goal.target_concept_id) if goal.target_concept_id else None
+    pretest_session = _latest_assessment_session(goal.assessment_sessions, session_type="pretest")
+    posttest_session = _latest_assessment_session(goal.assessment_sessions, session_type="posttest")
+    pretest = _assessment_dashboard_pretest(goal=goal, assessment=pretest_session)
+    posttest = _assessment_dashboard_posttest(posttest_session)
+    paired_scores = _paired_pre_post_scores(session, user=user, learning_goal_id=goal.id)
+    comparison = AssessmentDashboardComparisonRead(
+        available=bool(paired_scores["paired_concept_count"]),
+        pretest_score_percent=paired_scores["pretest_score_percent"],
+        posttest_score_percent=paired_scores["posttest_score_percent"],
+        learning_gain_percent=paired_scores["learning_gain_percent"],
+        paired_concept_count=int(paired_scores["paired_concept_count"] or 0),
+    )
+    state = _assessment_dashboard_state(
+        goal=goal,
+        pretest=pretest,
+        posttest=posttest,
+        posttest_session=posttest_session,
+    )
+    recommendations = _assessment_dashboard_recommendations(
+        state=state,
+        pretest=pretest,
+        posttest=posttest,
+    )
+    return AssessmentDashboardResponse(
+        learning_goal_id=goal.id,
+        target_title=target.title if target else goal.normalized_topic,
+        state=state,
+        pretest=pretest,
+        posttest=posttest,
+        comparison=comparison,
+        primary_action=_assessment_dashboard_action(
+            state=state,
+            goal=goal,
+            pretest_session=pretest_session,
+            posttest_session=posttest_session,
+        ),
+        recommendations=recommendations,
+    )
+
+
 def get_pretest_for_goal(
     session: Session,
     *,
@@ -295,6 +361,197 @@ def get_pretest_for_goal(
     )
 
 
+def _latest_assessment_session(
+    assessments: list[AssessmentSession],
+    *,
+    session_type: str,
+) -> AssessmentSession | None:
+    candidates = [item for item in assessments if item.session_type == session_type]
+    if not candidates:
+        return None
+    return sorted(
+        candidates,
+        key=lambda item: _as_utc(item.completed_at or item.created_at)
+        if (item.completed_at or item.created_at)
+        else datetime.min.replace(tzinfo=UTC),
+        reverse=True,
+    )[0]
+
+
+def _assessment_dashboard_pretest(
+    *,
+    goal: LearningGoal,
+    assessment: AssessmentSession | None,
+) -> AssessmentDashboardPretestRead | None:
+    diagnosis = None
+    if assessment is not None:
+        metadata_diagnosis = (assessment.metadata_json or {}).get("diagnosis")
+        if isinstance(metadata_diagnosis, dict):
+            diagnosis = metadata_diagnosis
+    if diagnosis is None:
+        goal_diagnosis = (goal.metadata_json or {}).get("diagnosis")
+        if isinstance(goal_diagnosis, dict):
+            diagnosis = goal_diagnosis
+    if diagnosis is None:
+        return None
+
+    analysis = diagnosis.get("analysis") if isinstance(diagnosis.get("analysis"), dict) else {}
+    nodes = diagnosis.get("nodes") if isinstance(diagnosis.get("nodes"), list) else []
+    return AssessmentDashboardPretestRead(
+        session_id=assessment.id if assessment is not None else None,
+        status=assessment.status if assessment is not None else "completed",
+        score_percent=_float_value(diagnosis.get("score_percent"), fallback=0.0),
+        overall_mastery_percent=_float_value(
+            diagnosis.get("overall_mastery_percent"),
+            fallback=_float_value(analysis.get("overall_mastery_percent"), fallback=0.0),
+        ),
+        confidence_percent=_float_value(diagnosis.get("confidence_percent"), fallback=0.0),
+        recommended_path=str(diagnosis.get("recommended_path") or ""),
+        summary=str(diagnosis.get("summary") or ""),
+        strengths=_string_list(analysis.get("strengths")),
+        gaps=_string_list(analysis.get("gaps")),
+        evidence_notes=_string_list(analysis.get("evidence_notes")),
+        nodes=[dict(node) for node in nodes if isinstance(node, dict)],
+    )
+
+
+def _assessment_dashboard_posttest(
+    assessment: AssessmentSession | None,
+) -> AssessmentDashboardPosttestRead | None:
+    if assessment is None:
+        return None
+    node_results = (assessment.metadata_json or {}).get("node_results")
+    if not isinstance(node_results, dict):
+        state = assessment.decision_state_json or {}
+        node_results = state.get("node_results") if isinstance(state.get("node_results"), dict) else {}
+    nodes = [
+        _assessment_dashboard_posttest_node(concept_code, payload)
+        for concept_code, payload in node_results.items()
+        if isinstance(payload, dict)
+    ]
+    passed_count = len([node for node in nodes if node.passed])
+    total_count = len(nodes)
+    passed = total_count > 0 and passed_count == total_count
+    return AssessmentDashboardPosttestRead(
+        session_id=assessment.id,
+        status=assessment.status,
+        answer_percent=_average([node.answer_percent for node in nodes]),
+        evidence_percent=_average([node.evidence_percent for node in nodes]),
+        score_percent=_average([node.score_percent for node in nodes]),
+        confidence_percent=_average([node.confidence_percent for node in nodes]),
+        passed_node_count=passed_count,
+        total_node_count=total_count,
+        retake_required_concepts=[node.concept_code for node in nodes if node.retake_required],
+        passed=passed,
+        nodes=nodes,
+    )
+
+
+def _assessment_dashboard_posttest_node(
+    concept_code: str,
+    payload: dict[str, Any],
+) -> PosttestNodeResultRead:
+    concept_id = payload.get("concept_id")
+    return PosttestNodeResultRead(
+        concept_id=UUID(str(concept_id)) if concept_id else None,
+        concept_code=concept_code,
+        concept_title=str(payload.get("concept_title") or concept_code),
+        total_questions=int(payload.get("total_questions") or 3),
+        answered_count=int(payload.get("answered_count") or 0),
+        correct_count=int(payload.get("correct_count") or 0),
+        answer_percent=_float_value(payload.get("answer_percent"), fallback=0.0),
+        evidence_percent=_float_value(payload.get("evidence_percent"), fallback=0.0),
+        score_percent=_float_value(payload.get("score_percent"), fallback=0.0),
+        confidence_percent=_float_value(payload.get("confidence_percent"), fallback=0.0),
+        scaled_score=_float_value(payload.get("scaled_score"), fallback=0.0),
+        passed=bool(payload.get("passed")),
+        retake_required=bool(payload.get("retake_required", not bool(payload.get("passed")))),
+        metric_source=str(payload.get("metric_source") or "adaptive_posttest_evidence"),
+    )
+
+
+def _assessment_dashboard_state(
+    *,
+    goal: LearningGoal,
+    pretest: AssessmentDashboardPretestRead | None,
+    posttest: AssessmentDashboardPosttestRead | None,
+    posttest_session: AssessmentSession | None,
+) -> str:
+    if pretest is None:
+        return "needs_pretest"
+    if posttest_session is not None and posttest_session.status in {"active", "awaiting_answer"}:
+        return "posttest_in_progress"
+    if posttest is not None and posttest.total_node_count > 0:
+        return "mastered" if posttest.passed else "needs_retake"
+    if goal.status == "in_progress" and goal.track is not None and goal.track.progress_percent > 0:
+        return "learning_in_progress"
+    return "diagnosed"
+
+
+def _assessment_dashboard_action(
+    *,
+    state: str,
+    goal: LearningGoal,
+    pretest_session: AssessmentSession | None,
+    posttest_session: AssessmentSession | None,
+) -> AssessmentDashboardActionRead:
+    if state == "needs_pretest":
+        return AssessmentDashboardActionRead(
+            label="Start pretest",
+            action_type="start_pretest",
+            target_id=str(pretest_session.id if pretest_session else goal.id),
+        )
+    if state == "posttest_in_progress":
+        return AssessmentDashboardActionRead(
+            label="Continue posttest",
+            action_type="continue_posttest",
+            target_id=str(posttest_session.id) if posttest_session else None,
+        )
+    if state == "needs_retake":
+        return AssessmentDashboardActionRead(
+            label="Review weak nodes",
+            action_type="review",
+            target_id=str(goal.track.id if goal.track else goal.id),
+        )
+    return AssessmentDashboardActionRead(
+        label="Continue learning",
+        action_type="continue_learning",
+        target_id=str(goal.track.id if goal.track else goal.id),
+    )
+
+
+def _assessment_dashboard_recommendations(
+    *,
+    state: str,
+    pretest: AssessmentDashboardPretestRead | None,
+    posttest: AssessmentDashboardPosttestRead | None,
+) -> list[str]:
+    if state == "needs_retake" and posttest is not None:
+        return [f"Review: {concept_code}" for concept_code in posttest.retake_required_concepts]
+    if pretest is not None:
+        return pretest.gaps[:3] or pretest.strengths[:3]
+    return []
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _average(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    return round(sum(values) / len(values), 2)
+
+
+def _float_value(value: object, *, fallback: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
 def submit_answer(
     session: Session,
     *,
@@ -313,6 +570,7 @@ def submit_answer(
         question_id=question_id,
         option_id=option_id,
     )
+    answer_score = 1.0 if option.is_correct else 0.0
     attempt = AssessmentAttempt(
         session_id=assessment.id,
         question_id=question.id,
@@ -320,11 +578,16 @@ def submit_answer(
         confidence=confidence,
         explanation_text=explanation.strip(),
         used_canvas=used_canvas,
-        score=1.0 if option.is_correct else 0.0,
+        score=answer_score,
+        is_correct=bool(option.is_correct),
+        answer_score=answer_score,
+        evidence_score=answer_score,
+        diagnostic_signal="correct_mcq_only" if option.is_correct else "concept_gap_likely",
         evaluated_result={
             "verdict": "CORRECT" if option.is_correct else "INCORRECT",
             "grading": "deterministic_seed",
         },
+        evaluation_metadata_json={"source": "legacy_objective", "confidence": confidence},
     )
     session.add(attempt)
     _update_mastery(session, user=user, question=question, is_correct=option.is_correct)
@@ -539,7 +802,7 @@ def queue_animation_job(
         concept_id=concept_id,
         workspace=workspace,
     )
-    normalized_language = _normalize_short_label(language, fallback="id", max_length=16)
+    normalized_language = normalize_language_code(language)[:16]
     normalized_quality = _normalize_short_label(
         quality_profile, fallback="standard", max_length=32
     )
@@ -1038,6 +1301,12 @@ def get_weekly_report(
     states = list(
         session.scalars(select(LearnerConceptState).where(LearnerConceptState.user_id == user.id))
     )
+    paired_scores = _paired_pre_post_scores(
+        session,
+        user=user,
+        submitted_from=start_at,
+        submitted_before=end_at,
+    )
     mastered_or_ready = len([state for state in states if state.status in {"mastered", "ready"}])
     review_due = len([state for state in states if state.status in {"review_due", "gap"}])
     fixed_in_range = len(
@@ -1087,6 +1356,10 @@ def get_weekly_report(
         status=status,
         source=source,
         score=score,
+        pretest_score_percent=paired_scores["pretest_score_percent"],
+        posttest_score_percent=paired_scores["posttest_score_percent"],
+        learning_gain_percent=paired_scores["learning_gain_percent"],
+        paired_concept_count=paired_scores["paired_concept_count"],
         fixed_gaps=fixed_gaps,
         fixed_gaps_delta=fixed_delta,
         remaining_gaps=remaining_gaps,
@@ -1295,7 +1568,7 @@ def get_daily_evaluation_result(
         )
     )
     reviewed_count = len(attempts)
-    correct_count = len([attempt for attempt in attempts if attempt.score >= 1.0])
+    correct_count = len([attempt for attempt in attempts if attempt_answer_score(attempt) >= 1.0])
     review_again_count = max(0, reviewed_count - correct_count)
     score_percent = int(round((correct_count / reviewed_count) * 100)) if reviewed_count else 0
     interval_days = 3 if review_again_count else 7
@@ -1612,10 +1885,72 @@ def _assessment_attempt_rows(
     return [(attempt, question) for attempt, question in session.execute(query)]
 
 
+def _paired_pre_post_scores(
+    session: Session,
+    *,
+    user: UserAccount,
+    submitted_from: datetime | None = None,
+    submitted_before: datetime | None = None,
+    learning_goal_id: UUID | None = None,
+) -> dict[str, int | None]:
+    query = (
+        select(AssessmentAttempt, AssessmentQuestion.concept_id, AssessmentSession.session_type)
+        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
+        .join(AssessmentQuestion, AssessmentAttempt.question_id == AssessmentQuestion.id)
+        .where(
+            AssessmentSession.user_id == user.id,
+            AssessmentSession.session_type.in_({"pretest", "posttest"}),
+            AssessmentQuestion.concept_id.is_not(None),
+        )
+        .order_by(AssessmentAttempt.submitted_at)
+    )
+    if submitted_from is not None:
+        query = query.where(AssessmentAttempt.submitted_at >= submitted_from)
+    if submitted_before is not None:
+        query = query.where(AssessmentAttempt.submitted_at < submitted_before)
+    if learning_goal_id is not None:
+        query = query.where(AssessmentSession.learning_goal_id == learning_goal_id)
+
+    by_concept: dict[UUID, dict[str, list[float]]] = {}
+    for attempt, concept_id, session_type in session.execute(query):
+        if concept_id is None:
+            continue
+        concept_scores = by_concept.setdefault(concept_id, {"pretest": [], "posttest": []})
+        if session_type in concept_scores:
+            concept_scores[str(session_type)].append(attempt_evidence_score(attempt))
+
+    paired_pre: list[float] = []
+    paired_post: list[float] = []
+    for scores in by_concept.values():
+        pre_scores = scores["pretest"]
+        post_scores = scores["posttest"]
+        if not pre_scores or not post_scores:
+            continue
+        paired_pre.append(sum(pre_scores) / len(pre_scores))
+        paired_post.append(sum(post_scores) / len(post_scores))
+
+    paired_count = len(paired_pre)
+    if paired_count == 0:
+        return {
+            "pretest_score_percent": None,
+            "posttest_score_percent": None,
+            "learning_gain_percent": None,
+            "paired_concept_count": 0,
+        }
+    pretest_score = int(round((sum(paired_pre) / paired_count) * 100))
+    posttest_score = int(round((sum(paired_post) / paired_count) * 100))
+    return {
+        "pretest_score_percent": pretest_score,
+        "posttest_score_percent": posttest_score,
+        "learning_gain_percent": posttest_score - pretest_score,
+        "paired_concept_count": paired_count,
+    }
+
+
 def _attempt_correct_percent(rows: list[tuple[AssessmentAttempt, AssessmentQuestion]]) -> int:
     if not rows:
         return 0
-    correct = len([attempt for attempt, _question in rows if attempt.score >= 1.0])
+    correct = len([attempt for attempt, _question in rows if attempt_answer_score(attempt) >= 1.0])
     return int(round((correct / len(rows)) * 100))
 
 
@@ -1627,7 +1962,7 @@ def _weighted_analysis_percent(rows: list[tuple[AssessmentAttempt, AssessmentQue
     for attempt, _question in rows:
         confidence_weight = max(1, min(10, attempt.confidence or 1)) / 10
         total_weight += confidence_weight
-        weighted_score += (attempt.score or 0.0) * confidence_weight
+        weighted_score += attempt_evidence_score(attempt) * confidence_weight
     return int(round((weighted_score / max(total_weight, 0.01)) * 100))
 
 
@@ -1812,9 +2147,7 @@ def _answered_question_ids(session: Session, *, assessment_id: UUID) -> set[UUID
 
 
 def _language_for_user(user: UserAccount) -> str:
-    if user.learner_profile and user.learner_profile.preferred_language:
-        return user.learner_profile.preferred_language
-    return "en"
+    return preferred_language_code(user)
 
 
 def _daily_source(assessment: AssessmentSession) -> str:
@@ -1913,7 +2246,8 @@ def _reviewed_concepts(
         if attempt is None:
             continue
         state = state_by_concept.get(question.concept_id) if question.concept_id else None
-        mastery_score = state.mastery_score if state else (0.68 if attempt.score >= 1.0 else 0.32)
+        is_correct = attempt_answer_score(attempt) >= 1.0
+        mastery_score = state.mastery_score if state else (0.68 if is_correct else 0.32)
         rows.append(
             ReviewedConceptRead(
                 concept_id=str(question.concept_id) if question.concept_id else None,
@@ -1924,7 +2258,7 @@ def _reviewed_concepts(
                 )
                 or question.topic,
                 status_label=_concept_status_label(
-                    is_correct=attempt.score >= 1.0,
+                    is_correct=is_correct,
                     mastery_score=mastery_score,
                 ),
                 mastery_score=round(float(mastery_score), 2),
@@ -2197,12 +2531,22 @@ def _create_track(
     subject: Subject,
     concept: KnowledgeConcept | None,
 ) -> LearningTrack:
-    title = f"{goal.normalized_topic} path"
+    language = _language_for_user(user)
+    topic = _localized_topic(goal.normalized_topic, concept, language=language)
+    title = (
+        f"Jalur {topic}"
+        if language == "id"
+        else f"{topic} path"
+    )
     track = LearningTrack(
         user_id=user.id,
         learning_goal_id=goal.id,
         title=title,
-        subtitle=f"{subject.name} | prerequisite-first adaptive path",
+        subtitle=(
+            f"{subject.name} | jalur adaptif mulai dari prasyarat"
+            if language == "id"
+            else f"{subject.name} | prerequisite-first adaptive path"
+        ),
         status="pretest",
         progress_percent=0,
         metadata_json={"generation": "deterministic_seed"},
@@ -2210,7 +2554,7 @@ def _create_track(
     session.add(track)
     session.flush()
 
-    modules = _module_templates(goal.normalized_topic, concept)
+    modules = _module_templates(goal.normalized_topic, concept, language=language)
     for index, module in enumerate(modules, start=1):
         session.add(
             TrackModule(
@@ -2232,8 +2576,32 @@ def _create_track(
 def _module_templates(
     normalized_topic: str,
     concept: KnowledgeConcept | None,
+    *,
+    language: str,
 ) -> list[dict[str, Any]]:
-    target = concept.title if concept else normalized_topic
+    target = _localized_topic(normalized_topic, concept, language=language)
+    if language == "id":
+        return [
+            {
+                "title": "Cek prasyarat",
+                "description": "Perbaiki fondasi yang terdeteksi dari pretest sebelum masuk ke topik utama.",
+                "minutes": 8,
+                "difficulty": "Mudah",
+            },
+            {
+                "title": target,
+                "description": f"Pelajari {target} lewat chat, bukti kanvas, dan cek singkat.",
+                "minutes": 14,
+                "difficulty": "Sedang",
+            },
+            {
+                "title": "Penerapan dan review",
+                "description": "Terapkan konsepnya, lalu jadwalkan untuk pengulangan berspasi.",
+                "minutes": 10,
+                "difficulty": "Sedang",
+            },
+        ]
+
     return [
         {
             "title": "Prerequisite checkpoint",
@@ -2243,7 +2611,7 @@ def _module_templates(
         },
         {
             "title": target,
-            "description": f"Learn {normalized_topic} with chat, canvas evidence, and short checks.",
+            "description": f"Learn {target} with chat, canvas evidence, and short checks.",
             "minutes": 14,
             "difficulty": "Medium",
         },
@@ -2254,6 +2622,25 @@ def _module_templates(
             "difficulty": "Medium",
         },
     ]
+
+
+def _localized_topic(
+    normalized_topic: str,
+    concept: KnowledgeConcept | None,
+    *,
+    language: str,
+) -> str:
+    if concept is None:
+        return (
+            normalized_topic
+            if language == "id"
+            else translate_curriculum_label_to_english(normalized_topic)
+        )
+    if language == "id":
+        return concept.title
+    metadata = concept.metadata_json or {}
+    english_title = str(metadata.get("en_title") or "").strip()
+    return english_title or translate_curriculum_label_to_english(concept.title)
 
 
 def _resolve_subject(

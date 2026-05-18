@@ -67,7 +67,7 @@ def save_onboarding_profile(
     profile.country_name = payload.country_name.strip()
     profile.education_level = payload.education_level.strip()
     profile.grade_level = payload.grade_level.strip()
-    profile.preferred_language = payload.preferred_language.strip() or "id"
+    profile.preferred_language = payload.preferred_language.strip() or "en"
     profile.study_goal = payload.study_goal.strip()
     profile.daily_study_time_label = payload.daily_study_time_label.strip()
     profile.selected_subjects = [

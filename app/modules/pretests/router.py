@@ -69,7 +69,8 @@ def submit_pretest_answer(
     user: UserAccount = Depends(get_current_account),
 ):
     assessment = session.get(AssessmentSession, session_id)
-    if assessment is not None and (assessment.metadata_json or {}).get("generation") != "lazy_node_pack":
+    adaptive_generations = {"lazy_node_pack", "fresh_ai_questions"}
+    if assessment is not None and (assessment.metadata_json or {}).get("generation") not in adaptive_generations:
         return legacy_learning_service.submit_answer_response(
             session,
             user=user,

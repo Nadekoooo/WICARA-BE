@@ -100,7 +100,7 @@ class BaseTemplateSpec(BaseModel):
     phase: str = Field(default="D", min_length=1, max_length=8)
     audience_level: str = Field(default="smp", min_length=1, max_length=16)
     language: str = Field(
-        default="id",
+        default="en",
         min_length=2,
         max_length=16,
         validation_alias=AliasChoices("language", "locale", "lang"),
@@ -120,7 +120,7 @@ class BaseTemplateSpec(BaseModel):
     def normalize_language(cls, value: Any) -> str:
         normalized = str(value or "").strip().lower()
         if not normalized:
-            return "id"
+            return "en"
         aliases = {
             "indonesian": "id",
             "bahasa": "id",
@@ -199,7 +199,7 @@ class RemotionGenericTemplateSpec(BaseModel):
     domain: str = Field(default="", max_length=80)
     media_engine_family: str = Field(default="remotion_svg", max_length=80)
     language: str = Field(
-        default="id",
+        default="en",
         min_length=2,
         max_length=16,
         validation_alias=AliasChoices("language", "locale", "lang"),
@@ -247,7 +247,7 @@ class RemotionGenericTemplateSpec(BaseModel):
     def normalize_language(cls, value: Any) -> str:
         normalized = str(value or "").strip().lower()
         if not normalized:
-            return "id"
+            return "en"
         aliases = {
             "indonesian": "id",
             "bahasa": "id",

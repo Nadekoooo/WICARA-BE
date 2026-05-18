@@ -28,7 +28,7 @@ class ResolveLearningGoalRequest(BaseModel):
     subject_code: str | None = None
     education_level: str | None = None
     grade_level: str | None = None
-    language: str = Field(default="id", min_length=2, max_length=16)
+    language: str | None = Field(default=None, min_length=2, max_length=16)
 
 
 class ResolveLearningGoalResponse(BaseModel):
@@ -58,6 +58,13 @@ class RepromptLearningGoalRequest(BaseModel):
 class SelectResolvedConceptRequest(BaseModel):
     concept_id: UUID | None = None
     concept_code: str | None = None
+
+
+class CreateLearningGoalFromConceptRequest(BaseModel):
+    concept_id: UUID | None = None
+    concept_code: str | None = None
+    subject_code: str | None = None
+    language: str | None = Field(default=None, min_length=2, max_length=16)
 
 
 class ActiveGoalRead(BaseModel):

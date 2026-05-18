@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -8,7 +9,14 @@ from sqlalchemy.orm import Session
 from app.db.session import get_session
 from app.modules.accounts.dependencies import get_current_account
 from app.modules.accounts.models import UserAccount
+from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
+from app.modules.learning.models import (
+    AssessmentAttempt,
+    AssessmentOption,
+    AssessmentQuestion,
+    AssessmentSession,
+)
 from app.modules.question_bank.models import QuestionBankItem
 from app.modules.question_bank.service import import_seed_directory
 
@@ -194,6 +202,23 @@ def test_weekly_report_range_uses_selected_dates_and_attempt_scores(client):
     assert payload["upcoming_recommendations"][0]["title"].startswith("Review:")
 
 
+def test_weekly_report_exposes_paired_pretest_posttest_gain(client):
+    _override_account(client)
+    today = datetime.now(UTC).date()
+    _create_paired_pre_post_attempts(client)
+
+    report_response = client.get(
+        f"/api/v1/reports/weekly?start={today.isoformat()}&end={today.isoformat()}"
+    )
+
+    assert report_response.status_code == 200
+    payload = report_response.json()
+    assert payload["pretest_score_percent"] == 0
+    assert payload["posttest_score_percent"] == 100
+    assert payload["learning_gain_percent"] == 100
+    assert payload["paired_concept_count"] == 1
+
+
 def test_weekly_report_range_rejects_invalid_dates(client):
     _override_account(client)
 
@@ -250,6 +275,93 @@ def test_media_artifacts_contains_demo_supabase_videos(client):
         "https://gwbqhirtkgkghnpahtgt.supabase.co/storage/v1/object/public/video/aljabar.mp4"
         in playback_urls
     )
+
+
+def _create_paired_pre_post_attempts(client) -> None:
+    with _session_for_client(client) as session:
+        account = session.get(UserAccount, ACCOUNT_ID)
+        if account is None:
+            account = UserAccount(
+                id=ACCOUNT_ID,
+                supabase_user_id="supabase-user-learning",
+                email="learner-learning@example.com",
+                display_name="Learning User",
+                provider_subject="supabase-user-learning",
+            )
+            session.add(account)
+            session.flush()
+        subject = Subject(code="metric-test", name="Metric Test", description="", is_active=True)
+        session.add(subject)
+        session.flush()
+        concept = KnowledgeConcept(
+            subject_id=subject.id,
+            code="metric.test.concept",
+            title="Metric Test Concept",
+            description="Metric Test Concept",
+            grade_band="primary",
+            display_order=1,
+        )
+        session.add(concept)
+        session.flush()
+        for session_type, is_correct in [("pretest", False), ("posttest", True)]:
+            assessment = AssessmentSession(
+                user_id=ACCOUNT_ID,
+                session_type=session_type,
+                title=f"{session_type} metric test",
+                status="completed",
+                metadata_json={"source": "test"},
+            )
+            session.add(assessment)
+            session.flush()
+            question = AssessmentQuestion(
+                session_id=assessment.id,
+                concept_id=concept.id,
+                step_label="Metric",
+                topic="Metric Test",
+                prompt="Metric prompt?",
+                helper_text="",
+                difficulty_label="Medium",
+                sort_order=1,
+                metadata_json={"correct_option_key": "A"},
+            )
+            session.add(question)
+            session.flush()
+            option = AssessmentOption(
+                question_id=question.id,
+                option_key="A",
+                label="A",
+                text="Answer",
+                is_correct=is_correct,
+                sort_order=1,
+            )
+            session.add(option)
+            session.flush()
+            score = 1.0 if is_correct else 0.0
+            session.add(
+                AssessmentAttempt(
+                    session_id=assessment.id,
+                    question_id=question.id,
+                    selected_option_id=option.id,
+                    confidence=8,
+                    score=score,
+                    is_correct=is_correct,
+                    answer_score=score,
+                    evidence_score=score,
+                    diagnostic_signal="correct_mcq_only" if is_correct else "concept_gap_likely",
+                )
+            )
+        session.commit()
+
+
+@contextmanager
+def _session_for_client(client):
+    override = client.app.dependency_overrides[get_session]
+    generator = override()
+    session = next(generator)
+    try:
+        yield session
+    finally:
+        generator.close()
 
 
 def _override_account(client, *, seed_question_bank: bool = False) -> None:

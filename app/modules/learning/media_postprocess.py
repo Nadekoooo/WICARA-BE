@@ -470,11 +470,11 @@ def _resolve_tts_language(*, spec_json: dict[str, Any], fallback_language: str |
         or spec_json.get("locale")
         or spec_json.get("narration_language")
         or fallback_language
-        or "id"
+        or "en"
     )
     token = str(raw or "").strip().lower()
     if not token:
-        return "id"
+        return "en"
     token = token.replace("_", "-")
     mapped = LANGUAGE_ALIASES.get(token)
     if mapped:
@@ -486,7 +486,7 @@ def _resolve_tts_language(*, spec_json: dict[str, Any], fallback_language: str |
 
 
 def _voiceover_lang_for_gtts(language: str) -> str:
-    normalized = _resolve_tts_language(spec_json={"language": language}, fallback_language="id")
+    normalized = _resolve_tts_language(spec_json={"language": language}, fallback_language="en")
     if normalized in {"id", "en", "vi", "ms", "ja"}:
         return normalized
     return "en"

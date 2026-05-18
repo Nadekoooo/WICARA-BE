@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
+from app.modules.assessments.metrics import PASS_PERCENT
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
 from app.modules.curriculum.schemas import (
     ConceptDetailResponse,
@@ -62,6 +63,8 @@ KNOWLEDGE_MAP_SUBJECT_SCOPES = {
     "biologi": {"ipas", "ipa", "biologi"},
 }
 
+KNOWLEDGE_GRAPH_ENABLED_SUBJECTS = {"matematika"}
+
 
 @dataclass(frozen=True)
 class _NodeLayout:
@@ -94,12 +97,41 @@ def list_active_subjects(session: Session) -> list[Subject]:
     )
 
 
-def subject_to_schema(subject: Subject, *, locale: str = "id") -> SubjectRead:
+def subject_to_schema(
+    subject: Subject,
+    *,
+    locale: str = "id",
+    for_knowledge_graph_selector: bool = False,
+) -> SubjectRead:
     metadata = subject.metadata_json or {}
+    name_id = _subject_display_name(subject, locale="id", fallback=subject.name)
+    name_en = _subject_display_name(
+        subject,
+        locale="en",
+        fallback=subject.name,
+        for_knowledge_graph_selector=for_knowledge_graph_selector,
+    )
+    response_metadata = {
+        **metadata,
+        "locale": _normalize_locale(locale),
+        "name_id": name_id,
+        "name_en": name_en,
+        "is_available_in_knowledge_graph": (
+            subject.code in KNOWLEDGE_GRAPH_ENABLED_SUBJECTS
+        ),
+        "is_locked_in_knowledge_graph": (
+            subject.code not in KNOWLEDGE_GRAPH_ENABLED_SUBJECTS
+        ),
+    }
     return SubjectRead(
         id=subject.id,
         code=subject.code,
-        name=_localized(metadata, "name", locale, fallback=subject.name),
+        name=_subject_display_name(
+            subject,
+            locale=locale,
+            fallback=subject.name,
+            for_knowledge_graph_selector=for_knowledge_graph_selector,
+        ),
         description=_localized(
             metadata,
             "description",
@@ -108,7 +140,7 @@ def subject_to_schema(subject: Subject, *, locale: str = "id") -> SubjectRead:
         ),
         is_active=subject.is_active,
         display_order=subject.display_order,
-        metadata={**metadata, "locale": _normalize_locale(locale)},
+        metadata=response_metadata,
     )
 
 
@@ -611,12 +643,7 @@ def _single_subject_knowledge_map_layout(
         groups,
         node_layouts,
         KnowledgeMapGraph(
-            title=_localized(
-                graph_metadata,
-                "title",
-                locale,
-                fallback=f"{subject.name} Knowledge Map",
-            ),
+            title=_knowledge_map_title(subject, graph_metadata, locale=locale),
             width=float(graph_metadata.get("width", 1200)),
             height=float(graph_metadata.get("height", 600)),
             top_down=bool(graph_metadata.get("top_down", True)),
@@ -807,6 +834,48 @@ def _latest_posttest_pass_by_concept(
 ) -> dict[UUID, bool]:
     if user is None or not concept_ids:
         return {}
+    concept_id_set = set(concept_ids)
+    result: dict[UUID, bool] = {}
+    completed_sessions = list(
+        session.scalars(
+            select(AssessmentSession)
+            .where(
+                AssessmentSession.user_id == user.id,
+                AssessmentSession.session_type == "posttest",
+                AssessmentSession.status == "completed",
+            )
+            .order_by(AssessmentSession.completed_at.desc().nullslast(), AssessmentSession.created_at.desc())
+            .limit(50)
+        )
+    )
+    for assessment in completed_sessions:
+        node_results = (assessment.metadata_json or {}).get("node_results")
+        if not isinstance(node_results, dict):
+            node_results = (assessment.decision_state_json or {}).get("node_results")
+        if not isinstance(node_results, dict):
+            continue
+        for payload in node_results.values():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                concept_uuid = UUID(str(payload.get("concept_id")))
+            except (TypeError, ValueError):
+                continue
+            if concept_uuid not in concept_id_set or concept_uuid in result:
+                continue
+            answered_count = _safe_int(payload.get("answered_count"), fallback=0)
+            total_questions = max(1, _safe_int(payload.get("total_questions"), fallback=3))
+            answer_percent = _safe_float(payload.get("answer_percent"), fallback=0.0)
+            score_percent = _safe_float(
+                payload.get("score_percent"),
+                fallback=_safe_float(payload.get("scaled_score"), fallback=0.0) * 10,
+            )
+            result[concept_uuid] = (
+                answered_count >= total_questions
+                and answer_percent >= PASS_PERCENT
+                and score_percent >= PASS_PERCENT
+            )
+
     rows = list(
         session.execute(
             select(
@@ -826,20 +895,19 @@ def _latest_posttest_pass_by_concept(
     )
     latest: dict[UUID, dict[str, int]] = {}
     for concept_id, is_correct, _submitted_at in rows:
-        if concept_id is None:
+        if concept_id is None or concept_id in result:
             continue
         payload = latest.setdefault(concept_id, {"answered": 0, "correct": 0})
         if payload["answered"] >= 3:
             continue
         payload["answered"] += 1
         payload["correct"] += 1 if is_correct else 0
-    result: dict[UUID, bool] = {}
     for concept_id, payload in latest.items():
         answered = payload["answered"]
         if answered <= 0:
             continue
-        scaled = round((payload["correct"] / max(1, answered)) * 10)
-        result[concept_id] = scaled >= 7.0 and answered >= 3
+        score_percent = (payload["correct"] / max(1, answered)) * 100
+        result[concept_id] = score_percent >= PASS_PERCENT and answered >= 3
     return result
 
 
@@ -1094,6 +1162,13 @@ def _safe_int(value: Any, *, fallback: int) -> int:
         return fallback
 
 
+def _safe_float(value: Any, *, fallback: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
 def _clamp_score(value: float | None) -> float:
     if value is None:
         return 0.0
@@ -1142,6 +1217,53 @@ def _localized(
         if text:
             return text
     return ""
+
+
+def _subject_display_name(
+    subject: Subject,
+    *,
+    locale: str,
+    fallback: str,
+    for_knowledge_graph_selector: bool = False,
+) -> str:
+    if for_knowledge_graph_selector and _normalize_locale(locale) == "en":
+        if subject.code == "matematika":
+            return "Math"
+    return _localized(subject.metadata_json or {}, "name", locale, fallback=fallback)
+
+
+def _knowledge_map_title(
+    subject: Subject,
+    graph_metadata: dict[str, Any],
+    *,
+    locale: str,
+) -> str:
+    localized_title = _localized(
+        graph_metadata,
+        "title",
+        locale,
+        fallback="",
+    )
+    cleaned_title = _strip_kurikulum_merdeka_label(localized_title)
+    if cleaned_title:
+        return cleaned_title
+    subject_name = _localized(
+        subject.metadata_json or {},
+        "name",
+        locale,
+        fallback=subject.name,
+    )
+    if _normalize_locale(locale) == "id":
+        return f"Peta Pengetahuan {subject_name}"
+    return f"{subject_name} Knowledge Map"
+
+
+def _strip_kurikulum_merdeka_label(value: str) -> str:
+    cleaned = str(value or "").strip()
+    for prefix in ("Kurikulum Merdeka ", "Graph Kurikulum Merdeka "):
+        if cleaned.startswith(prefix):
+            cleaned = cleaned[len(prefix) :].strip()
+    return cleaned
 
 
 def _concept_display_label(

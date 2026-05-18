@@ -27,7 +27,7 @@ class LearningGoalResolution(Base):
     subject_code: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     education_level: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     grade_level: Mapped[str] = mapped_column(String(64), nullable=False, default="")
-    language: Mapped[str] = mapped_column(String(16), nullable=False, default="id")
+    language: Mapped[str] = mapped_column(String(16), nullable=False, default="en")
     suggested_concept_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("knowledge_concepts.id", ondelete="SET NULL")
     )

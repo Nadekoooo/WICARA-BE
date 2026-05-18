@@ -74,7 +74,6 @@ class PretestDiagnosisService:
         goal = session.get(LearningGoal, assessment.learning_goal_id) if assessment.learning_goal_id else None
         if goal is not None and goal.status != "in_progress":
             goal.status = "diagnosed"
-            goal.metadata_json = {**(goal.metadata_json or {}), "diagnosis": diagnosis}
         if goal is not None:
             auto_session_goal = _auto_prepare_session_goal_from_diagnosis(
                 session,
@@ -90,10 +89,11 @@ class PretestDiagnosisService:
                     except ValueError:
                         pass
                 diagnosis["session_goal"] = auto_session_goal
-                goal.metadata_json = {
-                    **(goal.metadata_json or {}),
-                    "session_goal": auto_session_goal,
-                }
+            goal_metadata = {**(goal.metadata_json or {}), "diagnosis": diagnosis}
+            if auto_session_goal is not None:
+                goal_metadata["session_goal"] = auto_session_goal
+            goal.metadata_json = goal_metadata
+        assessment.metadata_json = {**(assessment.metadata_json or {}), "diagnosis": diagnosis}
         session.commit()
         return diagnosis
 
@@ -114,6 +114,11 @@ def _diagnosis_nodes(
         mastery = _mastery(status)
         attempts = result.get("attempts", []) if isinstance(result, dict) else []
         evidence_summary = _evidence_summary(attempts)
+        metric_summary = _metric_summary(
+            attempts=attempts,
+            mastery_score=mastery,
+            confidence=_node_confidence(attempts),
+        )
         rows.append(
             {
                 "concept_id": node.get("concept_id"),
@@ -127,6 +132,11 @@ def _diagnosis_nodes(
                 "difficulty_reached": _difficulty_reached(result),
                 "evidence": attempts,
                 "evidence_summary": evidence_summary,
+                "answer_percent": metric_summary["answer_percent"],
+                "evidence_percent": metric_summary["evidence_percent"],
+                "score_percent": metric_summary["score_percent"],
+                "confidence_percent": metric_summary["confidence_percent"],
+                "metric_source": "adaptive_pretest_diagnosis",
             }
         )
     return rows
@@ -262,6 +272,38 @@ def _evidence_summary(attempts: object) -> dict[str, Any]:
         "careless_mistake_possible": "possible_careless_mistake" in signals,
         "misconception_detected": "misconception_detected" in signals,
     }
+
+
+def _metric_summary(
+    *,
+    attempts: object,
+    mastery_score: float,
+    confidence: float,
+) -> dict[str, float]:
+    rows = [item for item in attempts if isinstance(item, dict)] if isinstance(attempts, list) else []
+    answer_values = [
+        _attempt_score_value(item, key="answer_score", fallback=1.0 if item.get("is_correct") is True else 0.0)
+        for item in rows
+    ]
+    evidence_values = [
+        _attempt_score_value(item, key="evidence_score", fallback=answer_values[index] if index < len(answer_values) else 0.0)
+        for index, item in enumerate(rows)
+    ]
+    answer_avg = sum(answer_values) / len(answer_values) if answer_values else 0.0
+    evidence_avg = sum(evidence_values) / len(evidence_values) if evidence_values else 0.0
+    return {
+        "answer_percent": round(answer_avg * 100, 2),
+        "evidence_percent": round(evidence_avg * 100, 2),
+        "score_percent": round(float(mastery_score or 0.0) * 100, 2),
+        "confidence_percent": round(float(confidence or 0.0) * 100, 2),
+    }
+
+
+def _attempt_score_value(item: dict[str, Any], *, key: str, fallback: float) -> float:
+    try:
+        return max(0.0, min(1.0, float(item.get(key, fallback))))
+    except (TypeError, ValueError):
+        return max(0.0, min(1.0, fallback))
 
 
 def _difficulty_reached(result: dict[str, Any]) -> str | None:

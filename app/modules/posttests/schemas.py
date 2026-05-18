@@ -43,9 +43,14 @@ class PosttestNodeResultRead(BaseModel):
     total_questions: int
     answered_count: int
     correct_count: int
+    answer_percent: float = 0.0
+    evidence_percent: float = 0.0
+    score_percent: float = 0.0
+    confidence_percent: float = 0.0
     scaled_score: float
     passed: bool
     retake_required: bool
+    metric_source: str = "adaptive_posttest_evidence"
 
 
 class PosttestSessionRead(BaseModel):
@@ -65,6 +70,9 @@ class PosttestSubmitAnswerRequest(BaseModel):
     selected_option_id: UUID | None = None
     option_id: UUID | None = None
     confidence: int = Field(default=0, ge=0, le=10)
+    typed_reasoning: str = ""
+    canvas_asset_id: UUID | None = None
+    used_canvas: bool = False
 
     @model_validator(mode="after")
     def require_selected_option(self) -> "PosttestSubmitAnswerRequest":
@@ -75,9 +83,24 @@ class PosttestSubmitAnswerRequest(BaseModel):
         return self
 
 
+class PosttestEvaluationRead(BaseModel):
+    is_correct: bool
+    answer_score: float
+    reasoning_score: float | None = None
+    reasoning_signal: str | None = None
+    reasoning_feedback: str | None = None
+    reasoning_evaluation_source: str | None = None
+    canvas_score: float | None = None
+    evidence_score: float
+    confidence: float
+    diagnostic_signal: str
+    canvas_status: str | None = None
+
+
 class PosttestAnswerResponse(BaseModel):
     attempt_id: UUID
     is_correct: bool
+    evaluation: PosttestEvaluationRead
     node_result: PosttestNodeResultRead
     next_question: PosttestQuestionRead | None = None
     completed: bool = False

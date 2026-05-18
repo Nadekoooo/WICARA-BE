@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.session import get_session
 from app.modules.accounts.dependencies import get_optional_current_account
-from app.modules.accounts.models import UserAccount
+from app.modules.accounts.models import LearnerProfile, UserAccount
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.learning.models import LearnerConceptState
 
@@ -23,14 +23,45 @@ def test_get_subjects_returns_seeded_subject_catalog(client, seeded_curriculum):
     payload = response.json()
     assert [subject["code"] for subject in payload["items"]] == [
         "matematika",
-        "ipas",
-        "ipa",
         "fisika",
         "kimia",
         "biologi",
     ]
-    assert payload["items"][0]["name"] == "Matematika"
-    assert payload["items"][0]["metadata"]["curriculum"] == "kurikulum_merdeka"
+    subjects_by_code = {subject["code"]: subject for subject in payload["items"]}
+    matematika = subjects_by_code["matematika"]
+    assert matematika["name"] == "Matematika"
+    assert matematika["metadata"]["name_id"] == "Matematika"
+    assert matematika["metadata"]["name_en"] == "Math"
+    assert matematika["metadata"]["curriculum"] == "kurikulum_merdeka"
+    assert matematika["metadata"]["is_available_in_knowledge_graph"] is True
+    assert matematika["metadata"]["is_locked_in_knowledge_graph"] is False
+    assert all(
+        subject["metadata"]["is_available_in_knowledge_graph"] is False
+        for code, subject in subjects_by_code.items()
+        if code != "matematika"
+    )
+    assert all(
+        subject["metadata"]["is_locked_in_knowledge_graph"] is True
+        for code, subject in subjects_by_code.items()
+        if code != "matematika"
+    )
+
+
+def test_get_subjects_uses_profile_language_for_button_labels(
+    client,
+    seeded_curriculum,
+):
+    _override_optional_account(client, preferred_language="en")
+
+    response = client.get("/api/v1/subjects")
+
+    assert response.status_code == 200
+    payload = response.json()
+    subjects_by_code = {subject["code"]: subject for subject in payload["items"]}
+    assert subjects_by_code["matematika"]["name"] == "Math"
+    assert subjects_by_code["fisika"]["name"] == "Physics"
+    assert subjects_by_code["biologi"]["name"] == "Biology"
+    assert subjects_by_code["matematika"]["metadata"]["locale"] == "en"
 
 
 def test_get_knowledge_map_returns_mobile_ready_kurikulum_graph(client, seeded_curriculum):
@@ -56,7 +87,7 @@ def test_get_knowledge_map_returns_mobile_ready_kurikulum_graph(client, seeded_c
         "Memahami dan menerapkan konsep Bilangan bulat"
     )
     assert nodes_by_id["km_d_matematika_bilangan_bulat"]["en_desc"].startswith(
-        "Build understanding of Bilangan bulat"
+        "Understand and apply integer concepts"
     )
     assert (
         nodes_by_id["km_d_matematika_bilangan_bulat"]["en_desc"]
@@ -84,7 +115,7 @@ def test_get_knowledge_map_localizes_english_graph_fields(client, seeded_curricu
     assert nodes_by_id["km_d_matematika_bilangan_bulat"]["label"] == "Integers"
     assert (
         nodes_by_id["km_d_matematika_bilangan_bulat"]["description"]
-        == "Understand and apply integer concepts aligned with Kurikulum Merdeka Phase D learning outcomes."
+        == "Build understanding of Integers within Numbers for Phase D / SMP/MTs / grades 7-9."
     )
     assert nodes_by_id["km_d_matematika_bilangan_desimal"]["label"] == (
         "Decimal numbers"
@@ -439,6 +470,7 @@ def _node_by_id(payload: dict, node_id: str) -> dict:
 def _override_optional_account(
     client,
     *,
+    preferred_language: str | None = None,
     concept_code: str | None = None,
     mastery_score: float = 0.0,
     confidence_score: float = 0.0,
@@ -461,6 +493,18 @@ def _override_optional_account(
             )
             session.add(account)
             session.flush()
+
+        if preferred_language is not None:
+            profile = account.learner_profile
+            if profile is None:
+                profile = LearnerProfile(
+                    user_id=account.id,
+                    full_name=account.display_name,
+                    selected_subjects=["matematika"],
+                    onboarding_completed=True,
+                )
+                session.add(profile)
+            profile.preferred_language = preferred_language
 
         requested_states = list(concept_states or [])
         if concept_code is not None:

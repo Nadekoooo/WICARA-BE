@@ -63,7 +63,7 @@ class LearnerProfileOnboardingRequest(BaseModel):
     )
     education_level: str = Field(default="", max_length=64)
     grade_level: str = Field(default="", max_length=64)
-    preferred_language: str = Field(default="id", max_length=16)
+    preferred_language: str = Field(default="en", max_length=16)
     study_goal: str = ""
     daily_study_time_label: str = Field(
         default="",
