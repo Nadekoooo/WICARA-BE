@@ -128,6 +128,34 @@ def test_resolve_needs_clarification_when_query_has_no_candidate_signal(client):
     assert payload["clarification_question"]
 
 
+def test_resolve_defaults_to_math_scope_when_subject_missing(client, monkeypatch):
+    _override_account(client)
+    from app.modules.learning_goal_resolution.router import service
+
+    captured_kwargs: dict[str, object] = {}
+
+    async def fake_resolve_progressively(*args, **kwargs):
+        captured_kwargs.update(kwargs)
+        return None
+
+    monkeypatch.setattr(service, "_resolve_progressively", fake_resolve_progressively)
+
+    response = client.post(
+        "/api/v1/learning-goals/resolve",
+        json={
+            "raw_query": "aku mau belajar gaya",
+            "education_level": "senior_high",
+            "grade_level": "11",
+            "language": "id",
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured_kwargs["subject_code"] == "math"
+    assert captured_kwargs["allow_cross_subject"] is False
+    assert response.json()["search_scope"] == "no_match"
+
+
 def test_resolve_allows_foundational_node_for_higher_grade_user(client):
     _override_account(client)
 
