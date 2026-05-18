@@ -29,6 +29,8 @@ _PROMPT_VERSION = "workspace_context_spec_gemini_v1"
 _ROUTER_PROMPT_VERSION = "workspace_context_template_router_gemini_v1"
 _DEFAULT_MODEL = "gemini-2.5-flash"
 _MAX_ATTEMPTS = 2
+_SPEC_MAX_OUTPUT_TOKENS = 8192
+_PREVIOUS_RESPONSE_FEEDBACK_LIMIT = 1800
 _ROOT_DIR = Path(__file__).resolve().parents[3]
 _SAMPLE_SPECS_DIR = _ROOT_DIR / "wicara_mvp_10_manim_templates" / "specs" / "samples"
 
@@ -83,7 +85,10 @@ def generate_spec_from_workspace_context(
     active_concept_type = str(metadata.get("active_concept_type") or "").strip().lower()
     raw_template_id = str(metadata.get("active_template_id") or "").strip().lower()
     template_resolution_source = "active_template_id"
-    router_candidates: list[str] = []
+    router_candidates = resolve_template_candidates(active_concept_type)
+    mapped_template_id = resolve_primary_template_id(active_concept_type)
+    if not router_candidates and mapped_template_id:
+        router_candidates = [mapped_template_id]
     router_used = False
     requested_language = _normalize_language(language) or "id"
     context_snapshot = _build_context_snapshot(
@@ -92,12 +97,17 @@ def generate_spec_from_workspace_context(
         requested_language=requested_language,
     )
 
-    if not raw_template_id:
-        router_candidates = resolve_template_candidates(active_concept_type)
-        mapped_template_id = resolve_primary_template_id(active_concept_type)
-        if not router_candidates and mapped_template_id:
-            router_candidates = [mapped_template_id]
+    if raw_template_id and router_candidates:
+        normalized_candidates = {
+            str(candidate).strip().lower()
+            for candidate in router_candidates
+            if str(candidate).strip()
+        }
+        if raw_template_id not in normalized_candidates:
+            raw_template_id = mapped_template_id or router_candidates[0]
+            template_resolution_source = "concept_type_route_overrode_active_template_id"
 
+    if not raw_template_id:
         if router_candidates:
             planned = _select_template_id_with_gemini(
                 concept_type=active_concept_type,
@@ -161,7 +171,22 @@ def generate_spec_from_workspace_context(
         )
         ai_response = _generate_with_gemini(user_instruction=user_instruction)
         final_ai_response = ai_response
-        candidate_payload = _parse_candidate_spec(ai_response.text)
+        try:
+            candidate_payload = _parse_candidate_spec(ai_response.text)
+        except WorkspaceContextSpecGenerationError as exc:
+            last_error = str(exc)
+            validation_details = [
+                {
+                    "path": "response",
+                    "message": str(exc),
+                    "type": "json_parse_error",
+                    "finish_reason": ai_response.finish_reason,
+                }
+            ]
+            last_response = _feedback_response_excerpt(ai_response.text)
+            if attempt >= _MAX_ATTEMPTS:
+                raise
+            continue
         candidate_payload["template_id"] = template_id
         candidate_payload["language"] = requested_language
         candidate_payload.setdefault("id", f"context_auto_{workspace.id}")
@@ -176,7 +201,7 @@ def generate_spec_from_workspace_context(
         except TemplateValidationError as exc:
             last_error = exc.message
             validation_details = exc.details
-            last_response = ai_response.text
+            last_response = _feedback_response_excerpt(ai_response.text)
             if attempt >= _MAX_ATTEMPTS:
                 raise WorkspaceContextSpecGenerationError(
                     f"Gemini generated an invalid spec for {template_id}: {exc.message}"
@@ -191,7 +216,7 @@ def generate_spec_from_workspace_context(
             quality_errors = [issue.message for issue in quality_result.errors]
             last_error = "Template quality lint failed."
             validation_details = quality_result.to_feedback_details()
-            last_response = ai_response.text
+            last_response = _feedback_response_excerpt(ai_response.text)
             if attempt >= _MAX_ATTEMPTS:
                 error_text = "; ".join(quality_errors) if quality_errors else "Unknown quality issue."
                 raise WorkspaceContextSpecGenerationError(
@@ -430,7 +455,7 @@ def _build_user_instruction(
 def _generate_with_gemini(*, user_instruction: str) -> AIGenerationResponse:
     params = {
         "temperature": 0.3,
-        "maxOutputTokens": 3072,
+        "maxOutputTokens": _SPEC_MAX_OUTPUT_TOKENS,
         "responseMimeType": "application/json",
     }
     try:
@@ -503,6 +528,13 @@ def _try_parse_json_object_response(raw_text: str) -> dict[str, Any] | None:
         if isinstance(payload, dict):
             return payload
     return None
+
+
+def _feedback_response_excerpt(raw_text: str) -> str:
+    text = (raw_text or "").strip()
+    if len(text) <= _PREVIOUS_RESPONSE_FEEDBACK_LIMIT:
+        return text
+    return f"{text[:_PREVIOUS_RESPONSE_FEEDBACK_LIMIT]}...[truncated]"
 
 
 def _extract_fenced_json(text: str) -> str:

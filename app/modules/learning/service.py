@@ -678,7 +678,7 @@ def list_tracks(session: Session, *, user: UserAccount) -> TrackListResponse:
         session.scalars(
             select(LearningTrack)
             .where(LearningTrack.user_id == user.id)
-            .options(selectinload(LearningTrack.modules))
+            .options(*_track_schema_load_options())
             .order_by(LearningTrack.created_at.desc())
         )
     )
@@ -731,7 +731,7 @@ def get_track_modules(
     track = session.scalar(
         select(LearningTrack)
         .where(LearningTrack.id == track_id, LearningTrack.user_id == user.id)
-        .options(selectinload(LearningTrack.modules))
+        .options(*_track_schema_load_options())
     )
     return track_to_schema(track) if track is not None else None
 
@@ -750,7 +750,7 @@ def update_track_module_state(
     track = session.scalar(
         select(LearningTrack)
         .where(LearningTrack.id == track_id, LearningTrack.user_id == user.id)
-        .options(selectinload(LearningTrack.modules))
+        .options(*_track_schema_load_options())
     )
     if track is None:
         return None
@@ -1632,9 +1632,12 @@ def question_to_schema(question: AssessmentQuestion) -> AssessmentQuestionRead:
 
 
 def track_to_schema(track: LearningTrack) -> TrackRead:
+    subject = track.learning_goal.subject if track.learning_goal else None
     return TrackRead(
         id=track.id,
         learning_goal_id=track.learning_goal_id,
+        subject_code=subject.code if subject else "",
+        subject_name=subject.name if subject else "",
         title=track.title,
         subtitle=track.subtitle,
         status=track.status,
@@ -1652,6 +1655,13 @@ def track_to_schema(track: LearningTrack) -> TrackRead:
             )
             for module in track.modules
         ],
+    )
+
+
+def _track_schema_load_options():
+    return (
+        selectinload(LearningTrack.modules),
+        selectinload(LearningTrack.learning_goal).selectinload(LearningGoal.subject),
     )
 
 
@@ -1681,7 +1691,7 @@ def _user_tracks(session: Session, *, user: UserAccount) -> list[LearningTrack]:
         session.scalars(
             select(LearningTrack)
             .where(LearningTrack.user_id == user.id)
-            .options(selectinload(LearningTrack.modules))
+            .options(*_track_schema_load_options())
             .order_by(LearningTrack.created_at.desc())
         )
     )

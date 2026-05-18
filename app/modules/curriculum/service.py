@@ -28,8 +28,11 @@ from app.modules.curriculum.kurikulum_merdeka import (
     NODE_Y_GAP,
     NODE_Y_START,
     PHASE_ORDER,
+    SUBJECT_LABEL_EN,
     SUBJECT_DISPLAY_ORDER,
     canonical_subject_code,
+    translate_curriculum_domain_to_english,
+    translate_curriculum_label_to_english,
 )
 from app.modules.learning.models import (
     AssessmentAttempt,
@@ -48,6 +51,8 @@ STATUS_LABELS = {
     "gap": "GAP",
     "locked": "LOCKED",
 }
+
+SUPPORTED_LOCALES = {"id", "en"}
 
 KNOWLEDGE_MAP_SUBJECT_SCOPES = {
     "matematika": {"matematika"},
@@ -90,15 +95,21 @@ def list_active_subjects(session: Session) -> list[Subject]:
     )
 
 
-def subject_to_schema(subject: Subject) -> SubjectRead:
+def subject_to_schema(subject: Subject, *, locale: str = "id") -> SubjectRead:
+    metadata = subject.metadata_json or {}
     return SubjectRead(
         id=subject.id,
         code=subject.code,
-        name=subject.name,
-        description=subject.description,
+        name=_localized(metadata, "name", locale, fallback=subject.name),
+        description=_localized(
+            metadata,
+            "description",
+            locale,
+            fallback=subject.description,
+        ),
         is_active=subject.is_active,
         display_order=subject.display_order,
-        metadata=subject.metadata_json or {},
+        metadata={**metadata, "locale": _normalize_locale(locale)},
     )
 
 
@@ -185,8 +196,10 @@ def get_knowledge_map(
     session: Session,
     *,
     subject_code: str,
+    locale: str = "id",
     user: UserAccount | None = None,
 ) -> KnowledgeMapResponse | None:
+    locale = _normalize_locale(locale)
     normalized_code = canonical_subject_code(subject_code)
     subject = _active_subject_by_code(session, normalized_code)
     if subject is None:
@@ -207,7 +220,11 @@ def get_knowledge_map(
             .order_by(ConceptEdge.edge_type, ConceptEdge.created_at)
         )
     )
-    groups, node_layouts, graph = _knowledge_map_layout(concepts, subject)
+    groups, node_layouts, graph = _knowledge_map_layout(
+        concepts,
+        subject,
+        locale=locale,
+    )
     state_by_concept = _learner_states_for_concepts(
         session,
         user=user,
@@ -238,7 +255,7 @@ def get_knowledge_map(
     )
 
     return KnowledgeMapResponse(
-        subject=subject_to_schema(subject),
+        subject=subject_to_schema(subject, locale=locale),
         graph=graph,
         groups=groups,
         nodes=[
@@ -251,6 +268,7 @@ def get_knowledge_map(
                 prerequisite_gate=prerequisite_gates.get(concept.id, empty_gate),
                 posttest_required=(concept.id in posttest_required_concept_ids),
                 latest_posttest_pass=latest_posttest_pass_by_concept.get(concept.id),
+                locale=locale,
             )
             for concept in concepts
         ],
@@ -273,8 +291,10 @@ def get_concept_detail(
     *,
     concept_code: str,
     subject_code: str | None = None,
+    locale: str = "id",
     user: UserAccount | None = None,
 ) -> ConceptDetailResponse | None:
+    locale = _normalize_locale(locale)
     concept = _concept_for_detail_context(
         session,
         concept_code=concept_code,
@@ -373,6 +393,7 @@ def get_concept_detail(
             ),
             posttest_required=(item.id in posttest_required_concept_ids),
             latest_posttest_pass=latest_posttest_pass_by_concept.get(item.id),
+            locale=locale,
         )
         for item in prerequisite_concepts
     ]
@@ -387,6 +408,7 @@ def get_concept_detail(
             ),
             posttest_required=(item.id in posttest_required_concept_ids),
             latest_posttest_pass=latest_posttest_pass_by_concept.get(item.id),
+            locale=locale,
         )
         for item in related_concept_models
     ]
@@ -401,6 +423,7 @@ def get_concept_detail(
             ),
             posttest_required=(item.id in posttest_required_concept_ids),
             latest_posttest_pass=latest_posttest_pass_by_concept.get(item.id),
+            locale=locale,
         )
         for item in cross_subject_concepts
     ]
@@ -408,14 +431,15 @@ def get_concept_detail(
     return ConceptDetailResponse(
         concept=_concept_to_node(
             concept,
-            _groups_for_subject(concept.subject),
+            _groups_for_subject(concept.subject, locale=locale),
             state=concept_state,
             is_personalized=user is not None,
             prerequisite_gate=concept_prerequisite_gate,
             posttest_required=(concept.id in posttest_required_concept_ids),
             latest_posttest_pass=latest_posttest_pass_by_concept.get(concept.id),
+            locale=locale,
         ),
-        subject=subject_to_schema(concept.subject),
+        subject=subject_to_schema(concept.subject, locale=locale),
         mastery_confidence=_mastery_confidence_for_detail(
             concept,
             state=concept_state,
@@ -443,6 +467,7 @@ def _concept_to_node(
     prerequisite_gate: _PrerequisiteGate | None = None,
     posttest_required: bool = False,
     latest_posttest_pass: bool | None = None,
+    locale: str = "id",
 ) -> KnowledgeMapNode:
     metadata: dict[str, Any] = concept.metadata_json or {}
     gate = prerequisite_gate or _PrerequisiteGate(
@@ -464,21 +489,24 @@ def _concept_to_node(
         status_reason=reason,
         prerequisite_gate=gate,
     )
+    response_metadata["locale"] = _normalize_locale(locale)
+    label = _concept_display_label(concept, locale=locale)
+    description = _concept_display_description(concept, locale=locale, label=label)
     return KnowledgeMapNode(
         id=concept.code,
         concept_id=concept.id,
         code=concept.code,
-        label=concept.title,
-        title=concept.title,
-        description=concept.id_desc or concept.description,
+        label=label,
+        title=label,
+        description=description,
         id_desc=concept.id_desc or concept.description,
-        en_desc=concept.en_desc,
+        en_desc=description if _normalize_locale(locale) == "en" else concept.en_desc,
         grade_band=concept.grade_band,
         status=status,
         status_label=(
             _personalized_status_label(status)
             if is_personalized
-            else _concept_status_label(metadata, status)
+            else _concept_status_label(metadata, status, locale=locale)
         ),
         x=layout.x if layout else concept.layout_x,
         y=layout.y if layout else concept.layout_y,
@@ -495,6 +523,7 @@ def _concept_relation(
     prerequisite_gate: _PrerequisiteGate | None = None,
     posttest_required: bool = False,
     latest_posttest_pass: bool | None = None,
+    locale: str = "id",
 ) -> ConceptRelation:
     metadata: dict[str, Any] = concept.metadata_json or {}
     gate = prerequisite_gate or _PrerequisiteGate(
@@ -512,23 +541,35 @@ def _concept_relation(
     return ConceptRelation(
         id=concept.code,
         code=concept.code,
-        label=concept.title,
+        label=_concept_display_label(concept, locale=locale),
         subject_code=concept.subject.code,
-        subject_name=concept.subject.name,
+        subject_name=_localized(
+            concept.subject.metadata_json or {},
+            "name",
+            locale,
+            fallback=concept.subject.name,
+        ),
         status=status,
         status_label=(
             _personalized_status_label(status)
             if is_personalized
-            else _concept_status_label(metadata, status)
+            else _concept_status_label(metadata, status, locale=locale)
         ),
     )
 
 
-def _groups_for_subject(subject: Subject) -> list[KnowledgeMapGroup]:
+def _groups_for_subject(
+    subject: Subject,
+    *,
+    locale: str = "id",
+) -> list[KnowledgeMapGroup]:
     graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
     groups_payload = graph_metadata.get("groups", [])
     return [
-        KnowledgeMapGroup(label=str(group["label"]), x=float(group["x"]))
+        KnowledgeMapGroup(
+            label=_group_display_label(group, locale=locale),
+            x=float(group["x"]),
+        )
         for group in groups_payload
     ]
 
@@ -536,20 +577,28 @@ def _groups_for_subject(subject: Subject) -> list[KnowledgeMapGroup]:
 def _knowledge_map_layout(
     concepts: list[KnowledgeConcept],
     selected_subject: Subject,
+    *,
+    locale: str = "id",
 ) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
     subject_ids = {concept.subject_id for concept in concepts}
     if subject_ids == {selected_subject.id}:
-        return _single_subject_knowledge_map_layout(concepts, selected_subject)
+        return _single_subject_knowledge_map_layout(
+            concepts,
+            selected_subject,
+            locale=locale,
+        )
 
-    return _integrated_knowledge_map_layout(concepts, selected_subject)
+    return _integrated_knowledge_map_layout(concepts, selected_subject, locale=locale)
 
 
 def _single_subject_knowledge_map_layout(
     concepts: list[KnowledgeConcept],
     subject: Subject,
+    *,
+    locale: str = "id",
 ) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
     graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
-    groups = _groups_for_subject(subject)
+    groups = _groups_for_subject(subject, locale=locale)
     node_layouts = {
         concept.id: _NodeLayout(
             x=concept.layout_x,
@@ -563,7 +612,12 @@ def _single_subject_knowledge_map_layout(
         groups,
         node_layouts,
         KnowledgeMapGraph(
-            title=str(graph_metadata.get("title", f"{subject.name} Knowledge Map")),
+            title=_localized(
+                graph_metadata,
+                "title",
+                locale,
+                fallback=f"{subject.name} Knowledge Map",
+            ),
             width=float(graph_metadata.get("width", 1200)),
             height=float(graph_metadata.get("height", 600)),
             top_down=bool(graph_metadata.get("top_down", True)),
@@ -574,6 +628,8 @@ def _single_subject_knowledge_map_layout(
 def _integrated_knowledge_map_layout(
     concepts: list[KnowledgeConcept],
     selected_subject: Subject,
+    *,
+    locale: str = "id",
 ) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
     ordered_concepts = sorted(concepts, key=_concept_map_sort_key)
     ordered_group_keys: list[tuple[str, str, str, str]] = []
@@ -588,7 +644,7 @@ def _integrated_knowledge_map_layout(
     ordered_group_keys.sort(key=_layout_group_sort_key)
     groups = [
         KnowledgeMapGroup(
-            label=_layout_group_label(key),
+            label=_layout_group_label(key, locale=locale),
             x=GROUP_X_START + (index * GROUP_X_GAP),
         )
         for index, key in enumerate(ordered_group_keys)
@@ -616,7 +672,10 @@ def _integrated_knowledge_map_layout(
         groups,
         node_layouts,
         KnowledgeMapGraph(
-            title=f"{selected_subject.name} Integrated Knowledge Map",
+            title=(
+                f"{_localized(selected_subject.metadata_json or {}, 'name', locale, fallback=selected_subject.name)} "
+                "Integrated Knowledge Map"
+            ),
             width=width,
             height=height,
             top_down=True,
@@ -628,9 +687,14 @@ def _layout_group_key(concept: KnowledgeConcept) -> tuple[str, str, str, str]:
     metadata: dict[str, Any] = concept.metadata_json or {}
     return (
         concept.subject.code,
-        str(metadata.get("subject_label") or concept.subject.name).strip(),
+        _localized(
+            metadata,
+            "subject_label",
+            "id",
+            fallback=concept.subject.name,
+        ).strip(),
         str(metadata.get("phase") or "").strip(),
-        str(metadata.get("domain") or "General").strip(),
+        _localized(metadata, "domain", "id", fallback="General").strip(),
     )
 
 
@@ -644,13 +708,21 @@ def _layout_group_sort_key(key: tuple[str, str, str, str]) -> tuple[int, int, st
     )
 
 
-def _layout_group_label(key: tuple[str, str, str, str]) -> str:
-    _subject_code, subject_label, phase, domain = key
+def _layout_group_label(key: tuple[str, str, str, str], *, locale: str = "id") -> str:
+    subject_code, subject_label, phase, domain = key
+    is_english = _normalize_locale(locale) == "en"
+    phase_label = "Phase" if is_english else "Fase"
+    localized_subject_label = (
+        SUBJECT_LABEL_EN.get(subject_code, subject_label) if is_english else subject_label
+    )
+    localized_domain = (
+        translate_curriculum_domain_to_english(domain) if is_english else domain
+    )
     if phase and domain:
-        return f"{subject_label} - Fase {phase} / {domain}"
+        return f"{localized_subject_label} - {phase_label} {phase} / {localized_domain}"
     if phase:
-        return f"{subject_label} - Fase {phase}"
-    return f"{subject_label} - {domain}"
+        return f"{localized_subject_label} - {phase_label} {phase}"
+    return f"{localized_subject_label} - {localized_domain}"
 
 
 def _concept_map_sort_key(concept: KnowledgeConcept) -> tuple[int, int, str, int, int, str]:
@@ -1023,17 +1095,23 @@ def _nearest_group_label(
     return min(groups, key=lambda group: abs(group.x - x)).label
 
 
-def _concept_status_label(metadata: dict[str, Any], status: str) -> str:
+def _concept_status_label(
+    metadata: dict[str, Any],
+    status: str,
+    *,
+    locale: str = "id",
+) -> str:
     if metadata.get("preview_status_only"):
         return STATUS_LABELS.get(status, status.upper())
 
     if metadata.get("source_curriculum_graph"):
         phase = str(metadata.get("phase") or "").strip()
         grade_range = str(metadata.get("grade_range") or "").strip()
+        phase_label = "Phase" if _normalize_locale(locale) == "en" else "Fase"
         if phase and grade_range:
-            return f"Fase {phase} / {grade_range}"
+            return f"{phase_label} {phase} / {grade_range}"
         if phase:
-            return f"Fase {phase}"
+            return f"{phase_label} {phase}"
 
     return STATUS_LABELS.get(status, status.upper())
 
@@ -1083,3 +1161,105 @@ def _datetime_to_iso(value: datetime | None) -> str | None:
         return None
     candidate = value if value.tzinfo else value.replace(tzinfo=UTC)
     return candidate.isoformat()
+
+
+def _normalize_locale(locale: str | None) -> str:
+    normalized = (locale or "id").strip().lower()
+    return normalized if normalized in SUPPORTED_LOCALES else "id"
+
+
+def _localized(
+    metadata: dict[str, Any],
+    base_key: str,
+    locale: str,
+    *,
+    fallback: str | None = None,
+) -> str:
+    normalized_locale = _normalize_locale(locale)
+    locale_key = f"{base_key}_{normalized_locale}"
+    id_key = f"{base_key}_id"
+    candidates = [
+        metadata.get(locale_key),
+        metadata.get(id_key),
+        metadata.get(base_key),
+        fallback,
+    ]
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        text = str(candidate).strip()
+        if text:
+            return text
+    return ""
+
+
+def _concept_display_label(
+    concept: KnowledgeConcept,
+    *,
+    locale: str = "id",
+) -> str:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    if _normalize_locale(locale) == "en":
+        source_label = _localized(metadata, "label", "id", fallback=concept.title)
+        translated_label = translate_curriculum_label_to_english(source_label)
+        if translated_label:
+            return translated_label
+    return _localized(metadata, "label", locale, fallback=concept.title)
+
+
+def _concept_display_description(
+    concept: KnowledgeConcept,
+    *,
+    locale: str = "id",
+    label: str,
+) -> str | None:
+    metadata: dict[str, Any] = concept.metadata_json or {}
+    if _normalize_locale(locale) != "en":
+        return _localized(
+            metadata,
+            "description",
+            locale,
+            fallback=concept.description,
+        )
+
+    if not label:
+        return _localized(
+            metadata,
+            "description",
+            locale,
+            fallback=concept.description,
+        )
+
+    domain_id = _localized(metadata, "domain", "id")
+    domain = translate_curriculum_domain_to_english(domain_id) if domain_id else ""
+    phase = str(metadata.get("phase") or "").strip()
+    school_level = str(metadata.get("school_level") or "").strip()
+    grade_range = str(metadata.get("grade_range") or "").strip()
+    context_parts = [
+        part
+        for part in (
+            f"Phase {phase}" if phase else "",
+            school_level,
+            f"grades {grade_range}" if grade_range else "",
+        )
+        if part
+    ]
+    domain_suffix = f" within {domain}" if domain else ""
+    context = f" for {' / '.join(context_parts)}" if context_parts else ""
+    return f"Build understanding of {label}{domain_suffix}{context}."
+
+
+def _group_display_label(group: dict[str, Any], *, locale: str = "id") -> str:
+    if _normalize_locale(locale) == "en":
+        phase = str(group.get("phase") or "").strip()
+        domain_id = str(group.get("domain_id") or group.get("domain") or "").strip()
+        domain_label = (
+            translate_curriculum_domain_to_english(domain_id) if domain_id else ""
+        )
+        if phase and domain_label:
+            return f"Phase {phase} / {domain_label}"
+        if phase:
+            return f"Phase {phase}"
+        if domain_label:
+            return domain_label
+    return _localized(group, "label", locale, fallback=str(group["label"]))
