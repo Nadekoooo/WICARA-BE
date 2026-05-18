@@ -26,6 +26,9 @@ from app.modules.learning_goal_resolution.candidate_retriever import (
     ConceptCandidate,
     score_to_confidence,
 )
+from app.modules.learning_goal_resolution.description_cleaner import (
+    first_course_description,
+)
 from app.modules.learning_goal_resolution.models import LearningGoalResolution
 from app.modules.learning_goal_resolution.level_context import (
     grade_relation_for_concept,
@@ -54,6 +57,8 @@ from app.modules.workspaces.models import WorkspaceSession
 ACTIVE_GOAL_STATUSES = {"confirmed", "pretest_in_progress", "diagnosed", "in_progress"}
 INACTIVE_GOAL_STATUSES = {"completed", "cancelled", "archived"}
 EXACT_MATCH_CONFIDENCE_THRESHOLD = 0.75
+DETERMINISTIC_EXACT_SCORE_THRESHOLD = 16.0
+DEFAULT_RESOLVE_SUBJECT_CODE = "math"
 
 
 class ActiveLearningGoalExists(Exception):
@@ -95,8 +100,10 @@ class GoalResolverService:
         language: str | None,
     ) -> ResolveLearningGoalResponse:
         _ensure_curriculum(session)
-        response_language = _preferred_response_language(user=user, requested_language=language)
-        explicit_subject_code = subject_code
+        response_language = _preferred_response_language(
+            user=user, requested_language=language
+        )
+        explicit_subject_code = DEFAULT_RESOLVE_SUBJECT_CODE
         attempt = await self._resolve_progressively(
             session,
             raw_query=raw_query,
@@ -104,7 +111,7 @@ class GoalResolverService:
             education_level=education_level,
             grade_level=grade_level,
             language=response_language,
-            allow_cross_subject=explicit_subject_code is None,
+            allow_cross_subject=False,
         )
         if attempt is None:
             clarification = _localized_message(
@@ -115,7 +122,7 @@ class GoalResolverService:
             resolution = LearningGoalResolution(
                 user_id=user.id,
                 raw_query=raw_query.strip(),
-                subject_code=subject_code or "",
+                subject_code=explicit_subject_code,
                 education_level=education_level or "",
                 grade_level=grade_level or "",
                 language=response_language,
@@ -153,7 +160,9 @@ class GoalResolverService:
             education_level=education_level or "",
             grade_level=grade_level or "",
             language=response_language,
-            suggested_concept_id=selected.concept.id if status == "needs_confirmation" else None,
+            suggested_concept_id=(
+                selected.concept.id if status == "needs_confirmation" else None
+            ),
             confidence=confidence,
             alternatives_json=[candidate.snapshot() for candidate in alternatives],
             candidate_snapshot_json=[candidate.snapshot() for candidate in candidates],
@@ -198,16 +207,20 @@ class GoalResolverService:
                     en_text=f"Do you want to learn {_concept_display_title(selected.concept, language=response_language)}?",
                 )
                 if status == "needs_confirmation"
-                else _clarification_from_candidates(language=response_language, candidates=alternatives)
+                else _clarification_from_candidates(
+                    language=response_language, candidates=alternatives
+                )
             ),
             search_scope=attempt.scope,
             search_scope_reason=attempt.scope_reason,
             graph_focus=_graph_focus(selected=selected, alternatives=alternatives),
             can_expand_scope=_can_expand_scope(
                 attempt.scope,
-                allow_cross_subject=explicit_subject_code is None,
+                allow_cross_subject=False,
             ),
-            candidate_debug=_candidate_debug(candidates, scope=attempt.scope, language=response_language),
+            candidate_debug=_candidate_debug(
+                candidates, scope=attempt.scope, language=response_language
+            ),
         )
 
     async def reprompt(
@@ -270,17 +283,23 @@ class GoalResolverService:
         concept = (
             _concept_from_candidate_snapshot(session, selected_snapshot)
             if selected_snapshot is not None
-            else _concept_from_selection(session, concept_id=concept_id, concept_code=concept_code)
+            else _concept_from_selection(
+                session, concept_id=concept_id, concept_code=concept_code
+            )
         )
         if concept is None:
             raise ValueError("Selected concept was not found.")
         if not _concept_allowed_for_resolution(concept, resolution=resolution):
-            raise ValueError("Selected concept is outside the locked subject for this resolution.")
+            raise ValueError(
+                "Selected concept is outside the locked subject for this resolution."
+            )
         if selected_snapshot is None:
             selected_snapshot = _snapshot_from_concept(concept, confidence=0.99)
 
         selected_confidence = max(_snapshot_confidence(selected_snapshot), 0.99)
-        selected_candidate = _candidate_from_concept_snapshot(concept, selected_snapshot)
+        selected_candidate = _candidate_from_concept_snapshot(
+            concept, selected_snapshot
+        )
         alternatives = [
             candidate
             for snapshot in snapshots
@@ -292,7 +311,9 @@ class GoalResolverService:
         resolution.confidence = selected_confidence
         resolution.status = "needs_confirmation"
         resolution.language = response_language
-        resolution.alternatives_json = [candidate.snapshot() for candidate in alternatives]
+        resolution.alternatives_json = [
+            candidate.snapshot() for candidate in alternatives
+        ]
         resolution.llm_response_json = {
             **(resolution.llm_response_json or {}),
             "manual_candidate_selection": {
@@ -329,13 +350,18 @@ class GoalResolverService:
                 id_text=f"Benar kamu mau belajar {_concept_display_title(concept, language=response_language)}?",
                 en_text=f"Do you want to learn {_concept_display_title(concept, language=response_language)}?",
             ),
-            search_scope=str((resolution.llm_response_json or {}).get("scope") or "manual_candidate_selection"),
+            search_scope=str(
+                (resolution.llm_response_json or {}).get("scope")
+                or "manual_candidate_selection"
+            ),
             search_scope_reason=_localized_message(
                 response_language,
                 id_text="Kandidat dipilih langsung dari hasil rekomendasi sebelumnya.",
                 en_text="Candidate selected directly from the previous recommendation set.",
             ),
-            graph_focus=_graph_focus(selected=selected_candidate, alternatives=alternatives),
+            graph_focus=_graph_focus(
+                selected=selected_candidate, alternatives=alternatives
+            ),
             can_expand_scope=False,
             candidate_debug=_candidate_debug(
                 [selected_candidate, *alternatives],
@@ -390,7 +416,9 @@ class GoalResolverService:
             target_concept_id=concept.id,
             resolution_id=resolution.id,
             raw_topic=resolution.raw_query,
-            normalized_topic=_concept_display_title(concept, language=response_language),
+            normalized_topic=_concept_display_title(
+                concept, language=response_language
+            ),
             status="confirmed",
             metadata_json={
                 "source": "goal_resolution",
@@ -526,21 +554,29 @@ class GoalResolverService:
         goals = list(
             session.scalars(
                 select(LearningGoal)
-                .where(LearningGoal.user_id == user.id, LearningGoal.status.in_(ACTIVE_GOAL_STATUSES))
-                .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+                .where(
+                    LearningGoal.user_id == user.id,
+                    LearningGoal.status.in_(ACTIVE_GOAL_STATUSES),
+                )
+                .options(
+                    selectinload(LearningGoal.track),
+                    selectinload(LearningGoal.assessment_sessions),
+                )
                 .order_by(LearningGoal.created_at.desc())
             )
         )
         goal = goals[0] if goals else None
         return ActiveLearningGoalResponse(
             has_active_goal=goal is not None,
-            goal=_active_goal_to_read(
-                session,
-                goal,
-                language=_preferred_response_language(user=user),
-            )
-            if goal
-            else None,
+            goal=(
+                _active_goal_to_read(
+                    session,
+                    goal,
+                    language=_preferred_response_language(user=user),
+                )
+                if goal
+                else None
+            ),
             active_goals=[
                 _active_goal_to_read(
                     session,
@@ -565,8 +601,13 @@ class GoalResolverService:
                     LearningGoal.user_id == user.id,
                     LearningGoal.status != "archived",
                 )
-                .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
-                .order_by(LearningGoal.updated_at.desc(), LearningGoal.created_at.desc())
+                .options(
+                    selectinload(LearningGoal.track),
+                    selectinload(LearningGoal.assessment_sessions),
+                )
+                .order_by(
+                    LearningGoal.updated_at.desc(), LearningGoal.created_at.desc()
+                )
             )
         )
         if not goals:
@@ -575,12 +616,20 @@ class GoalResolverService:
         subject_ids = {goal.subject_id for goal in goals}
         subjects_by_id = {
             item.id: item
-            for item in session.scalars(select(Subject).where(Subject.id.in_(subject_ids)))
+            for item in session.scalars(
+                select(Subject).where(Subject.id.in_(subject_ids))
+            )
         }
-        concept_ids = {goal.target_concept_id for goal in goals if goal.target_concept_id is not None}
+        concept_ids = {
+            goal.target_concept_id
+            for goal in goals
+            if goal.target_concept_id is not None
+        }
         concepts_by_id = {
             item.id: item
-            for item in session.scalars(select(KnowledgeConcept).where(KnowledgeConcept.id.in_(concept_ids)))
+            for item in session.scalars(
+                select(KnowledgeConcept).where(KnowledgeConcept.id.in_(concept_ids))
+            )
         }
         track_ids = {goal.track.id for goal in goals if goal.track is not None}
         workspaces_by_track: dict[UUID, WorkspaceSession] = {}
@@ -608,7 +657,11 @@ class GoalResolverService:
             subject = subjects_by_id.get(goal.subject_id)
             if subject is None:
                 continue
-            concept = concepts_by_id.get(goal.target_concept_id) if goal.target_concept_id else None
+            concept = (
+                concepts_by_id.get(goal.target_concept_id)
+                if goal.target_concept_id
+                else None
+            )
             track = goal.track
             latest_workspace = (
                 workspaces_by_track.get(track.id) if track is not None else None
@@ -643,7 +696,9 @@ class GoalResolverService:
             if key not in grouped:
                 grouped[key] = SubjectSessionGoalHistoryRead(
                     subject_code=subject.code,
-                    subject_name=_subject_display_name(subject, language=response_language),
+                    subject_name=_subject_display_name(
+                        subject, language=response_language
+                    ),
                     session_goals=[],
                 )
             grouped[key].session_goals.append(session_goal)
@@ -662,7 +717,9 @@ class GoalResolverService:
         learning_goal_id: UUID,
     ) -> CancelGoalResponse | None:
         goal = session.scalar(
-            select(LearningGoal).where(LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id)
+            select(LearningGoal).where(
+                LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id
+            )
         )
         if goal is None:
             return None
@@ -693,7 +750,9 @@ class GoalResolverService:
         learning_goal_id: UUID,
     ) -> ArchiveGoalResponse | None:
         goal = session.scalar(
-            select(LearningGoal).where(LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id)
+            select(LearningGoal).where(
+                LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id
+            )
         )
         if goal is None:
             return None
@@ -718,16 +777,26 @@ class GoalResolverService:
             session,
             query=query,
             subject_code=subject_code,
-            education_level=user.learner_profile.education_level if user.learner_profile else None,
-            grade_level=user.learner_profile.grade_level if user.learner_profile else None,
+            education_level=(
+                user.learner_profile.education_level if user.learner_profile else None
+            ),
+            grade_level=(
+                user.learner_profile.grade_level if user.learner_profile else None
+            ),
             limit=20,
         )
         return [
             _concept_to_read(
                 candidate,
                 confidence=score_to_confidence(candidate.score),
-                education_level=user.learner_profile.education_level if user.learner_profile else None,
-                grade_level=user.learner_profile.grade_level if user.learner_profile else None,
+                education_level=(
+                    user.learner_profile.education_level
+                    if user.learner_profile
+                    else None
+                ),
+                grade_level=(
+                    user.learner_profile.grade_level if user.learner_profile else None
+                ),
                 language=response_language,
             )
             for candidate in candidates
@@ -750,8 +819,9 @@ class GoalResolverService:
             language=language,
             allow_cross_subject=allow_cross_subject,
         ):
-            candidates = self.retriever.scope_candidates(
+            candidates = self.retriever.search(
                 session,
+                query=raw_query,
                 subject_code=scope["subject_code"],
                 education_level=education_level,
                 grade_level=grade_level,
@@ -768,14 +838,41 @@ class GoalResolverService:
             )
             llm_status = _normalized_llm_status(llm_result)
             selected = _validated_candidate(llm_result, candidates)
+            deterministic_selected = _deterministic_exact_candidate(candidates)
+            if deterministic_selected is not None and (
+                llm_status != "exact_match" or selected is None
+            ):
+                selected = deterministic_selected
+                llm_status = "exact_match"
+                llm_result = {
+                    **llm_result,
+                    "selected_concept_code": selected.concept.code,
+                    "confidence": max(
+                        score_to_confidence(selected.score),
+                        EXACT_MATCH_CONFIDENCE_THRESHOLD,
+                    ),
+                    "deterministic_override": "strong_query_match",
+                }
             fallback_candidate = selected or candidates[0]
+            fallback_confidence = score_to_confidence(fallback_candidate.score)
+            if llm_status == "exact_match" and selected is not None:
+                fallback_confidence = max(
+                    fallback_confidence,
+                    EXACT_MATCH_CONFIDENCE_THRESHOLD,
+                )
             confidence = _coerce_confidence(
                 llm_result.get("confidence"),
-                fallback=0.0,
+                fallback=fallback_confidence,
             )
-            alternatives = _validated_alternatives(llm_result, candidates, selected=selected)
+            alternatives = _validated_alternatives(
+                llm_result, candidates, selected=selected
+            )
 
-            if llm_status == "exact_match" and selected is not None and confidence >= EXACT_MATCH_CONFIDENCE_THRESHOLD:
+            if (
+                llm_status == "exact_match"
+                and selected is not None
+                and confidence >= EXACT_MATCH_CONFIDENCE_THRESHOLD
+            ):
                 status = "needs_confirmation"
             elif llm_status == "ambiguous":
                 status = "needs_clarification"
@@ -804,7 +901,11 @@ class GoalResolverService:
                 selected=fallback_candidate,
                 alternatives=alternatives,
                 confidence=confidence,
-                status="needs_confirmation" if status == "needs_confirmation" else "needs_clarification",
+                status=(
+                    "needs_confirmation"
+                    if status == "needs_confirmation"
+                    else "needs_clarification"
+                ),
             )
             if _attempt_rank(attempt) > _attempt_rank(best_attempt):
                 best_attempt = attempt
@@ -826,7 +927,9 @@ class GoalResolverService:
                 "status": "no_match",
                 "selected_concept_code": None,
                 "confidence": 0.0,
-                "alternatives": [candidate.concept.code for candidate in candidates[:4]],
+                "alternatives": [
+                    candidate.concept.code for candidate in candidates[:4]
+                ],
                 "reason": "LLM resolution unavailable because Gemini is not configured.",
                 "should_expand_scope": True,
                 "clarification_question": _localized_message(
@@ -858,7 +961,9 @@ class GoalResolverService:
                 "status": "no_match",
                 "selected_concept_code": None,
                 "confidence": 0.0,
-                "alternatives": [candidate.concept.code for candidate in candidates[:4]],
+                "alternatives": [
+                    candidate.concept.code for candidate in candidates[:4]
+                ],
                 "reason": "LLM resolution failed.",
                 "should_expand_scope": True,
                 "clarification_question": _localized_message(
@@ -881,7 +986,25 @@ def _validated_candidate(
     ).strip()
     if not selected_code:
         return None
-    return next((candidate for candidate in candidates if candidate.concept.code == selected_code), None)
+    return next(
+        (
+            candidate
+            for candidate in candidates
+            if candidate.concept.code == selected_code
+        ),
+        None,
+    )
+
+
+def _deterministic_exact_candidate(
+    candidates: list[ConceptCandidate],
+) -> ConceptCandidate | None:
+    if not candidates:
+        return None
+    candidate = candidates[0]
+    if candidate.score < DETERMINISTIC_EXACT_SCORE_THRESHOLD:
+        return None
+    return candidate
 
 
 def _validated_alternatives(
@@ -919,7 +1042,9 @@ def _normalized_llm_status(llm_result: dict[str, Any]) -> str:
     return "no_match"
 
 
-def _resolution_candidate_snapshots(resolution: LearningGoalResolution) -> list[dict[str, Any]]:
+def _resolution_candidate_snapshots(
+    resolution: LearningGoalResolution,
+) -> list[dict[str, Any]]:
     snapshots: list[dict[str, Any]] = []
     for raw_snapshot in [
         *(resolution.candidate_snapshot_json or []),
@@ -927,7 +1052,9 @@ def _resolution_candidate_snapshots(resolution: LearningGoalResolution) -> list[
     ]:
         if not isinstance(raw_snapshot, dict):
             continue
-        key = str(raw_snapshot.get("concept_id") or raw_snapshot.get("concept_code") or "").strip()
+        key = str(
+            raw_snapshot.get("concept_id") or raw_snapshot.get("concept_code") or ""
+        ).strip()
         if not key:
             continue
         if any(
@@ -996,13 +1123,19 @@ def _concept_from_direct_selection(
     concept_code: str | None,
     subject_code: str | None,
 ) -> KnowledgeConcept | None:
-    normalized_subject = canonical_subject_code(subject_code or "") if subject_code else ""
+    normalized_subject = (
+        canonical_subject_code(subject_code or "") if subject_code else ""
+    )
     if concept_id is not None:
         concept = session.get(KnowledgeConcept, concept_id)
         if concept is None or not normalized_subject:
             return concept
         subject = concept.subject
-        return concept if subject is not None and subject.code == normalized_subject else None
+        return (
+            concept
+            if subject is not None and subject.code == normalized_subject
+            else None
+        )
 
     code = (concept_code or "").strip()
     if not code:
@@ -1025,10 +1158,14 @@ def _concept_allowed_for_resolution(
     if not locked_subject:
         return True
     subject = concept.subject
-    return subject is not None and subject.code == canonical_subject_code(locked_subject)
+    return subject is not None and subject.code == canonical_subject_code(
+        locked_subject
+    )
 
 
-def _snapshot_from_concept(concept: KnowledgeConcept, *, confidence: float) -> dict[str, Any]:
+def _snapshot_from_concept(
+    concept: KnowledgeConcept, *, confidence: float
+) -> dict[str, Any]:
     subject = concept.subject
     return {
         "concept_id": str(concept.id),
@@ -1064,12 +1201,22 @@ def _candidate_from_concept_snapshot(
     return ConceptCandidate(
         concept=concept,
         score=_snapshot_score(snapshot),
-        matched_signals=tuple(str(item) for item in snapshot.get("matched_signals", []) if str(item).strip())
-        if isinstance(snapshot.get("matched_signals"), list)
-        else (),
-        aliases=tuple(str(item) for item in snapshot.get("aliases", []) if str(item).strip())
-        if isinstance(snapshot.get("aliases"), list)
-        else (),
+        matched_signals=(
+            tuple(
+                str(item)
+                for item in snapshot.get("matched_signals", [])
+                if str(item).strip()
+            )
+            if isinstance(snapshot.get("matched_signals"), list)
+            else ()
+        ),
+        aliases=(
+            tuple(
+                str(item) for item in snapshot.get("aliases", []) if str(item).strip()
+            )
+            if isinstance(snapshot.get("aliases"), list)
+            else ()
+        ),
     )
 
 
@@ -1089,12 +1236,13 @@ def _snapshot_score(snapshot: dict[str, Any]) -> float:
 
 
 def _coerce_confidence(value: Any, *, fallback: float) -> float:
+    fallback_confidence = max(0.0, min(0.99, float(fallback or 0.0)))
     if value is None:
-        return score_to_confidence(float(fallback or 0.0))
+        return fallback_confidence
     try:
         confidence = float(value)
     except (TypeError, ValueError):
-        return score_to_confidence(float(fallback or 0.0))
+        return fallback_confidence
     if confidence > 1.0:
         return score_to_confidence(confidence)
     return max(0.0, min(0.99, confidence))
@@ -1153,18 +1301,18 @@ def _concept_display_description(
 ) -> str | None:
     metadata = concept.metadata_json or {}
     if _is_english_language(language):
-        description = (
-            concept.en_desc
-            or _metadata_text(metadata, "description_en")
-            or _metadata_text(metadata, "en_desc")
+        description = first_course_description(
+            concept.en_desc,
+            _metadata_text(metadata, "description_en"),
+            _metadata_text(metadata, "en_desc"),
         )
         if description:
             return description
-        return f"Understand and apply {title}."
-    return (
-        concept.id_desc
-        or _metadata_text(metadata, "description_id")
-        or concept.description
+        return None
+    return first_course_description(
+        concept.id_desc,
+        _metadata_text(metadata, "description_id"),
+        concept.description,
     )
 
 
@@ -1191,6 +1339,17 @@ def _concept_to_read(
         language=language,
         title=display_title,
     )
+    metadata = concept.metadata_json or {}
+    id_description = first_course_description(
+        concept.id_desc,
+        _metadata_text(metadata, "description_id"),
+        concept.description,
+    )
+    en_description = first_course_description(
+        concept.en_desc,
+        _metadata_text(metadata, "description_en"),
+        _metadata_text(metadata, "en_desc"),
+    )
     relation = grade_relation_for_concept(
         concept,
         education_level=education_level,
@@ -1201,15 +1360,21 @@ def _concept_to_read(
         concept_code=concept.code,
         title=display_title,
         description=display_description,
-        id_desc=concept.id_desc or concept.description,
-        en_desc=display_description if _is_english_language(language) else concept.en_desc,
+        id_desc=id_description,
+        en_desc=(
+            display_description if _is_english_language(language) else en_description
+        ),
         subject_code=subject.code if subject else "",
         subject=_subject_display_name(subject, language=language) if subject else "",
         grade_band=concept.grade_band,
         grade_relation=relation,
         level_note=level_note_for_relation(relation, language=language),
         confidence=round(
-            float(confidence if confidence is not None else score_to_confidence(candidate.score)),
+            float(
+                confidence
+                if confidence is not None
+                else score_to_confidence(candidate.score)
+            ),
             3,
         ),
         aliases=list(candidate.aliases),
@@ -1227,7 +1392,9 @@ def _is_ambiguous(candidates: list[ConceptCandidate]) -> bool:
     return margin_ratio < 0.12
 
 
-def _clarification_from_candidates(*, language: str, candidates: list[ConceptCandidate]) -> str:
+def _clarification_from_candidates(
+    *, language: str, candidates: list[ConceptCandidate]
+) -> str:
     titles = [
         _concept_display_title(candidate.concept, language=language)
         for candidate in candidates[:3]
@@ -1355,10 +1522,10 @@ def _resolution_subject_code(
 
 def _candidate_limit_for_scope(scope_name: str) -> int:
     if scope_name == "all_subjects_all_grades":
-        return 500
+        return 80
     if scope_name == "same_subject_all_grades":
-        return 240
-    return 180
+        return 60
+    return 40
 
 
 def _can_expand_scope(scope_name: str, *, allow_cross_subject: bool) -> bool:
@@ -1369,7 +1536,9 @@ def _can_expand_scope(scope_name: str, *, allow_cross_subject: bool) -> bool:
     return False
 
 
-def _graph_focus(*, selected: ConceptCandidate, alternatives: list[ConceptCandidate]) -> dict[str, Any]:
+def _graph_focus(
+    *, selected: ConceptCandidate, alternatives: list[ConceptCandidate]
+) -> dict[str, Any]:
     subject = selected.concept.subject
     codes = [selected.concept.code]
     codes.extend(candidate.concept.code for candidate in alternatives)
@@ -1398,7 +1567,10 @@ def _active_goal_for_target(
             LearningGoal.target_concept_id == target_concept_id,
             LearningGoal.status.in_(ACTIVE_GOAL_STATUSES),
         )
-        .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+        .options(
+            selectinload(LearningGoal.track),
+            selectinload(LearningGoal.assessment_sessions),
+        )
         .order_by(LearningGoal.created_at.desc())
     )
 
@@ -1409,12 +1581,17 @@ def _active_goal_to_read(
     *,
     language: str,
 ) -> ActiveGoalRead:
-    concept = session.get(KnowledgeConcept, goal.target_concept_id) if goal.target_concept_id else None
+    concept = (
+        session.get(KnowledgeConcept, goal.target_concept_id)
+        if goal.target_concept_id
+        else None
+    )
     pretest = next(
         (
             assessment
             for assessment in goal.assessment_sessions
-            if assessment.session_type == "pretest" and assessment.status in {"active", "awaiting_answer"}
+            if assessment.session_type == "pretest"
+            and assessment.status in {"active", "awaiting_answer"}
         ),
         None,
     )
