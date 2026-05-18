@@ -1,2 +1,1 @@
 """Shared assessment scoring helpers."""
-

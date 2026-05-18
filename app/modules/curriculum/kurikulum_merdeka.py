@@ -1097,9 +1097,9 @@ def _subject_seed(
     school_levels = sorted({_string(node, "school_level") for node in nodes if _string(node, "school_level")})
     groups = list(_subject_groups(nodes).values())
     graph_metadata = {
-        "title": f"Kurikulum Merdeka {label} Knowledge Map",
-        "title_id": f"Kurikulum Merdeka {label} Knowledge Map",
-        "title_en": f"Kurikulum Merdeka {label_en} Knowledge Map",
+        "title": f"{label} Knowledge Map",
+        "title_id": f"Peta Pengetahuan {label}",
+        "title_en": f"{label_en} Knowledge Map",
         "width": (groups[-1]["x"] + 260.0) if groups else 1200.0,
         "height": _graph_height(nodes),
         "top_down": True,
@@ -1110,7 +1110,7 @@ def _subject_seed(
         code=subject_code,
         name=label,
         description=(
-            f"Kurikulum Merdeka {label} graph covering phases "
+            f"{label} knowledge graph covering phases "
             f"{', '.join(phases)} across {len(nodes)} concepts."
         ),
         display_order=SUBJECT_DISPLAY_ORDER.get(subject_code, 999),
@@ -1122,11 +1122,11 @@ def _subject_seed(
             "name_id": label,
             "name_en": label_en,
             "description_id": (
-                f"Graph Kurikulum Merdeka {label} yang mencakup fase "
+                f"Graf pengetahuan {label} yang mencakup fase "
                 f"{', '.join(phases)} dengan {len(nodes)} konsep."
             ),
             "description_en": (
-                f"Kurikulum Merdeka {label_en} graph covering phases "
+                f"{label_en} knowledge graph covering phases "
                 f"{', '.join(phases)} across {len(nodes)} concepts."
             ),
             "phases": phases,
