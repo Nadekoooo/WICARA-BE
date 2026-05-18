@@ -2209,14 +2209,13 @@ def _report_data_quality(
     status: str,
     source: str,
 ) -> ReportDataQualityRead:
-    confidence_score = 20
-    confidence_score += min(40, attempts_count * 4)
+    confidence_score = 10
+    confidence_score += min(35, attempts_count * 2)
+    confidence_score += min(35, paired_concepts * 10)
     if has_baseline:
-        confidence_score += 20
-    if paired_concepts > 0:
-        confidence_score += 15
+        confidence_score += 10
     if has_state:
-        confidence_score += 5
+        confidence_score += 10
     confidence_score = max(0, min(100, confidence_score))
     if confidence_score >= 80:
         confidence_label = "high"
