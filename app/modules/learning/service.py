@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -113,8 +114,39 @@ from app.modules.question_bank.service import (
     DAILY_SELECTOR_VERSION,
     LearnerStep,
     SelectedQuestion,
+    ensure_question_bank_seeded,
+    import_seed_directory,
     select_daily_questions,
 )
+
+
+@dataclass(frozen=True)
+class _DailyQuestionResult:
+    question: AssessmentQuestion
+    attempt: AssessmentAttempt
+    is_correct: bool
+
+
+@dataclass(frozen=True)
+class _DailyConceptSummary:
+    concept_id: UUID | None
+    title: str
+    status_key: str
+    status_label: str
+    mastery_score: float
+    attempted_count: int
+    correct_count: int
+    score_percent: int
+
+
+@dataclass(frozen=True)
+class _DailySessionResultSummary:
+    question_results: list[_DailyQuestionResult]
+    reviewed_count: int
+    correct_count: int
+    review_again_count: int
+    score_percent: int
+    reviewed_concepts: list[_DailyConceptSummary]
 
 
 PRETEST_TEMPLATES: list[dict[str, Any]] = [
@@ -1511,27 +1543,37 @@ def get_or_create_daily_evaluation(
             selectinload(AssessmentSession.questions).selectinload(AssessmentQuestion.options)
         )
     )
+    if assessment is not None and _should_refresh_daily_assessment_from_bank(
+        session,
+        assessment=assessment,
+        user=user,
+    ):
+        session.delete(assessment)
+        session.flush()
+        assessment = None
     if assessment is None:
+        language = _language_for_user(user)
+        ensure_question_bank_seeded(
+            session,
+            commit=False,
+            preferred_language=language,
+        )
         learner_step, selected_questions = select_daily_questions(session, user=user)
-        if selected_questions:
-            assessment = _create_daily_assessment_from_bank(
-                session,
-                user=user,
-                review_date=today,
-                learner_step=learner_step,
-                selected_questions=selected_questions,
+        if not selected_questions:
+            import_seed_directory(session, strict=False, commit=False)
+            learner_step, selected_questions = select_daily_questions(session, user=user)
+        if not selected_questions:
+            raise LookupError(
+                "Daily Evaluation requires active question-bank items with "
+                "assessment_types including daily_quiz."
             )
-        else:
-            assessment = _create_assessment_session(
-                session,
-                user=user,
-                learning_goal=None,
-                track=None,
-                session_type="daily_evaluation",
-                title="Daily Evaluation",
-                templates=DAILY_REVIEW_TEMPLATES,
-                metadata={"review_date": today, "policy": "spaced_repetition_mvp"},
-            )
+        assessment = _create_daily_assessment_from_bank(
+            session,
+            user=user,
+            review_date=today,
+            learner_step=learner_step,
+            selected_questions=selected_questions,
+        )
         session.commit()
         assessment = session.scalar(
             select(AssessmentSession)
@@ -1543,8 +1585,27 @@ def get_or_create_daily_evaluation(
             )
         )
     assert assessment is not None
+    language = _language_for_user(user)
     completed_question_ids = _answered_question_ids(session, assessment_id=assessment.id)
-    questions = [question_to_schema(question) for question in assessment.questions]
+    concept_titles_by_id = _daily_concept_titles_by_id(
+        session,
+        questions=assessment.questions,
+        language=language,
+    )
+    option_titles_by_text = _daily_option_titles_by_text(
+        session,
+        assessment=assessment,
+        language=language,
+    )
+    questions = [
+        _daily_question_to_schema(
+            question,
+            language=language,
+            concept_titles_by_id=concept_titles_by_id,
+            option_titles_by_text=option_titles_by_text,
+        )
+        for question in assessment.questions
+    ]
     total_questions = len(questions)
     completed_count = len(completed_question_ids)
     current_question = next(
@@ -1554,34 +1615,53 @@ def get_or_create_daily_evaluation(
     due_count = max(0, total_questions - completed_count)
     return DailyEvaluationResponse(
         session_id=assessment.id,
-        title=assessment.title,
+        title=_daily_session_title(language),
         status=assessment.status,
-        language=_language_for_user(user),
+        language=language,
         source=_daily_source(assessment),
         review_policy={
             "strategy": str(assessment.metadata_json.get("policy") or "spaced_repetition_mvp"),
-            "basis": _daily_review_policy_basis(assessment),
+            "basis": _daily_review_policy_basis(assessment, language=language),
         },
         review_due=ReviewDueRead(
-            title="Review due",
+            title=_daily_copy(language, id_text="Review yang jatuh tempo", en_text="Review due"),
             due_count=due_count,
-            summary=f"{due_count} items ready for review",
-            action_label="Start" if completed_count == 0 else "Continue",
+            summary=_daily_due_summary(due_count, language=language),
+            action_label=_daily_copy(
+                language,
+                id_text="Mulai" if completed_count == 0 else "Lanjutkan",
+                en_text="Start" if completed_count == 0 else "Continue",
+            ),
         ),
         progress=ProgressRead(
             current=min(total_questions, completed_count + 1) if total_questions else 0,
             total=total_questions,
             completed=completed_count,
-            label=(
-                f"{min(total_questions, completed_count + 1)} of {total_questions}"
-                if total_questions
-                else "0 of 0"
+            label=_daily_progress_label(
+                min(total_questions, completed_count + 1) if total_questions else 0,
+                total_questions,
+                language=language,
             ),
         ),
-        question=question_to_schema(current_question) if current_question else None,
+        question=(
+            _daily_question_to_schema(
+                current_question,
+                language=language,
+                concept_titles_by_id=concept_titles_by_id,
+                option_titles_by_text=option_titles_by_text,
+            )
+            if current_question
+            else None
+        ),
         questions=questions,
-        retention_forecast=_retention_forecast(completed_count=completed_count),
-        recommendation_callout=_daily_recommendation_callout(due_count=due_count),
+        retention_forecast=_retention_forecast(
+            completed_count=completed_count,
+            language=language,
+        ),
+        recommendation_callout=_daily_recommendation_callout(
+            due_count=due_count,
+            language=language,
+        ),
     )
 
 
@@ -1594,6 +1674,7 @@ def submit_daily_answer_response(
     option_id: str,
     confidence: int,
 ) -> DailyEvaluationAnswerResponse:
+    language = _language_for_user(user)
     attempt, is_correct = submit_answer(
         session,
         user=user,
@@ -1624,7 +1705,10 @@ def submit_daily_answer_response(
     return DailyEvaluationAnswerResponse(
         attempt_id=attempt.id,
         is_correct=is_correct,
-        next_review_label="Review tomorrow" if not is_correct else "Review in 3 days",
+        next_review_label=_daily_next_review_label(
+            3 if is_correct else 1,
+            language=language,
+        ),
         mastery_delta=0.08 if is_correct else -0.04,
         session_status=session_status,
         completed=completed,
@@ -1649,55 +1733,64 @@ def get_daily_evaluation_result(
     if assessment is None:
         return None
 
-    attempts = list(
-        session.scalars(
-            select(AssessmentAttempt)
-            .where(AssessmentAttempt.session_id == assessment.id)
-            .order_by(AssessmentAttempt.submitted_at)
-        )
+    language = _language_for_user(user)
+    result_summary = _daily_session_result_summary(
+        session,
+        user=user,
+        assessment=assessment,
+        language=language,
     )
-    reviewed_count = len(attempts)
-    correct_count = len([attempt for attempt in attempts if attempt_answer_score(attempt) >= 1.0])
-    review_again_count = max(0, reviewed_count - correct_count)
-    score_percent = int(round((correct_count / reviewed_count) * 100)) if reviewed_count else 0
-    interval_days = 3 if review_again_count else 7
+    interval_days = 3 if result_summary.review_again_count else 7
     due_date = datetime.now(UTC).date() + timedelta(days=interval_days)
 
-    if assessment.questions and len(_answered_question_ids(session, assessment_id=assessment.id)) >= len(
-        assessment.questions
-    ):
+    if assessment.questions and result_summary.reviewed_count >= len(assessment.questions):
         assessment.status = "completed"
         assessment.completed_at = assessment.completed_at or datetime.now(UTC)
         session.commit()
 
-    reviewed_concepts = _reviewed_concepts(session, user=user, assessment=assessment, attempts=attempts)
+    reviewed_concepts = [
+        ReviewedConceptRead(
+            concept_id=str(concept.concept_id) if concept.concept_id else None,
+            title=concept.title,
+            status_label=concept.status_label,
+            mastery_score=concept.mastery_score,
+        )
+        for concept in result_summary.reviewed_concepts
+    ]
     return DailyEvaluationResultResponse(
         session_id=assessment.id,
-        title=assessment.title,
+        title=_daily_session_title(language),
         status=assessment.status,
         source=_daily_source(assessment),
-        score_percent=score_percent,
-        reviewed_count=reviewed_count,
-        correct_count=correct_count,
-        review_again_count=review_again_count,
+        score_percent=result_summary.score_percent,
+        reviewed_count=result_summary.reviewed_count,
+        correct_count=result_summary.correct_count,
+        review_again_count=result_summary.review_again_count,
         reviewed_concepts=reviewed_concepts,
         spaced_repetition_impact=SpacedRepetitionImpactRead(
-            retention_lift_percent=_retention_lift_percent(correct_count, review_again_count),
+            retention_lift_percent=_retention_lift_percent(
+                result_summary.correct_count,
+                result_summary.review_again_count,
+            ),
             days_until_next_review=interval_days,
-            summary="You've strengthened your memory." if reviewed_count else "No review evidence yet.",
+            summary=_daily_result_summary_label(
+                reviewed_count=result_summary.reviewed_count,
+                language=language,
+            ),
         ),
         next_review=DailyEvaluationNextReviewRead(
-            label=f"Review in {interval_days} days",
+            label=_daily_next_review_label(interval_days, language=language),
             due_date=due_date.isoformat(),
             interval_days=interval_days,
         ),
         recommended_next_actions=_daily_next_actions(
-            reviewed_concepts=reviewed_concepts,
-            review_again_count=review_again_count,
+            reviewed_concepts=result_summary.reviewed_concepts,
+            review_again_count=result_summary.review_again_count,
             due_date=due_date,
+            language=language,
         ),
         back_to_home=ActionRead(
-            label="Back to Home",
+            label=_daily_copy(language, id_text="Kembali ke Beranda", en_text="Back to Home"),
             action_type="navigate",
             target="/home",
         ),
@@ -1722,6 +1815,235 @@ def question_to_schema(question: AssessmentQuestion) -> AssessmentQuestionRead:
             for option in question.options
         ],
     )
+
+
+def _daily_question_to_schema(
+    question: AssessmentQuestion,
+    *,
+    language: str,
+    concept_titles_by_id: dict[UUID, str],
+    option_titles_by_text: dict[str, str],
+) -> AssessmentQuestionRead:
+    topic = _daily_question_topic(
+        question,
+        language=language,
+        concept_titles_by_id=concept_titles_by_id,
+    )
+    return AssessmentQuestionRead(
+        id=str(question.id),
+        step_label=_daily_question_step_label(question, language=language),
+        topic=topic,
+        prompt=_daily_question_prompt(question.prompt, language=language),
+        helper=_daily_question_helper(question.helper_text, language=language),
+        options=[
+            AssessmentOptionRead(
+                id=str(option.id),
+                label=option.label,
+                text=_daily_option_text(
+                    option.text,
+                    language=language,
+                    option_titles_by_text=option_titles_by_text,
+                ),
+            )
+            for option in question.options
+        ],
+    )
+
+
+def _should_refresh_daily_assessment_from_bank(
+    session: Session,
+    *,
+    assessment: AssessmentSession,
+    user: UserAccount,
+) -> bool:
+    attempt_count = session.scalar(
+        select(func.count())
+        .select_from(AssessmentAttempt)
+        .where(AssessmentAttempt.session_id == assessment.id)
+    )
+    if int(attempt_count or 0) > 0:
+        return False
+
+    if assessment.metadata_json.get("policy") != "personalized_daily_v2":
+        return True
+
+    preferred_language = _language_for_user(user)
+    stored_language = normalize_language_code(
+        str(assessment.metadata_json.get("preferred_language") or "")
+    )
+    if stored_language and stored_language != preferred_language:
+        return True
+
+    question_languages = {
+        normalize_language_code(str(question.metadata_json.get("question_bank_language") or ""))
+        for question in assessment.questions
+        if question.metadata_json.get("question_bank_language")
+    }
+    return bool(question_languages and preferred_language not in question_languages)
+
+
+def _daily_concept_titles_by_id(
+    session: Session,
+    *,
+    questions: list[AssessmentQuestion],
+    language: str,
+) -> dict[UUID, str]:
+    concept_ids = {
+        question.concept_id for question in questions if question.concept_id is not None
+    }
+    if not concept_ids:
+        return {}
+    return {
+        concept.id: _localized_topic(concept.title, concept, language=language)
+        for concept in session.scalars(
+            select(KnowledgeConcept).where(KnowledgeConcept.id.in_(concept_ids))
+        )
+    }
+
+
+def _daily_option_titles_by_text(
+    session: Session,
+    *,
+    assessment: AssessmentSession,
+    language: str,
+) -> dict[str, str]:
+    option_texts = {
+        _normalize_daily_text(option.text)
+        for question in assessment.questions
+        for option in question.options
+        if option.text.strip()
+    }
+    if not option_texts:
+        return {}
+
+    query = select(KnowledgeConcept)
+    subject_code = str(
+        assessment.metadata_json.get("selected_subject_code") or ""
+    ).strip()
+    if subject_code:
+        subject_id = session.scalar(select(Subject.id).where(Subject.code == subject_code))
+        if subject_id is not None:
+            query = query.where(KnowledgeConcept.subject_id == subject_id)
+
+    title_by_text: dict[str, str] = {}
+    for concept in session.scalars(query):
+        localized = _localized_topic(concept.title, concept, language=language)
+        for candidate in _daily_concept_title_candidates(concept):
+            key = _normalize_daily_text(candidate)
+            if key in option_texts:
+                title_by_text[key] = localized
+    return title_by_text
+
+
+def _daily_concept_title_candidates(concept: KnowledgeConcept) -> set[str]:
+    metadata = dict(concept.metadata_json or {})
+    candidates = {
+        concept.title,
+        str(metadata.get("label_id") or ""),
+        str(metadata.get("label_en") or ""),
+        str(metadata.get("en_title") or ""),
+    }
+    english_title = translate_curriculum_label_to_english(concept.title)
+    if english_title:
+        candidates.add(english_title)
+    return {candidate.strip() for candidate in candidates if candidate.strip()}
+
+
+def _daily_question_topic(
+    question: AssessmentQuestion,
+    *,
+    language: str,
+    concept_titles_by_id: dict[UUID, str],
+) -> str:
+    if question.concept_id is not None:
+        localized = concept_titles_by_id.get(question.concept_id)
+        if localized:
+            return localized
+    return _daily_option_text(
+        question.topic,
+        language=language,
+        option_titles_by_text={},
+    )
+
+
+def _daily_question_step_label(question: AssessmentQuestion, *, language: str) -> str:
+    step_label = question.step_label.strip()
+    if not _is_indonesian(language):
+        return step_label
+    if "/" in step_label:
+        return f"Soal {step_label}"
+    if step_label.lower() in {"daily evals", "daily evaluation"}:
+        return "Evaluasi Harian"
+    return step_label
+
+
+def _daily_question_prompt(prompt: str, *, language: str) -> str:
+    text = prompt.strip()
+    if not _is_indonesian(language) or not text:
+        return text
+
+    normalized = _normalize_daily_text(text)
+    if normalized.startswith("a quick review of ") and normalized.endswith(
+        " belongs to which topic?"
+    ):
+        idea = text[len("A quick review of ") : -len(" belongs to which topic?")]
+        return f"Review cepat tentang {idea} termasuk topik apa?"
+    if normalized.startswith("which topic is about ") and normalized.endswith("?"):
+        idea = text[len("Which topic is about ") : -1]
+        return f"Topik mana yang membahas {idea}?"
+    if normalized.startswith("topic for ") and normalized.endswith("?"):
+        idea = text[len("Topic for ") : -1]
+        return f"Topik untuk {idea}?"
+    if normalized.startswith(
+        "before starting this strand, which topic would assess "
+    ) and normalized.endswith("?"):
+        idea = text[
+            len("Before starting this strand, which topic would assess ") : -1
+        ]
+        return f"Sebelum memulai rangkaian ini, topik mana yang mengecek {idea}?"
+    if normalized.startswith(
+        "after learning this strand, which topic best fits "
+    ) and normalized.endswith("?"):
+        idea = text[len("After learning this strand, which topic best fits ") : -1]
+        return f"Setelah belajar rangkaian ini, topik mana yang paling cocok dengan {idea}?"
+    return text
+
+
+def _daily_question_helper(helper: str, *, language: str) -> str:
+    text = helper.strip()
+    if not _is_indonesian(language) or not text:
+        return text
+    helper_map = {
+        "choose the topic that best matches the key skill or idea.": (
+            "Pilih topik yang paling cocok dengan skill atau ide kunci."
+        ),
+        "pick the topic that best matches the idea.": (
+            "Pilih topik yang paling cocok dengan ide tersebut."
+        ),
+        "choose the topic that best fits the full mathematical idea.": (
+            "Pilih topik yang paling sesuai dengan ide matematika lengkapnya."
+        ),
+        "pick the best topic match.": "Pilih topik yang paling cocok.",
+    }
+    return helper_map.get(_normalize_daily_text(text), text)
+
+
+def _daily_option_text(
+    text: str,
+    *,
+    language: str,
+    option_titles_by_text: dict[str, str],
+) -> str:
+    if not text.strip():
+        return ""
+    localized = option_titles_by_text.get(_normalize_daily_text(text))
+    if localized:
+        return localized
+    return text
+
+
+def _normalize_daily_text(value: str) -> str:
+    return " ".join(value.strip().casefold().split())
 
 
 def track_to_schema(track: LearningTrack) -> TrackRead:
@@ -2673,8 +2995,16 @@ def _weekly_recommendations(
     ]
 
 
-def _due_label(due_date: date, *, today: date) -> str:
+def _due_label(due_date: date, *, today: date, language: str = "en") -> str:
     day_delta = (due_date - today).days
+    if _is_indonesian(language):
+        if day_delta < 0:
+            return "Terlambat"
+        if day_delta == 0:
+            return "Jatuh tempo hari ini"
+        if day_delta == 1:
+            return "Jatuh tempo besok"
+        return f"Jatuh tempo dalam {day_delta} hari"
     if day_delta < 0:
         return "Overdue"
     if day_delta == 0:
@@ -2698,6 +3028,95 @@ def _language_for_user(user: UserAccount) -> str:
     return preferred_language_code(user)
 
 
+def _is_indonesian(language: str) -> bool:
+    return normalize_language_code(language) == "id"
+
+
+def _daily_copy(language: str, *, id_text: str, en_text: str) -> str:
+    return id_text if _is_indonesian(language) else en_text
+
+
+def _daily_session_title(language: str) -> str:
+    return _daily_copy(
+        language,
+        id_text="Evaluasi Harian",
+        en_text="Daily Evaluation",
+    )
+
+
+def _daily_due_summary(due_count: int, *, language: str) -> str:
+    return _daily_copy(
+        language,
+        id_text=f"{due_count} item siap direview",
+        en_text=f"{due_count} items ready for review",
+    )
+
+
+def _daily_progress_label(current: int, total: int, *, language: str) -> str:
+    if total <= 0:
+        return _daily_copy(language, id_text="0 dari 0", en_text="0 of 0")
+    return _daily_copy(
+        language,
+        id_text=f"{current} dari {total}",
+        en_text=f"{current} of {total}",
+    )
+
+
+def _daily_result_summary_label(*, reviewed_count: int, language: str) -> str:
+    if reviewed_count:
+        return _daily_copy(
+            language,
+            id_text="Memorimu makin kuat.",
+            en_text="You've strengthened your memory.",
+        )
+    return _daily_copy(
+        language,
+        id_text="Belum ada bukti review.",
+        en_text="No review evidence yet.",
+    )
+
+
+def _daily_next_review_label(interval_days: int, *, language: str) -> str:
+    if _is_indonesian(language):
+        if interval_days <= 1:
+            return "Tinjau besok"
+        return f"Tinjau dalam {interval_days} hari"
+    if interval_days <= 1:
+        return "Review tomorrow"
+    return f"Review in {interval_days} days"
+
+
+def _daily_action_title(
+    action_type: str,
+    *,
+    concept_title: str | None,
+    language: str,
+) -> str:
+    if action_type == "review":
+        if concept_title:
+            prefix = "Tinjau" if _is_indonesian(language) else "Review"
+            return f"{prefix}: {concept_title}"
+        return _daily_copy(
+            language,
+            id_text="Tinjau konsep 2 minggu",
+            en_text="Review 2-week concepts",
+        )
+    if action_type == "practice":
+        if concept_title:
+            prefix = "Latihan" if _is_indonesian(language) else "Practice"
+            return f"{prefix}: {concept_title}"
+        return _daily_copy(
+            language,
+            id_text="Latihan 5 soal lagi",
+            en_text="Practice 5 more questions",
+        )
+    return _daily_copy(
+        language,
+        id_text="Lanjutkan belajar",
+        en_text="Continue learning",
+    )
+
+
 def _daily_source(assessment: AssessmentSession) -> str:
     policy = assessment.metadata_json.get("policy")
     if policy == "personalized_daily_v2":
@@ -2707,28 +3126,53 @@ def _daily_source(assessment: AssessmentSession) -> str:
     return str(assessment.metadata_json.get("generation") or "deterministic_mvp")
 
 
-def _daily_review_policy_basis(assessment: AssessmentSession) -> str:
+def _daily_review_policy_basis(assessment: AssessmentSession, *, language: str = "en") -> str:
     policy = assessment.metadata_json.get("policy")
     if policy == "personalized_daily_v2":
-        return (
-            "question bank selector using due review, weak mastery, and current module state"
+        return _daily_copy(
+            language,
+            id_text="selector bank soal memakai review jatuh tempo, mastery lemah, dan modul aktif",
+            en_text="question bank selector using due review, weak mastery, and current module state",
         )
-    return "due concepts first, seeded review templates when no due concepts exist"
+    return _daily_copy(
+        language,
+        id_text="item question bank dengan assessment_types daily_quiz",
+        en_text="question bank items with assessment_types daily_quiz",
+    )
 
 
-def _retention_forecast(*, completed_count: int) -> RetentionForecastRead:
+def _retention_forecast(*, completed_count: int, language: str = "en") -> RetentionForecastRead:
     lift = min(12, completed_count * 2)
-    raw_points = [
-        ("Today", 100, False),
-        ("Day 1", 70 + lift, False),
-        ("Day 2", 52 + lift, False),
-        ("Day 7", 38 + lift, False),
-        ("Day 14", 25 + lift, True),
-        ("Day 30", 17 + lift, True),
-    ]
+    raw_points = (
+        [
+            ("Hari ini", 100, False),
+            ("Hari 1", 70 + lift, False),
+            ("Hari 2", 52 + lift, False),
+            ("Hari 7", 38 + lift, False),
+            ("Hari 14", 25 + lift, True),
+            ("Hari 30", 17 + lift, True),
+        ]
+        if _is_indonesian(language)
+        else [
+            ("Today", 100, False),
+            ("Day 1", 70 + lift, False),
+            ("Day 2", 52 + lift, False),
+            ("Day 7", 38 + lift, False),
+            ("Day 14", 25 + lift, True),
+            ("Day 30", 17 + lift, True),
+        ]
+    )
     return RetentionForecastRead(
-        title="Your retention forecast",
-        basis="Based on the Ebbinghaus forgetting curve MVP.",
+        title=_daily_copy(
+            language,
+            id_text="Perkiraan retensimu",
+            en_text="Your retention forecast",
+        ),
+        basis=_daily_copy(
+            language,
+            id_text="Berdasarkan MVP kurva lupa Ebbinghaus.",
+            en_text="Based on the Ebbinghaus forgetting curve MVP.",
+        ),
         points=[
             RetentionForecastPointRead(
                 label=label,
@@ -2740,40 +3184,126 @@ def _retention_forecast(*, completed_count: int) -> RetentionForecastRead:
     )
 
 
-def _daily_recommendation_callout(*, due_count: int) -> RecommendationCalloutRead:
+def _daily_recommendation_callout(
+    *,
+    due_count: int,
+    language: str = "en",
+) -> RecommendationCalloutRead:
     return RecommendationCalloutRead(
-        title="Review now",
+        title=_daily_copy(language, id_text="Review sekarang", en_text="Review now"),
         message=(
-            "Keep reviewing to move the curve up and improve long-term retention."
+            _daily_copy(
+                language,
+                id_text="Terus review untuk menaikkan kurva dan memperkuat retensi jangka panjang.",
+                en_text="Keep reviewing to move the curve up and improve long-term retention.",
+            )
             if due_count
-            else "You are caught up for today's review queue."
+            else _daily_copy(
+                language,
+                id_text="Kamu sudah menyelesaikan antrian review hari ini.",
+                en_text="You are caught up for today's review queue.",
+            )
         ),
-        impact_label="High impact" if due_count else "Maintained",
-        action_label="Review now" if due_count else "Back to home",
+        impact_label=_daily_copy(
+            language,
+            id_text="Dampak tinggi" if due_count else "Terjaga",
+            en_text="High impact" if due_count else "Maintained",
+        ),
+        action_label=_daily_copy(
+            language,
+            id_text="Review sekarang" if due_count else "Kembali ke beranda",
+            en_text="Review now" if due_count else "Back to home",
+        ),
     )
 
 
-def _reviewed_concepts(
+def _daily_session_result_summary(
     session: Session,
     *,
     user: UserAccount,
     assessment: AssessmentSession,
-    attempts: list[AssessmentAttempt],
-) -> list[ReviewedConceptRead]:
+    language: str,
+) -> _DailySessionResultSummary:
+    latest_attempt_by_question = _latest_attempts_by_assessment_question(
+        session,
+        assessment=assessment,
+    )
+
+    question_results: list[_DailyQuestionResult] = []
+    for question in sorted(assessment.questions, key=lambda item: item.sort_order):
+        attempt = latest_attempt_by_question.get(question.id)
+        if attempt is None:
+            continue
+        question_results.append(
+            _DailyQuestionResult(
+                question=question,
+                attempt=attempt,
+                is_correct=attempt_answer_score(attempt) >= 1.0,
+            )
+        )
+
+    reviewed_count = len(question_results)
+    correct_count = sum(1 for result in question_results if result.is_correct)
+    review_again_count = max(0, reviewed_count - correct_count)
+    score_percent = int(round((correct_count / reviewed_count) * 100)) if reviewed_count else 0
+
+    return _DailySessionResultSummary(
+        question_results=question_results,
+        reviewed_count=reviewed_count,
+        correct_count=correct_count,
+        review_again_count=review_again_count,
+        score_percent=score_percent,
+        reviewed_concepts=_daily_reviewed_concept_summaries(
+            session,
+            user=user,
+            question_results=question_results,
+            language=language,
+        ),
+    )
+
+
+def _latest_attempts_by_assessment_question(
+    session: Session,
+    *,
+    assessment: AssessmentSession,
+) -> dict[UUID, AssessmentAttempt]:
+    question_ids = {question.id for question in assessment.questions}
+    if not question_ids:
+        return {}
+
+    attempts = list(
+        session.scalars(
+            select(AssessmentAttempt)
+            .where(
+                AssessmentAttempt.session_id == assessment.id,
+                AssessmentAttempt.question_id.in_(question_ids),
+            )
+            .order_by(AssessmentAttempt.submitted_at, AssessmentAttempt.id)
+        )
+    )
     latest_attempt_by_question: dict[UUID, AssessmentAttempt] = {}
     for attempt in attempts:
         latest_attempt_by_question[attempt.question_id] = attempt
+    return latest_attempt_by_question
 
+
+def _daily_reviewed_concept_summaries(
+    session: Session,
+    *,
+    user: UserAccount,
+    question_results: list[_DailyQuestionResult],
+    language: str,
+) -> list[_DailyConceptSummary]:
     concept_ids = {
-        question.concept_id
-        for question in assessment.questions
-        if question.concept_id is not None
+        result.question.concept_id
+        for result in question_results
+        if result.question.concept_id is not None
     }
-    concept_titles: dict[UUID, str] = {}
+    concepts_by_id: dict[UUID, KnowledgeConcept] = {}
     state_by_concept: dict[UUID, LearnerConceptState] = {}
     if concept_ids:
-        concept_titles = {
-            concept.id: concept.title
+        concepts_by_id = {
+            concept.id: concept
             for concept in session.scalars(
                 select(KnowledgeConcept).where(KnowledgeConcept.id.in_(concept_ids))
             )
@@ -2788,39 +3318,101 @@ def _reviewed_concepts(
             )
         }
 
-    rows: list[ReviewedConceptRead] = []
-    for question in sorted(assessment.questions, key=lambda item: item.sort_order):
-        attempt = latest_attempt_by_question.get(question.id)
-        if attempt is None:
-            continue
-        state = state_by_concept.get(question.concept_id) if question.concept_id else None
-        is_correct = attempt_answer_score(attempt) >= 1.0
-        mastery_score = state.mastery_score if state else (0.68 if is_correct else 0.32)
-        rows.append(
-            ReviewedConceptRead(
-                concept_id=str(question.concept_id) if question.concept_id else None,
-                title=(
-                    concept_titles.get(question.concept_id)
-                    if question.concept_id
-                    else question.topic
-                )
-                or question.topic,
-                status_label=_concept_status_label(
-                    is_correct=is_correct,
-                    mastery_score=mastery_score,
+    grouped: dict[str, dict[str, Any]] = {}
+    for result in question_results:
+        question = result.question
+        key = (
+            f"concept:{question.concept_id}"
+            if question.concept_id
+            else f"topic:{str(question.topic or question.id).strip().lower()}"
+        )
+        bucket = grouped.setdefault(
+            key,
+            {
+                "concept_id": question.concept_id,
+                "title": _daily_concept_title(
+                    question,
+                    concepts_by_id.get(question.concept_id) if question.concept_id else None,
+                    language=language,
                 ),
-                mastery_score=round(float(mastery_score), 2),
+                "sort_order": question.sort_order,
+                "attempted_count": 0,
+                "correct_count": 0,
+            },
+        )
+        bucket["sort_order"] = min(int(bucket["sort_order"]), question.sort_order)
+        bucket["attempted_count"] = int(bucket["attempted_count"]) + 1
+        bucket["correct_count"] = int(bucket["correct_count"]) + (1 if result.is_correct else 0)
+
+    summaries: list[_DailyConceptSummary] = []
+    for bucket in sorted(grouped.values(), key=lambda item: int(item["sort_order"])):
+        concept_id = bucket["concept_id"]
+        attempted_count = max(1, int(bucket["attempted_count"]))
+        correct_count = int(bucket["correct_count"])
+        score_percent = int(round((correct_count / attempted_count) * 100))
+        state = state_by_concept.get(concept_id) if concept_id else None
+        mastery_score = (
+            float(state.mastery_score)
+            if state is not None
+            else float(score_percent / 100)
+        )
+        status_key = _concept_status_key(
+            attempted_count=attempted_count,
+            correct_count=correct_count,
+            mastery_score=mastery_score,
+        )
+        summaries.append(
+            _DailyConceptSummary(
+                concept_id=concept_id,
+                title=str(bucket["title"]),
+                status_key=status_key,
+                status_label=_concept_status_label(status_key, language=language),
+                mastery_score=round(mastery_score, 2),
+                attempted_count=attempted_count,
+                correct_count=correct_count,
+                score_percent=score_percent,
             )
         )
-    return rows
+    return summaries
 
 
-def _concept_status_label(*, is_correct: bool, mastery_score: float) -> str:
-    if not is_correct:
-        return "Review"
+def _daily_concept_title(
+    question: AssessmentQuestion,
+    concept: KnowledgeConcept | None,
+    *,
+    language: str,
+) -> str:
+    if concept is not None:
+        return _localized_topic(concept.title, concept, language=language)
+    topic = (question.topic or "").strip()
+    return topic or question.prompt
+
+
+def _concept_status_key(
+    *,
+    attempted_count: int,
+    correct_count: int,
+    mastery_score: float,
+) -> str:
+    if correct_count < attempted_count:
+        return "review"
     if mastery_score >= 0.78:
-        return "Strong"
-    return "Good"
+        return "strong"
+    return "good"
+
+
+def _concept_status_label(status_key: str, *, language: str) -> str:
+    if _is_indonesian(language):
+        return {
+            "review": "Tinjau",
+            "strong": "Kuat",
+            "good": "Bagus",
+        }.get(status_key, "Tinjau")
+    return {
+        "review": "Review",
+        "strong": "Strong",
+        "good": "Good",
+    }.get(status_key, "Review")
 
 
 def _retention_lift_percent(correct_count: int, review_again_count: int) -> int:
@@ -2829,58 +3421,79 @@ def _retention_lift_percent(correct_count: int, review_again_count: int) -> int:
 
 def _daily_next_actions(
     *,
-    reviewed_concepts: list[ReviewedConceptRead],
+    reviewed_concepts: list[_DailyConceptSummary],
     review_again_count: int,
     due_date: date,
+    language: str,
 ) -> list[RecommendedNextActionRead]:
     review_concept = next(
-        (concept for concept in reviewed_concepts if concept.status_label == "Review"),
+        (concept for concept in reviewed_concepts if concept.status_key == "review"),
         reviewed_concepts[0] if reviewed_concepts else None,
     )
     practice_concept = next(
         (
             concept
             for concept in reviewed_concepts
-            if concept.status_label != "Review" and concept.mastery_score < 0.75
+            if concept.status_key != "review" and concept.mastery_score < 0.75
         ),
         review_concept,
     )
+    tomorrow = datetime.now(UTC).date() + timedelta(days=1)
     return [
         RecommendedNextActionRead(
-            title=(
-                f"Review: {review_concept.title}"
-                if review_concept and review_again_count
-                else (
-                    f"Review: {review_concept.title}"
-                    if review_concept
-                    else "Review 2-week concepts"
-                )
+            title=_daily_action_title(
+                "review",
+                concept_title=review_concept.title if review_concept else None,
+                language=language,
             ),
             action_type="review",
-            reason=(
-                "You missed this concept in today's evaluation."
-                if review_again_count
-                else "Focus on high-impact memory reinforcement."
+            reason=_daily_copy(
+                language,
+                id_text=(
+                    "Kamu melewatkan konsep ini di evaluasi hari ini."
+                    if review_again_count
+                    else "Fokus ke penguatan memori yang paling berdampak."
+                ),
+                en_text=(
+                    "You missed this concept in today's evaluation."
+                    if review_again_count
+                    else "Focus on high-impact memory reinforcement."
+                ),
             ),
             due_date=due_date.isoformat(),
+            due_label=_due_label(due_date, today=datetime.now(UTC).date(), language=language),
             priority=1,
         ),
         RecommendedNextActionRead(
-            title=(
-                f"Practice: {practice_concept.title}"
-                if practice_concept and practice_concept.mastery_score < 0.75
-                else "Practice 5 more questions"
+            title=_daily_action_title(
+                "practice",
+                concept_title=(
+                    practice_concept.title
+                    if practice_concept and practice_concept.mastery_score < 0.75
+                    else None
+                ),
+                language=language,
             ),
             action_type="practice",
-            reason="Retighten your understanding with short retrieval practice.",
-            due_date=(datetime.now(UTC).date() + timedelta(days=1)).isoformat(),
+            reason=_daily_copy(
+                language,
+                id_text="Kuatkan lagi pemahamanmu dengan latihan retrieval singkat.",
+                en_text="Retighten your understanding with short retrieval practice.",
+            ),
+            due_date=tomorrow.isoformat(),
+            due_label=_due_label(tomorrow, today=datetime.now(UTC).date(), language=language),
             priority=2,
         ),
         RecommendedNextActionRead(
-            title="Continue learning",
+            title=_daily_action_title("continue_learning", concept_title=None, language=language),
             action_type="continue_learning",
-            reason="Go to your learning path when review is complete.",
+            reason=_daily_copy(
+                language,
+                id_text="Lanjutkan jalur belajarmu setelah review selesai.",
+                en_text="Go to your learning path when review is complete.",
+            ),
             due_date=None,
+            due_label=None,
             priority=3,
         ),
     ]
@@ -3023,6 +3636,7 @@ def _create_daily_assessment_from_bank(
                     "reason": selected.reason,
                     "question_bank_external_id": selected.item.external_id,
                     "concept_code": selected.item.concept_code,
+                    "assessment_types": selected.item.assessment_types_json,
                 }
                 for selected in selected_questions
             ],
@@ -3047,6 +3661,8 @@ def _create_daily_assessment_from_bank(
                 "source": "question_bank",
                 "question_bank_item_id": str(item.id),
                 "question_bank_external_id": item.external_id,
+                "question_bank_language": item.language,
+                "assessment_types": item.assessment_types_json,
                 "concept_code": item.concept_code,
                 "selection_slot": selected.slot,
                 "selection_reason": selected.reason,
@@ -3187,7 +3803,7 @@ def _localized_topic(
     if language == "id":
         return concept.title
     metadata = concept.metadata_json or {}
-    english_title = str(metadata.get("en_title") or "").strip()
+    english_title = str(metadata.get("en_title") or metadata.get("label_en") or "").strip()
     return english_title or translate_curriculum_label_to_english(concept.title)
 
 

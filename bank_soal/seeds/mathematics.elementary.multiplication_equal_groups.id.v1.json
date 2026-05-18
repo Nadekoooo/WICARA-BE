@@ -1,0 +1,559 @@
+{
+  "version": "2026-05-16-id",
+  "source": "wicara_question_bank_seed_v1_id",
+  "language": "id",
+  "subject_code": "mathematics",
+  "education_level": "elementary",
+  "grade_band": "elementary",
+  "items": [
+    {
+      "id": "math_el_eqgrp_pre_1_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "pretest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "understand",
+      "prompt": "Kisah bergambar mana yang cocok dengan 3 x 2?",
+      "helper_text": "Pikirkan ada berapa kelompok dan berapa isi setiap kelompok.",
+      "options": [
+        {
+          "label": "A",
+          "text": "3 kelompok yang masing-masing berisi 2"
+        },
+        {
+          "label": "B",
+          "text": "2 kelompok yang masing-masing berisi 3"
+        },
+        {
+          "label": "C",
+          "text": "5 kelompok yang masing-masing berisi 1"
+        },
+        {
+          "label": "D",
+          "text": "1 kelompok yang masing-masing berisi 5"
+        }
+      ],
+      "answer_key": "A",
+      "explanation": "3 x 2 berarti 3 kelompok yang sama banyak dengan 2 benda di setiap kelompok.",
+      "rubric": {
+        "correct": "Peserta didik mengenali perkalian sebagai kumpulan kelompok yang sama banyak.",
+        "common_misconceptions": [
+          "Menukar faktor dan memilih 2 kelompok berisi 3.",
+          "Menjumlahkan angka dan mengira 3 x 2 berarti total 5 benda."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "concept_check",
+        "pretest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_pre_1",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_pre_2_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "pretest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "medium",
+      "cognitive_level": "apply",
+      "prompt": "Mila punya 4 kotak. Setiap kotak berisi 3 krayon. Berapa jumlah krayon seluruhnya?",
+      "helper_text": "Gunakan kelompok yang sama banyak untuk mencari total.",
+      "options": [
+        {
+          "label": "A",
+          "text": "7"
+        },
+        {
+          "label": "B",
+          "text": "12"
+        },
+        {
+          "label": "C",
+          "text": "14"
+        },
+        {
+          "label": "D",
+          "text": "16"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "Ada 4 kelompok yang sama banyak berisi 3 krayon, jadi 4 x 3 = 12.",
+      "rubric": {
+        "correct": "Peserta didik menggunakan kelompok yang sama banyak untuk mencari total dalam soal cerita sederhana.",
+        "common_misconceptions": [
+          "Menjumlahkan 4 + 3 alih-alih mencari 4 kelompok berisi 3.",
+          "Menghitung satu kelompok dengan benar tetapi tidak menggabungkan semua kelompok."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "story_problem",
+        "pretest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_pre_2",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_daily_1_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "daily_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "remember",
+      "prompt": "Berapa 2 kelompok yang masing-masing berisi 4?",
+      "helper_text": "Hitung 4, lalu 4 lagi.",
+      "options": [
+        {
+          "label": "A",
+          "text": "6"
+        },
+        {
+          "label": "B",
+          "text": "8"
+        },
+        {
+          "label": "C",
+          "text": "10"
+        },
+        {
+          "label": "D",
+          "text": "12"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "2 kelompok berisi 4 adalah 4 + 4 = 8.",
+      "rubric": {
+        "correct": "Peserta didik mengingat total untuk fakta kelompok yang sama banyak dalam ukuran kecil.",
+        "common_misconceptions": [
+          "Menjumlahkan 2 + 4 alih-alih menggabungkan kelompok yang sama banyak.",
+          "Menghitung satu-satu lalu berhenti terlalu cepat."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "retrieval",
+        "daily_quiz"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_daily_1",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_daily_2_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "daily_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "understand",
+      "prompt": "Kalimat perkalian mana yang berarti 5 kelompok berisi 2?",
+      "helper_text": "Angka pertama menunjukkan ada berapa kelompok.",
+      "options": [
+        {
+          "label": "A",
+          "text": "2 x 5"
+        },
+        {
+          "label": "B",
+          "text": "5 x 2"
+        },
+        {
+          "label": "C",
+          "text": "5 + 2"
+        },
+        {
+          "label": "D",
+          "text": "2 + 5"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "5 x 2 berarti 5 kelompok dengan 2 di setiap kelompok.",
+      "rubric": {
+        "correct": "Peserta didik mencocokkan bahasa kelompok yang sama banyak dengan kalimat perkalian.",
+        "common_misconceptions": [
+          "Memilih 2 x 5 karena totalnya sama.",
+          "Mencampur simbol penjumlahan dan perkalian."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "sentence_match",
+        "daily_quiz"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_daily_2",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_daily_3_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "daily_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "medium",
+      "cognitive_level": "apply",
+      "prompt": "Ada 3 piring. Setiap piring berisi 5 kue. Berapa total kue seluruhnya?",
+      "helper_text": "Cari total dalam 3 kelompok yang masing-masing berisi 5.",
+      "options": [
+        {
+          "label": "A",
+          "text": "8"
+        },
+        {
+          "label": "B",
+          "text": "10"
+        },
+        {
+          "label": "C",
+          "text": "15"
+        },
+        {
+          "label": "D",
+          "text": "18"
+        }
+      ],
+      "answer_key": "C",
+      "explanation": "Soal ini menilai pemahaman perkalian sebagai kelompok yang sama banyak.",
+      "rubric": {
+        "correct": "Peserta didik menerapkan kelompok yang sama banyak dalam konteks sehari-hari yang familiar.",
+        "common_misconceptions": [
+          "Adds 3 + 5 instead of multiplying.",
+          "Skips one group when counting by fives."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "story_problem",
+        "daily_quiz"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_daily_3",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_post_1_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "posttest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "medium",
+      "cognitive_level": "apply",
+      "prompt": "Sebuah kelas membuat 6 baris yang masing-masing berisi 2 bunga kertas. Ada berapa bunga kertas seluruhnya?",
+      "helper_text": "Gunakan baris sebagai kelompok yang sama banyak.",
+      "options": [
+        {
+          "label": "A",
+          "text": "8"
+        },
+        {
+          "label": "B",
+          "text": "10"
+        },
+        {
+          "label": "C",
+          "text": "12"
+        },
+        {
+          "label": "D",
+          "text": "14"
+        }
+      ],
+      "answer_key": "C",
+      "explanation": "Soal ini menilai pemahaman perkalian sebagai kelompok yang sama banyak.",
+      "rubric": {
+        "correct": "Peserta didik menunjukkan pemahaman perkalian sebagai kelompok yang sama banyak.",
+        "common_misconceptions": [
+          "Adds 6 + 2 instead of multiplying.",
+          "Counts rows but forgets flowers in each row."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "rows",
+        "posttest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_post_1",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_post_2_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "posttest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "hard",
+      "cognitive_level": "analyze",
+      "prompt": "Situasi mana yang dapat diselesaikan dengan 4 x 4?",
+      "helper_text": "Cari 4 kelompok yang sama banyak dengan 4 di setiap kelompok.",
+      "options": [
+        {
+          "label": "A",
+          "text": "4 bags with 4 stickers in each bag"
+        },
+        {
+          "label": "B",
+          "text": "4 red stickers and 4 blue stickers"
+        },
+        {
+          "label": "C",
+          "text": "4 stickers, then 4 more, then 1 more"
+        },
+        {
+          "label": "D",
+          "text": "A bag with 8 stickers"
+        }
+      ],
+      "answer_key": "A",
+      "explanation": "Soal ini menilai pemahaman perkalian sebagai kelompok yang sama banyak.",
+      "rubric": {
+        "correct": "Peserta didik menunjukkan pemahaman perkalian sebagai kelompok yang sama banyak.",
+        "common_misconceptions": [
+          "Chooses any situation with the numbers 4 and 4 even if groups are not equal.",
+          "Treats repeated addition with an extra item as the same as 4 x 4."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "analyze",
+        "posttest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_post_2",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_post_3_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "posttest"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "hard",
+      "cognitive_level": "apply",
+      "prompt": "Nora menaruh 3 manik-manik pada setiap gelang. Dia membuat 5 gelang. Berapa banyak manik-manik yang dipakai?",
+      "helper_text": "Bayangkan 5 kelompok yang sama banyak berisi 3 manik-manik.",
+      "options": [
+        {
+          "label": "A",
+          "text": "12"
+        },
+        {
+          "label": "B",
+          "text": "15"
+        },
+        {
+          "label": "C",
+          "text": "18"
+        },
+        {
+          "label": "D",
+          "text": "20"
+        }
+      ],
+      "answer_key": "B",
+      "explanation": "Soal ini menilai pemahaman perkalian sebagai kelompok yang sama banyak.",
+      "rubric": {
+        "correct": "Peserta didik menunjukkan pemahaman perkalian sebagai kelompok yang sama banyak.",
+        "common_misconceptions": [
+          "Adds 5 + 3 instead of multiplying.",
+          "Counts by threes incorrectly and lands on 18."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "story_problem",
+        "posttest"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_post_3",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    },
+    {
+      "id": "math_el_eqgrp_workspace_1_id",
+      "subject_code": "mathematics",
+      "concept_code": "operasi_perkalian_dan_pembagian_bilangan_cacah",
+      "concept_title": "Operasi perkalian dan pembagian bilangan cacah",
+      "education_level": "elementary",
+      "grade_band": "elementary",
+      "language": "id",
+      "assessment_types": [
+        "workspace_quiz"
+      ],
+      "question_type": "multiple_choice",
+      "difficulty": "easy",
+      "cognitive_level": "remember",
+      "prompt": "3 groups of 4 equals?",
+      "helper_text": "Tambahkan 4 sebanyak tiga kali.",
+      "options": [
+        {
+          "label": "A",
+          "text": "7"
+        },
+        {
+          "label": "B",
+          "text": "10"
+        },
+        {
+          "label": "C",
+          "text": "12"
+        },
+        {
+          "label": "D",
+          "text": "16"
+        }
+      ],
+      "answer_key": "C",
+      "explanation": "Soal ini menilai pemahaman perkalian sebagai kelompok yang sama banyak.",
+      "rubric": {
+        "correct": "Peserta didik menunjukkan pemahaman perkalian sebagai kelompok yang sama banyak.",
+        "common_misconceptions": [
+          "Adds 3 + 4 instead of using groups.",
+          "Counts only two groups of 4."
+        ]
+      },
+      "tags": [
+        "multiplication",
+        "equal_groups",
+        "workspace_quiz",
+        "quick_check"
+      ],
+      "status": "active",
+      "metadata": {
+        "source_pack": "baseline_generated",
+        "estimated_seconds": 45,
+        "translated_from": {
+          "language": "en",
+          "source_file": "mathematics.elementary.multiplication_equal_groups.v1.json",
+          "source_id": "math_el_eqgrp_workspace_1",
+          "source_title": "Multiplication as equal groups"
+        }
+      }
+    }
+  ]
+}

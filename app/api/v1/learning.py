@@ -306,7 +306,13 @@ def get_daily_evaluation(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.DailyEvaluationResponse:
-    return service.get_or_create_daily_evaluation(session, user=account)
+    try:
+        return service.get_or_create_daily_evaluation(session, user=account)
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
