@@ -96,6 +96,8 @@ class TrackModuleRead(BaseModel):
 class TrackRead(BaseModel):
     id: UUID
     learning_goal_id: UUID
+    subject_code: str = ""
+    subject_name: str = ""
     title: str
     subtitle: str
     status: str
