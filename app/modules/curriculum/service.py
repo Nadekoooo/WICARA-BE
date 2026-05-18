@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
+from app.modules.assessments.metrics import PASS_PERCENT
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
 from app.modules.curriculum.schemas import (
     ConceptDetailResponse,
@@ -94,7 +95,7 @@ def list_active_subjects(session: Session) -> list[Subject]:
     )
 
 
-def subject_to_schema(subject: Subject, *, locale: str = "id") -> SubjectRead:
+def subject_to_schema(subject: Subject, *, locale: str = "en") -> SubjectRead:
     metadata = subject.metadata_json or {}
     return SubjectRead(
         id=subject.id,
@@ -195,7 +196,7 @@ def get_knowledge_map(
     session: Session,
     *,
     subject_code: str,
-    locale: str = "id",
+    locale: str = "en",
     user: UserAccount | None = None,
 ) -> KnowledgeMapResponse | None:
     locale = _normalize_locale(locale)
@@ -290,7 +291,7 @@ def get_concept_detail(
     *,
     concept_code: str,
     subject_code: str | None = None,
-    locale: str = "id",
+    locale: str = "en",
     user: UserAccount | None = None,
 ) -> ConceptDetailResponse | None:
     locale = _normalize_locale(locale)
@@ -466,7 +467,7 @@ def _concept_to_node(
     prerequisite_gate: _PrerequisiteGate | None = None,
     posttest_required: bool = False,
     latest_posttest_pass: bool | None = None,
-    locale: str = "id",
+    locale: str = "en",
 ) -> KnowledgeMapNode:
     metadata: dict[str, Any] = concept.metadata_json or {}
     gate = prerequisite_gate or _PrerequisiteGate(
@@ -522,7 +523,7 @@ def _concept_relation(
     prerequisite_gate: _PrerequisiteGate | None = None,
     posttest_required: bool = False,
     latest_posttest_pass: bool | None = None,
-    locale: str = "id",
+    locale: str = "en",
 ) -> ConceptRelation:
     metadata: dict[str, Any] = concept.metadata_json or {}
     gate = prerequisite_gate or _PrerequisiteGate(
@@ -560,7 +561,7 @@ def _concept_relation(
 def _groups_for_subject(
     subject: Subject,
     *,
-    locale: str = "id",
+    locale: str = "en",
 ) -> list[KnowledgeMapGroup]:
     graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
     groups_payload = graph_metadata.get("groups", [])
@@ -577,7 +578,7 @@ def _knowledge_map_layout(
     concepts: list[KnowledgeConcept],
     selected_subject: Subject,
     *,
-    locale: str = "id",
+    locale: str = "en",
 ) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
     subject_ids = {concept.subject_id for concept in concepts}
     if subject_ids == {selected_subject.id}:
@@ -594,7 +595,7 @@ def _single_subject_knowledge_map_layout(
     concepts: list[KnowledgeConcept],
     subject: Subject,
     *,
-    locale: str = "id",
+    locale: str = "en",
 ) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
     graph_metadata = subject.metadata_json.get("graph", {}) if subject.metadata_json else {}
     groups = _groups_for_subject(subject, locale=locale)
@@ -628,7 +629,7 @@ def _integrated_knowledge_map_layout(
     concepts: list[KnowledgeConcept],
     selected_subject: Subject,
     *,
-    locale: str = "id",
+    locale: str = "en",
 ) -> tuple[list[KnowledgeMapGroup], dict[UUID, _NodeLayout], KnowledgeMapGraph]:
     ordered_concepts = sorted(concepts, key=_concept_map_sort_key)
     ordered_group_keys: list[tuple[str, str, str, str]] = []
@@ -707,7 +708,7 @@ def _layout_group_sort_key(key: tuple[str, str, str, str]) -> tuple[int, int, st
     )
 
 
-def _layout_group_label(key: tuple[str, str, str, str], *, locale: str = "id") -> str:
+def _layout_group_label(key: tuple[str, str, str, str], *, locale: str = "en") -> str:
     subject_code, subject_label, phase, domain = key
     is_english = _normalize_locale(locale) == "en"
     phase_label = "Phase" if is_english else "Fase"
@@ -807,6 +808,48 @@ def _latest_posttest_pass_by_concept(
 ) -> dict[UUID, bool]:
     if user is None or not concept_ids:
         return {}
+    concept_id_set = set(concept_ids)
+    result: dict[UUID, bool] = {}
+    completed_sessions = list(
+        session.scalars(
+            select(AssessmentSession)
+            .where(
+                AssessmentSession.user_id == user.id,
+                AssessmentSession.session_type == "posttest",
+                AssessmentSession.status == "completed",
+            )
+            .order_by(AssessmentSession.completed_at.desc().nullslast(), AssessmentSession.created_at.desc())
+            .limit(50)
+        )
+    )
+    for assessment in completed_sessions:
+        node_results = (assessment.metadata_json or {}).get("node_results")
+        if not isinstance(node_results, dict):
+            node_results = (assessment.decision_state_json or {}).get("node_results")
+        if not isinstance(node_results, dict):
+            continue
+        for payload in node_results.values():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                concept_uuid = UUID(str(payload.get("concept_id")))
+            except (TypeError, ValueError):
+                continue
+            if concept_uuid not in concept_id_set or concept_uuid in result:
+                continue
+            answered_count = _safe_int(payload.get("answered_count"), fallback=0)
+            total_questions = max(1, _safe_int(payload.get("total_questions"), fallback=3))
+            answer_percent = _safe_float(payload.get("answer_percent"), fallback=0.0)
+            score_percent = _safe_float(
+                payload.get("score_percent"),
+                fallback=_safe_float(payload.get("scaled_score"), fallback=0.0) * 10,
+            )
+            result[concept_uuid] = (
+                answered_count >= total_questions
+                and answer_percent >= PASS_PERCENT
+                and score_percent >= PASS_PERCENT
+            )
+
     rows = list(
         session.execute(
             select(
@@ -826,20 +869,19 @@ def _latest_posttest_pass_by_concept(
     )
     latest: dict[UUID, dict[str, int]] = {}
     for concept_id, is_correct, _submitted_at in rows:
-        if concept_id is None:
+        if concept_id is None or concept_id in result:
             continue
         payload = latest.setdefault(concept_id, {"answered": 0, "correct": 0})
         if payload["answered"] >= 3:
             continue
         payload["answered"] += 1
         payload["correct"] += 1 if is_correct else 0
-    result: dict[UUID, bool] = {}
     for concept_id, payload in latest.items():
         answered = payload["answered"]
         if answered <= 0:
             continue
-        scaled = round((payload["correct"] / max(1, answered)) * 10)
-        result[concept_id] = scaled >= 7.0 and answered >= 3
+        score_percent = (payload["correct"] / max(1, answered)) * 100
+        result[concept_id] = score_percent >= PASS_PERCENT and answered >= 3
     return result
 
 
@@ -1057,7 +1099,7 @@ def _concept_status_label(
     metadata: dict[str, Any],
     status: str,
     *,
-    locale: str = "id",
+    locale: str = "en",
 ) -> str:
     if metadata.get("preview_status_only"):
         return STATUS_LABELS.get(status, status.upper())
@@ -1094,6 +1136,13 @@ def _safe_int(value: Any, *, fallback: int) -> int:
         return fallback
 
 
+def _safe_float(value: Any, *, fallback: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
 def _clamp_score(value: float | None) -> float:
     if value is None:
         return 0.0
@@ -1115,8 +1164,8 @@ def _datetime_to_iso(value: datetime | None) -> str | None:
 
 
 def _normalize_locale(locale: str | None) -> str:
-    normalized = (locale or "id").strip().lower()
-    return normalized if normalized in SUPPORTED_LOCALES else "id"
+    normalized = (locale or "en").strip().lower()
+    return normalized if normalized in SUPPORTED_LOCALES else "en"
 
 
 def _localized(
@@ -1147,7 +1196,7 @@ def _localized(
 def _concept_display_label(
     concept: KnowledgeConcept,
     *,
-    locale: str = "id",
+    locale: str = "en",
 ) -> str:
     metadata: dict[str, Any] = concept.metadata_json or {}
     if _normalize_locale(locale) == "en":
@@ -1161,7 +1210,7 @@ def _concept_display_label(
 def _concept_display_description(
     concept: KnowledgeConcept,
     *,
-    locale: str = "id",
+    locale: str = "en",
     label: str,
 ) -> str | None:
     metadata: dict[str, Any] = concept.metadata_json or {}
@@ -1200,7 +1249,7 @@ def _concept_display_description(
     return f"Build understanding of {label}{domain_suffix}{context}."
 
 
-def _group_display_label(group: dict[str, Any], *, locale: str = "id") -> str:
+def _group_display_label(group: dict[str, Any], *, locale: str = "en") -> str:
     if _normalize_locale(locale) == "en":
         phase = str(group.get("phase") or "").strip()
         domain_id = str(group.get("domain_id") or group.get("domain") or "").strip()

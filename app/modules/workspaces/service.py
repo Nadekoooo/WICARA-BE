@@ -7,7 +7,11 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import normalize_language_code, preferred_language_code
 from app.modules.accounts.models import UserAccount
+from app.modules.curriculum.kurikulum_merdeka import (
+    translate_curriculum_label_to_english,
+)
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept
 from app.modules.inputs.service import create_workspace_input_event
 from app.modules.learning.models import LearningGoal, LearningTrack, MediaArtifact, TrackModule
@@ -59,6 +63,12 @@ def create_or_resume_workspace(
         module_id=module_id,
     )
 
+    language = _preferred_language(user)
+    topic_title, _topic_description = _workspace_topic_display(
+        session,
+        module=module,
+        language=language,
+    )
     workspace: WorkspaceSession | None = None
     if workspace_session_id is not None:
         workspace = _load_workspace(session, user=user, workspace_id=workspace_session_id)
@@ -83,25 +93,30 @@ def create_or_resume_workspace(
             user_id=user.id,
             track_id=track.id,
             module_id=module.id,
-            current_topic=module.title,
+            current_topic=topic_title or module.title,
             content_mode=_normalize_content_mode(content_mode),
             status="active",
             metadata_json={"source": "workspace_api"},
         )
         session.add(workspace)
     else:
-        workspace.current_topic = module.title
+        workspace.current_topic = topic_title or module.title
         workspace.content_mode = _normalize_content_mode(content_mode)
         workspace.status = "active"
         workspace.updated_at = datetime.now(UTC)
-    _apply_workspace_context(session, workspace=workspace, module=module)
+    _apply_workspace_context(
+        session,
+        workspace=workspace,
+        module=module,
+        language=language,
+    )
     module.status = "active"
     track.status = "active"
 
     session.commit()
     workspace = _load_workspace(session, user=user, workspace_id=workspace.id)
     assert workspace is not None
-    return workspace_to_schema(session, workspace)
+    return workspace_to_schema(session, workspace, user=user)
 
 
 def read_workspace(
@@ -111,7 +126,7 @@ def read_workspace(
     workspace_id: UUID,
 ) -> WorkspaceRead | None:
     workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
-    return workspace_to_schema(session, workspace) if workspace else None
+    return workspace_to_schema(session, workspace, user=user) if workspace else None
 
 
 def list_workspace_sessions(
@@ -167,6 +182,14 @@ async def append_workspace_event(
         _resolve_owned_media_artifact(session, user=user, media_artifact_id=media_artifact_id)
 
     module = session.get(TrackModule, workspace.module_id)
+    if module is not None:
+        topic_title, _topic_description = _workspace_topic_display(
+            session,
+            module=module,
+            language=_preferred_language(user),
+        )
+        if topic_title:
+            workspace.current_topic = topic_title
 
     # Call Gemini before saving so audit info goes into event metadata
     tutor_response, ai_audit = await generate_tutor_response(
@@ -174,6 +197,7 @@ async def append_workspace_event(
         event_type=normalized_event_type,
         text_payload=text_payload,
         events=list(workspace.events),
+        learner_language=_preferred_language(user),
     )
     if (
         normalized_event_type == "quiz_answer"
@@ -277,7 +301,7 @@ async def append_workspace_event(
         event=event_to_schema(event),
         tutor_response=tutor_response,
         mastery_update=mastery_result.update,
-        workspace=workspace_to_schema(session, workspace),
+        workspace=workspace_to_schema(session, workspace, user=user),
     )
 
 
@@ -363,21 +387,40 @@ def queue_workspace_video_generation(
     return WorkspaceGenerateVideoResponse(
         queue=queue,
         event=event_to_schema(event),
-        workspace=workspace_to_schema(session, workspace),
+        workspace=workspace_to_schema(session, workspace, user=user),
     )
 
 
-def workspace_to_schema(session: Session, workspace: WorkspaceSession) -> WorkspaceRead:
+def workspace_to_schema(
+    session: Session,
+    workspace: WorkspaceSession,
+    *,
+    user: UserAccount | None = None,
+) -> WorkspaceRead:
     events = sorted(
         workspace.events,
         key=lambda event: event.event_index,
     )
     latest_media = _latest_media_artifact(session, events)
+    language = _preferred_language(user) if user is not None else "en"
+    module = session.get(TrackModule, workspace.module_id)
+    topic_title = workspace.current_topic
+    topic_description = ""
+    if module is not None:
+        localized_title, localized_description = _workspace_topic_display(
+            session,
+            module=module,
+            language=language,
+        )
+        topic_title = localized_title or topic_title
+        topic_description = localized_description
     return WorkspaceRead(
         id=workspace.id,
         track_id=workspace.track_id,
         module_id=workspace.module_id,
-        current_topic=workspace.current_topic,
+        current_topic=topic_title,
+        current_topic_description=topic_description,
+        learner_language=_normalize_language_code(language),
         content_mode=workspace.content_mode,
         status=workspace.status,
         events=[event_to_schema(event) for event in events],
@@ -530,11 +573,122 @@ def _normalize_generation_mode(generation_mode: str) -> str:
     return normalized
 
 
+def _preferred_language(user: UserAccount) -> str:
+    return preferred_language_code(user)
+
+
+def _normalize_language_code(language: str | None) -> str:
+    return normalize_language_code(language)
+
+
+def _metadata_text(metadata: dict[str, Any], key: str) -> str:
+    value = metadata.get(key)
+    return str(value).strip() if value is not None else ""
+
+
+def _workspace_topic_display(
+    session: Session,
+    *,
+    module: TrackModule,
+    language: str,
+) -> tuple[str, str]:
+    concept = session.get(KnowledgeConcept, module.concept_id) if module.concept_id else None
+    if concept is not None:
+        title = _concept_display_title(concept, language=language)
+        description = _concept_display_description(
+            concept,
+            language=language,
+            title=title,
+        )
+        return title or module.title, description
+    return _module_display_title(module, language=language), _module_display_description(
+        module,
+        language=language,
+    )
+
+
+def _concept_display_title(concept: KnowledgeConcept, *, language: str) -> str:
+    metadata = concept.metadata_json or {}
+    if _normalize_language_code(language) == "en":
+        explicit = _metadata_text(metadata, "label_en")
+        label_id = _metadata_text(metadata, "label_id") or concept.title
+        if explicit and explicit.casefold() != label_id.casefold():
+            return explicit
+        translated = translate_curriculum_label_to_english(label_id)
+        return translated or explicit or label_id or concept.title
+    return _metadata_text(metadata, "label_id") or concept.title
+
+
+def _concept_display_description(
+    concept: KnowledgeConcept,
+    *,
+    language: str,
+    title: str,
+) -> str:
+    metadata = concept.metadata_json or {}
+    if _normalize_language_code(language) == "en":
+        description = (
+            concept.en_desc
+            or _metadata_text(metadata, "description_en")
+            or _metadata_text(metadata, "en_desc")
+        )
+        if description:
+            return description
+        return f"Understand and apply {title}."
+    return (
+        concept.id_desc
+        or _metadata_text(metadata, "description_id")
+        or concept.description
+        or f"Memahami dan menerapkan {title}."
+    )
+
+
+def _module_display_title(module: TrackModule, *, language: str) -> str:
+    metadata = module.metadata_json or {}
+    language_code = _normalize_language_code(language)
+    localized = _metadata_text(metadata, f"title_{language_code}")
+    if localized:
+        return localized
+    if language_code == "id":
+        return {
+            "Prerequisite checkpoint": "Cek prasyarat",
+            "Application and review": "Aplikasi dan ulasan",
+        }.get(module.title, module.title)
+    return {
+        "Cek prasyarat": "Prerequisite checkpoint",
+        "Aplikasi dan ulasan": "Application and review",
+    }.get(module.title, module.title)
+
+
+def _module_display_description(module: TrackModule, *, language: str) -> str:
+    metadata = module.metadata_json or {}
+    language_code = _normalize_language_code(language)
+    localized = _metadata_text(metadata, f"description_{language_code}")
+    if localized:
+        return localized
+    if language_code == "id":
+        return {
+            "Prerequisite checkpoint": (
+                "Perbaiki fondasi yang terdeteksi dari pretest sebelum masuk ke topik utama."
+            ),
+            "Application and review": (
+                "Terapkan konsepnya, lalu jadwalkan untuk pengulangan terarah."
+            ),
+        }.get(module.title, module.description)
+    return {
+        "Cek prasyarat": (
+            "Repair the foundation detected by the pretest before starting the main topic."
+        ),
+        "Aplikasi dan ulasan": "Apply the concept, then schedule it for spaced repetition.",
+    }.get(module.title, module.description)
+
+
 def _apply_workspace_context(
     session: Session,
     *,
     workspace: WorkspaceSession,
     module: TrackModule,
+    language: str = "en",
 ) -> None:
     metadata = dict(workspace.metadata_json or {})
     concept = session.get(KnowledgeConcept, module.concept_id) if module.concept_id else None
@@ -574,8 +728,22 @@ def _apply_workspace_context(
             "active_prerequisites": prerequisite_codes,
             "context_source": "module_concept_context" if concept is not None else "workspace_module_fallback",
             "learning_flow": "5e_steam",
+            "learner_language": _normalize_language_code(language),
             "session_goal_concept_id": str(concept.id) if concept is not None else None,
-            "session_goal_concept_title": concept.title if concept is not None else module.title,
+            "session_goal_concept_title": (
+                _concept_display_title(concept, language=language)
+                if concept is not None
+                else _module_display_title(module, language=language)
+            ),
+            "session_goal_concept_description": (
+                _concept_display_description(
+                    concept,
+                    language=language,
+                    title=_concept_display_title(concept, language=language),
+                )
+                if concept is not None
+                else _module_display_description(module, language=language)
+            ),
         }
     )
     workspace.metadata_json = {
@@ -637,6 +805,7 @@ def _trigger_posttest_for_completed_session(
 ) -> None:
     goal = session.get(LearningGoal, track.learning_goal_id)
     concept = session.get(KnowledgeConcept, module.concept_id) if module.concept_id else None
+    language = _preferred_language(user)
     trigger_payload: dict[str, Any] = {
         "status": "pending",
         "reason": "module_completed",
@@ -644,7 +813,11 @@ def _trigger_posttest_for_completed_session(
         "track_id": str(track.id),
         "module_id": str(module.id),
         "concept_code": concept.code if concept is not None else None,
-        "concept_title": concept.title if concept is not None else module.title,
+        "concept_title": (
+            _concept_display_title(concept, language=language)
+            if concept is not None
+            else _module_display_title(module, language=language)
+        ),
         "learning_flow": "5e_steam",
         "triggered_at": datetime.now(UTC).isoformat(),
     }

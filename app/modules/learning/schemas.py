@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.modules.posttests.schemas import PosttestNodeResultRead
+
 
 class LearningGoalCreateRequest(BaseModel):
     raw_topic: str = Field(..., min_length=2)
@@ -43,6 +45,59 @@ class LearningGoalRead(BaseModel):
     subject_code: str
     pretest_session_id: UUID | None = None
     track_id: UUID | None = None
+
+
+class AssessmentDashboardActionRead(BaseModel):
+    label: str
+    action_type: str
+    target_id: str | None = None
+
+
+class AssessmentDashboardComparisonRead(BaseModel):
+    available: bool
+    pretest_score_percent: int | None = None
+    posttest_score_percent: int | None = None
+    learning_gain_percent: int | None = None
+    paired_concept_count: int = 0
+
+
+class AssessmentDashboardPretestRead(BaseModel):
+    session_id: UUID | None = None
+    status: str
+    score_percent: float = 0.0
+    overall_mastery_percent: float = 0.0
+    confidence_percent: float = 0.0
+    recommended_path: str = ""
+    summary: str = ""
+    strengths: list[str] = Field(default_factory=list)
+    gaps: list[str] = Field(default_factory=list)
+    evidence_notes: list[str] = Field(default_factory=list)
+    nodes: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class AssessmentDashboardPosttestRead(BaseModel):
+    session_id: UUID | None = None
+    status: str
+    answer_percent: float = 0.0
+    evidence_percent: float = 0.0
+    score_percent: float = 0.0
+    confidence_percent: float = 0.0
+    passed_node_count: int = 0
+    total_node_count: int = 0
+    retake_required_concepts: list[str] = Field(default_factory=list)
+    passed: bool = False
+    nodes: list[PosttestNodeResultRead] = Field(default_factory=list)
+
+
+class AssessmentDashboardResponse(BaseModel):
+    learning_goal_id: UUID
+    target_title: str
+    state: str
+    pretest: AssessmentDashboardPretestRead | None = None
+    posttest: AssessmentDashboardPosttestRead | None = None
+    comparison: AssessmentDashboardComparisonRead
+    primary_action: AssessmentDashboardActionRead
+    recommendations: list[str] = Field(default_factory=list)
 
 
 class PretestReadResponse(BaseModel):
@@ -191,7 +246,7 @@ class AnimationQueueRequest(BaseModel):
     concept_id: UUID | None = None
     template_id: str = Field(..., min_length=3, max_length=120)
     spec_json: dict[str, Any] = Field(default_factory=dict)
-    language: str = Field(default="id", min_length=2, max_length=16)
+    language: str = Field(default="en", min_length=2, max_length=16)
     quality_profile: str = Field(default="standard", min_length=2, max_length=32)
 
 
@@ -297,6 +352,10 @@ class WeeklyReportResponse(BaseModel):
     status: str
     source: str
     score: int
+    pretest_score_percent: int | None = None
+    posttest_score_percent: int | None = None
+    learning_gain_percent: int | None = None
+    paired_concept_count: int = 0
     fixed_gaps: int
     fixed_gaps_delta: int
     remaining_gaps: int

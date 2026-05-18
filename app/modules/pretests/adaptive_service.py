@@ -6,12 +6,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.models import KnowledgeConcept
 from app.modules.evidence.models import ImageAsset
 from app.modules.learning.models import (
     AssessmentAttempt,
-    AssessmentOption,
     AssessmentQuestion,
     AssessmentQuestionPack,
     AssessmentSession,
@@ -33,6 +33,9 @@ from app.modules.pretests.schemas import (
 
 class DuplicateQuestionAttempt(Exception):
     pass
+
+
+PRETEST_NODE_DIFFICULTIES = ("easy", "medium", "hard")
 
 
 class AdaptivePretestService:
@@ -97,23 +100,29 @@ class AdaptivePretestService:
             max_depth=depth,
             max_questions=max_questions,
             max_nodes_visited=max_nodes_visited,
-            metadata_json={"source": "adaptive_generated", "generation": "lazy_node_pack"},
+            metadata_json={
+                "source": "adaptive_generated",
+                "generation": "fresh_ai_questions",
+                "question_reuse": "disabled",
+                "learner_language": _preferred_language(user),
+            },
         )
         session.add(assessment)
         session.flush()
 
-        pack = self.generation_service.ensure_pack(
+        target_questions = self._generate_pretest_node_questions(
             session,
+            user=user,
             assessment=assessment,
             concept=target,
-            language=_preferred_language(user),
+            node_role="goal",
         )
-        question = self.generation_service.question_for_difficulty(pack, difficulty="medium")
+        question = target_questions["medium"]
         decision_state = {
             "target_concept_code": target.code,
             "current_concept_code": target.code,
             "current_difficulty": "medium",
-            "current_pack_id": str(pack.id),
+            "current_pack_id": None,
             "current_question_id": str(question.id),
             "question_count": 1,
             "max_questions": max_questions,
@@ -122,8 +131,12 @@ class AdaptivePretestService:
             "max_questions_per_node": 2,
             "confidence_threshold": 0.95,
             "probe_queue": self.graph_builder.build_probe_queue(graph_scope),
-            "generated_packs": {
-                target.code: self.generation_service.pack_state(pack),
+            "generated_packs": {},
+            "generated_questions": {
+                target.code: {
+                    difficulty: str(node_question.id)
+                    for difficulty, node_question in target_questions.items()
+                }
             },
             "node_results": {},
             "confidence": 0.0,
@@ -335,35 +348,56 @@ class AdaptivePretestService:
             state["stop_reason"] = "concept_not_found"
             assessment.decision_state_json = state
             raise LookupError("Next concept was not found.")
-        generated_packs = state.setdefault("generated_packs", {})
-        pack_info = generated_packs.get(concept_code)
-        pack = None
-        if pack_info:
-            pack = session.scalar(
-                select(AssessmentQuestionPack)
-                .where(AssessmentQuestionPack.id == UUID(str(pack_info["pack_id"])))
-                .options(
-                    selectinload(AssessmentQuestionPack.questions).selectinload(
-                        AssessmentQuestion.options
-                    )
-                )
-            )
-        if pack is None:
-            pack = self.generation_service.ensure_pack(
+        state.setdefault("generated_packs", {})
+        generated_questions = state.setdefault("generated_questions", {})
+        question = _question_from_generated_node(
+            assessment,
+            generated_questions.get(concept_code),
+            difficulty=difficulty,
+        )
+        if question is None:
+            node_questions = self._generate_pretest_node_questions(
                 session,
+                user=user,
                 assessment=assessment,
                 concept=concept,
-                language=_preferred_language(user),
+                node_role="goal" if concept_code == state.get("target_concept_code") else "prerequisite",
             )
-            generated_packs[concept_code] = self.generation_service.pack_state(pack)
-        question = self.generation_service.question_for_difficulty(pack, difficulty=difficulty)
+            generated_questions[concept_code] = {
+                item_difficulty: str(node_question.id)
+                for item_difficulty, node_question in node_questions.items()
+            }
+            question = node_questions[difficulty]
         state["current_concept_code"] = concept_code
         state["current_difficulty"] = difficulty
-        state["current_pack_id"] = str(pack.id)
+        state["current_pack_id"] = None
         state["current_question_id"] = str(question.id)
         state["question_count"] = int(state.get("question_count", 0)) + 1
         assessment.decision_state_json = state
         return question
+
+    def _generate_pretest_node_questions(
+        self,
+        session: Session,
+        *,
+        user: UserAccount,
+        assessment: AssessmentSession,
+        concept: KnowledgeConcept,
+        node_role: str,
+    ) -> dict[str, AssessmentQuestion]:
+        questions = self.generation_service.create_fresh_questions(
+            session,
+            assessment=assessment,
+            concept=concept,
+            difficulties=list(PRETEST_NODE_DIFFICULTIES),
+            assessment_type="pretest",
+            language=_preferred_language(user),
+            node_role=node_role,
+        )
+        return {
+            question.difficulty_label.lower(): question
+            for question in questions
+        }
 
 
 def _active_pretest_for_goal(
@@ -413,6 +447,20 @@ def _question_by_id(
     question_id: str,
 ) -> AssessmentQuestion | None:
     return next((question for question in assessment.questions if str(question.id) == question_id), None)
+
+
+def _question_from_generated_node(
+    assessment: AssessmentSession,
+    node_questions: object,
+    *,
+    difficulty: str,
+) -> AssessmentQuestion | None:
+    if not isinstance(node_questions, dict):
+        return None
+    question_id = node_questions.get(difficulty)
+    if not question_id:
+        return None
+    return _question_by_id(assessment, str(question_id))
 
 
 def _question_to_read(
@@ -467,6 +515,4 @@ def _concept_code(session: Session, question: AssessmentQuestion) -> str:
 
 
 def _preferred_language(user: UserAccount) -> str:
-    if user.learner_profile and user.learner_profile.preferred_language:
-        return user.learner_profile.preferred_language
-    return "id"
+    return preferred_language_code(user)

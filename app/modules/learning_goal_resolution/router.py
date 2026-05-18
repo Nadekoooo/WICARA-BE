@@ -10,6 +10,7 @@ from app.modules.accounts.dependencies import get_current_account
 from app.modules.accounts.models import UserAccount
 from app.modules.learning_goal_resolution.schemas import (
     ActiveLearningGoalResponse,
+    CreateLearningGoalFromConceptRequest,
     PathSelectionRequest,
     RepromptLearningGoalRequest,
     ResolveLearningGoalRequest,
@@ -23,6 +24,17 @@ from app.modules.learning_goal_resolution.service import (
 
 router = APIRouter()
 service = GoalResolverService()
+
+
+def _active_goal_conflict(exc: ActiveLearningGoalExists) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "error": "ACTIVE_LEARNING_GOAL_EXISTS",
+            "message": "You already have an active session goal for this node.",
+            "active_goal": exc.active_goal.model_dump(mode="json"),
+        },
+    )
 
 
 @router.post("/learning-goals/resolve")
@@ -51,14 +63,7 @@ def confirm_learning_goal(
     try:
         result = service.confirm(session, user=user, resolution_id=resolution_id)
     except ActiveLearningGoalExists as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error": "ACTIVE_LEARNING_GOAL_EXISTS",
-                "message": "You already have an active session goal for this node.",
-                "active_goal": exc.active_goal.model_dump(mode="json"),
-            },
-        ) from exc
+        raise _active_goal_conflict(exc) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
@@ -120,6 +125,27 @@ def get_session_goal_history(
     user: UserAccount = Depends(get_current_account),
 ) -> SessionGoalHistoryResponse:
     return service.list_session_goal_history(session, user=user)
+
+
+@router.post("/learning-goals/from-concept")
+def create_learning_goal_from_concept(
+    payload: CreateLearningGoalFromConceptRequest,
+    session: Session = Depends(get_session),
+    user: UserAccount = Depends(get_current_account),
+):
+    try:
+        return service.create_from_concept(
+            session,
+            user=user,
+            concept_id=payload.concept_id,
+            concept_code=payload.concept_code,
+            subject_code=payload.subject_code,
+            language=payload.language,
+        )
+    except ActiveLearningGoalExists as exc:
+        raise _active_goal_conflict(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.post("/learning-goals/{learning_goal_id}/cancel")

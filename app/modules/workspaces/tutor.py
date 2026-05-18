@@ -6,18 +6,26 @@ from typing import Any
 from app.modules.ai import ai_client
 from app.modules.ai.errors import AIError
 from app.modules.ai.schemas import AIGenerationResponse
+from app.core.language import language_display_name, normalize_language_code
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 from app.modules.workspaces.schemas import TutorResponseRead
 
 logger = logging.getLogger(__name__)
 
-PROMPT_VERSION = "wicara_5e_v1"
+PROMPT_VERSION = "wicara_5e_profile_language_v2"
 
 _SYSTEM_INSTRUCTION = """
 You are Wicara, a Socratic AI tutor for a STEAM learning platform.
 Guide students using the 5E learning model: Engage, Explore, Explain, Elaborate, Evaluate.
-Rules:
-- Respond in the same language as the student (Bahasa Indonesia or English).
+
+Language rule:
+- The learner profile language is the source of truth.
+- Respond only in the required response language.
+- Do not infer language from the latest message if it conflicts with the profile.
+- If the required response language is English, write in English.
+- If the required response language is Indonesian, write in Indonesian.
+
+Teaching rules:
 - Be concise: 1-3 sentences for chat, longer for explanations.
 - End with one guiding question or clear next action.
 - Never give away the full answer — lead the student to discover it.
@@ -28,7 +36,7 @@ _PROMPTS: dict[str, str] = {
     "engage": (
         "Topic: {topic}\n"
         "Stage: Engage\n\n"
-        "Write a short opening (2-3 sentences) that sparks curiosity about this topic. "
+        "Write a short opening in {response_language} (2-3 sentences) that sparks curiosity about this topic. "
         "Connect it to a real-world situation. End with one open question to activate prior knowledge. "
         "Do NOT explain the concept yet."
     ),
@@ -37,7 +45,7 @@ _PROMPTS: dict[str, str] = {
         "Stage: Explore\n"
         "Conversation so far:\n{history}\n\n"
         "Student: {message}\n\n"
-        "Give a probing challenge or small experiment that pushes the student to discover the answer. "
+        "Give a probing challenge or small experiment in {response_language} that pushes the student to discover the answer. "
         "Keep it to 1-2 sentences."
     ),
     "explain": (
@@ -45,15 +53,15 @@ _PROMPTS: dict[str, str] = {
         "Stage: Explain\n"
         "Conversation so far:\n{history}\n\n"
         "Student: {message}\n\n"
-        "Give a clear explanation: what it is, why it matters, one worked example, one analogy. "
-        "Use short paragraphs. End with 'Does that make sense so far?'"
+        "Give a clear explanation in {response_language}: what it is, why it matters, one worked example, one analogy. "
+        "Use short paragraphs. End with one short check-in question in {response_language}."
     ),
     "elaborate": (
         "Topic: {topic}\n"
         "Stage: Elaborate\n"
         "Conversation so far:\n{history}\n\n"
         "Student: {message}\n\n"
-        "Give a practice task or extension question that makes the student apply what they learned. "
+        "Give a practice task or extension question in {response_language} that makes the student apply what they learned. "
         "Keep it to 2-3 sentences."
     ),
     "evaluate": (
@@ -61,6 +69,7 @@ _PROMPTS: dict[str, str] = {
         "Stage: Evaluate\n"
         "Conversation so far:\n{history}\n\n"
         "Student answer: {message}\n\n"
+        "Respond in {response_language}. "
         "If correct or partially correct: affirm and correct gently, suggest a next step. "
         "If incorrect: give a hint without revealing the answer. Ask them to try again. "
         "Keep it to 2-3 sentences."
@@ -69,7 +78,7 @@ _PROMPTS: dict[str, str] = {
         "Topic: {topic}\n"
         "Conversation so far:\n{history}\n\n"
         "Student: {message}\n\n"
-        "Respond as a Socratic tutor. Be concise (1-3 sentences). "
+        "Respond in {response_language} as a Socratic tutor. Be concise (1-3 sentences). "
         "End with a guiding question or next action suggestion."
     ),
 }
@@ -122,9 +131,38 @@ def _infer_stage(events: list[WorkspaceEvent], event_type: str) -> str:
     return "evaluate"
 
 
-def _build_user_instruction(stage: str, topic: str, history: str, message: str) -> str:
+def _build_user_instruction(
+    stage: str,
+    topic: str,
+    history: str,
+    message: str,
+    *,
+    learner_language: str | None,
+    response_language: str,
+) -> str:
     template = _PROMPTS.get(stage, _PROMPTS["chat"])
-    return template.format(topic=topic, history=history, message=message)
+    language_context = (
+        f"Learner profile language: {learner_language or 'unknown'}\n"
+        f"Required response language: {response_language}\n\n"
+        "Language requirements:\n"
+        f"- Respond only in {response_language}.\n"
+        "- Use the learner profile language as the source of truth.\n"
+        "- Do not switch language because the curriculum node title, topic, or prior metadata is in another language.\n"
+        f"- If a curriculum concept name has no clean translation, keep the concept term but explain it in {response_language}.\n"
+        "- If learner_language is missing or unknown, use English."
+    )
+    return "\n\n".join(
+        [
+            language_context,
+            template.format(
+                topic=topic,
+                history=history,
+                message=message,
+                learner_language=learner_language,
+                response_language=response_language,
+            ),
+        ]
+    )
 
 
 async def generate_tutor_response(
@@ -132,6 +170,7 @@ async def generate_tutor_response(
     event_type: str,
     text_payload: str,
     events: list[WorkspaceEvent],
+    learner_language: str | None = None,
 ) -> tuple[TutorResponseRead | None, dict[str, Any]]:
     """
     Call Gemini to generate a tutor response.
@@ -145,6 +184,7 @@ async def generate_tutor_response(
     topic = workspace.current_topic or "this module"
     history = _build_history(events)
     stage = _infer_stage(events, event_type)
+    language_code, response_language = _normalize_tutor_language(learner_language)
 
     if event_type == "canvas_sent":
         stage = "explore"
@@ -154,6 +194,8 @@ async def generate_tutor_response(
         topic=topic,
         history=history,
         message=text_payload or "(no message)",
+        learner_language=learner_language,
+        response_language=response_language,
     )
 
     audit: dict[str, Any] = {
@@ -161,6 +203,10 @@ async def generate_tutor_response(
         "stage": stage,
         "topic": topic,
         "event_type": event_type,
+        "learner_language": learner_language or language_code,
+        "response_language": response_language,
+        "language_code": language_code,
+        "language_source": "learner_profile",
         "history_turns": history.count("\n") + 1,
     }
 
@@ -181,7 +227,7 @@ async def generate_tutor_response(
         )
         tutor_text = ai_response.text.strip()
         if not tutor_text:
-            tutor_text = _fallback_text(event_type)
+            tutor_text = _fallback_text(event_type, language_code=language_code)
             audit["ai_source"] = "gemini_empty_fallback"
 
         return TutorResponseRead(
@@ -194,10 +240,27 @@ async def generate_tutor_response(
         logger.warning("Gemini tutor call failed, using deterministic fallback: %s", exc)
         audit["ai_source"] = "deterministic_fallback"
         audit["fallback_reason"] = str(exc)
-        return _fallback_response(event_type, text_payload), audit
+        return _fallback_response(event_type, text_payload, language_code=language_code), audit
 
 
-def _fallback_text(event_type: str) -> str:
+def _fallback_text(event_type: str, *, language_code: str) -> str:
+    if language_code == "id":
+        if event_type == "text":
+            return (
+                "Itu pemikiran yang bagus. Coba hubungkan dengan konsep modul ini, "
+                "lalu gunakan kanvas kalau diagram bisa membantu menjelaskan alasanmu."
+            )
+        if event_type == "canvas_sent":
+            return (
+                "Aku sudah menyimpan gambar kanvasmu. Sekarang tulis satu kalimat "
+                "yang menjelaskan apa yang ditunjukkan oleh sketsa itu."
+            )
+        if event_type == "quiz_answer":
+            return (
+                "Aku sudah mencatat jawabanmu. Tinjau lagi konsep utamanya dan coba ulang kuis jika perlu."
+            )
+        return "Aku sudah mencatat itu. Lanjutkan mengeksplorasi topik ini."
+
     if event_type == "text":
         return (
             "That's a good thought. Try connecting it to the module concept, "
@@ -215,7 +278,12 @@ def _fallback_text(event_type: str) -> str:
     return "I recorded that. Keep exploring the topic."
 
 
-def _fallback_response(event_type: str, text_payload: str) -> TutorResponseRead:
+def _fallback_response(
+    event_type: str,
+    text_payload: str,
+    *,
+    language_code: str,
+) -> TutorResponseRead:
     stage = "chat"
     if event_type == "quiz_answer":
         stage = "evaluate"
@@ -225,7 +293,12 @@ def _fallback_response(event_type: str, text_payload: str) -> TutorResponseRead:
         stage = "chat"
 
     return TutorResponseRead(
-        text=_fallback_text(event_type),
+        text=_fallback_text(event_type, language_code=language_code),
         intent=_STAGE_INTENT.get(stage, "ask_followup"),
         next_actions=_STAGE_ACTIONS.get(stage, ["ask_followup"]),
     )
+
+
+def _normalize_tutor_language(language: str | None) -> tuple[str, str]:
+    language_code = normalize_language_code(language)
+    return language_code, language_display_name(language_code)

@@ -63,6 +63,9 @@ def submit_posttest_answer(
             question_id=payload.question_id,
             selected_option_id=payload.selected_option_id,
             confidence=payload.confidence,
+            typed_reasoning=payload.typed_reasoning,
+            canvas_asset_id=payload.canvas_asset_id,
+            used_canvas=payload.used_canvas,
         )
     except DuplicateQuestionAttempt as exc:
         raise HTTPException(

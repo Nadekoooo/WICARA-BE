@@ -1,6 +1,6 @@
 """enforce one active session-goal per user per target node
 
-Revision ID: 20260517_0013_session_goal_per_node
+Revision ID: 20260517_0013_goal_per_node
 Revises: 20260517_0012_workspace_multi
 Create Date: 2026-05-17 22:40:00
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "20260517_0013_session_goal_per_node"
+revision: str = "20260517_0013_goal_per_node"
 down_revision: str | Sequence[str] | None = "20260517_0012_workspace_multi"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

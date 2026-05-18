@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 def _locale_query() -> str:
-    return Query(default="id", pattern="^(id|en)$")
+    return Query(default="en", pattern="^(id|en)$")
 
 
 @router.get("/subjects", response_model=schemas.SubjectListResponse)

@@ -43,6 +43,25 @@ def read_learning_goal(
     return goal
 
 
+@router.get(
+    "/learning-goals/{learning_goal_id}/assessment-dashboard",
+    response_model=schemas.AssessmentDashboardResponse,
+)
+def assessment_dashboard(
+    learning_goal_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.AssessmentDashboardResponse:
+    dashboard = service.get_assessment_dashboard(
+        session,
+        user=account,
+        learning_goal_id=learning_goal_id,
+    )
+    if dashboard is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Learning goal was not found.")
+    return dashboard
+
+
 @router.get("/tracks", response_model=schemas.TrackListResponse)
 def list_tracks(
     account: UserAccount = Depends(get_current_account),

@@ -247,7 +247,7 @@ def _clean_text(value: Any) -> str:
 def _normalize_language(value: Any) -> str:
     normalized = str(value or "").strip().lower()
     if not normalized:
-        return "id"
+        return "en"
     aliases = {
         "indonesian": "id",
         "bahasa": "id",
@@ -256,7 +256,7 @@ def _normalize_language(value: Any) -> str:
     normalized = aliases.get(normalized, normalized)
     if "-" in normalized:
         normalized = normalized.split("-", 1)[0] or normalized
-    return normalized[:16] or "id"
+    return normalized[:16] or "en"
 
 
 def _normalize_audience_level(value: Any) -> str:

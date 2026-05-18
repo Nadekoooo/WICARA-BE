@@ -29,7 +29,7 @@ class WorkspaceGenerateVideoRequest(BaseModel):
     generation_mode: str = Field(default="manual", min_length=2, max_length=32)
     template_id: str | None = Field(default=None, min_length=3, max_length=120)
     spec_json: dict[str, Any] = Field(default_factory=dict)
-    language: str = Field(default="id", min_length=2, max_length=16)
+    language: str = Field(default="en", min_length=2, max_length=16)
     quality_profile: str = Field(default="standard", min_length=2, max_length=32)
     concept_id: UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -74,6 +74,8 @@ class WorkspaceRead(BaseModel):
     track_id: UUID
     module_id: UUID
     current_topic: str
+    current_topic_description: str = ""
+    learner_language: str = "en"
     content_mode: str
     status: str
     events: list[WorkspaceEventRead] = Field(default_factory=list)
