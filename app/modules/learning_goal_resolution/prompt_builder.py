@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 
 from app.core.language import is_indonesian_language
-from app.modules.curriculum.kurikulum_merdeka import translate_curriculum_label_to_english
+from app.modules.curriculum.kurikulum_merdeka import (
+    translate_curriculum_label_to_english,
+)
 from app.modules.learning_goal_resolution.candidate_retriever import ConceptCandidate
-from app.modules.learning_goal_resolution.description_cleaner import course_description_only
+from app.modules.learning_goal_resolution.description_cleaner import (
+    first_course_description,
+)
 
 
 PROMPT_VERSION = "goal_resolver_v5_localized_nodes"
@@ -20,8 +24,7 @@ def build_goal_resolution_prompt(
 ) -> str:
     response_language = "id" if is_indonesian_language(language) else "en"
     node_payload = [
-        _node_payload(candidate, language=response_language)
-        for candidate in candidates
+        _node_payload(candidate, language=response_language) for candidate in candidates
     ]
     return f"""
 You resolve a learner's free-text learning goal to an existing knowledge_concepts node.
@@ -90,17 +93,15 @@ def _localized_description(
 ) -> str:
     concept = candidate.concept
     if is_indonesian_language(language):
-        return course_description_only(
-            concept.id_desc
-            or _metadata_text(candidate, "description_id")
-            or concept.description
-            or ""
+        return first_course_description(
+            concept.id_desc,
+            _metadata_text(candidate, "description_id"),
+            concept.description,
         )
-    return course_description_only(
-        concept.en_desc
-        or _metadata_text(candidate, "description_en")
-        or _metadata_text(candidate, "en_desc")
-        or f"Understand and apply {title}."
+    return first_course_description(
+        concept.en_desc,
+        _metadata_text(candidate, "description_en"),
+        _metadata_text(candidate, "en_desc"),
     )
 
 

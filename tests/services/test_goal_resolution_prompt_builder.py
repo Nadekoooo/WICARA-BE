@@ -4,7 +4,9 @@ import json
 
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.learning_goal_resolution.candidate_retriever import ConceptCandidate
-from app.modules.learning_goal_resolution.prompt_builder import build_goal_resolution_prompt
+from app.modules.learning_goal_resolution.prompt_builder import (
+    build_goal_resolution_prompt,
+)
 
 
 def test_goal_resolution_prompt_uses_english_node_payload_only():
@@ -57,6 +59,28 @@ def test_goal_resolution_prompt_uses_indonesian_node_payload_only():
     assert "Kurikulum Merdeka" not in prompt
 
 
+def test_goal_resolution_prompt_does_not_generate_missing_english_description():
+    prompt = build_goal_resolution_prompt(
+        raw_query="I want to learn decimals",
+        candidates=[_candidate_without_english_description()],
+        language="en",
+        search_scope="same_subject_all_grades",
+    )
+
+    payload = _available_nodes(prompt)
+
+    assert payload == [
+        {
+            "concept_code": "math_decimal",
+            "title": "Decimals",
+            "grade_band": "7",
+            "description": "",
+        }
+    ]
+    assert "Understand and apply" not in prompt
+    assert "Deskripsi Indonesia untuk desimal" not in prompt
+
+
 def _candidate() -> ConceptCandidate:
     subject = Subject(
         code="math",
@@ -82,6 +106,31 @@ def _candidate() -> ConceptCandidate:
             "label_en": "Fractions",
             "description_id": "Deskripsi metadata Indonesia.",
             "description_en": "Metadata English description.",
+        },
+    )
+    concept.subject = subject
+    return ConceptCandidate(concept=concept, score=1.0)
+
+
+def _candidate_without_english_description() -> ConceptCandidate:
+    subject = Subject(
+        code="math",
+        name="Matematika",
+        metadata_json={"name_id": "Matematika", "name_en": "Math"},
+    )
+    concept = KnowledgeConcept(
+        code="math_decimal",
+        title="Desimal",
+        description="Deskripsi umum desimal.",
+        id_desc="Deskripsi Indonesia untuk desimal.",
+        en_desc=None,
+        grade_band="7",
+        display_order=2,
+        metadata_json={
+            "label_id": "Desimal",
+            "label_en": "Decimals",
+            "description_id": "Deskripsi metadata Indonesia untuk desimal.",
+            "description_en": "",
         },
     )
     concept.subject = subject
