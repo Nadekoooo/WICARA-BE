@@ -249,6 +249,14 @@ def test_finalize_and_path_selection_create_track(client):
     assert target_metric["confidence_percent"] == 68
     assert target_metric["metric_source"] == "adaptive_pretest_diagnosis"
 
+    dashboard = client.get(f"/api/v1/learning-goals/{learning_goal_id}/assessment-dashboard")
+    assert dashboard.status_code == 200
+    dashboard_payload = dashboard.json()
+    assert dashboard_payload["state"] == "diagnosed"
+    assert dashboard_payload["pretest"]["recommended_path"] == "review_only"
+    assert dashboard_payload["pretest"]["nodes"][0]["metric_source"] == "adaptive_pretest_diagnosis"
+    assert dashboard_payload["comparison"]["available"] is False
+
     path = client.post(
         f"/api/v1/learning-goals/{learning_goal_id}/path-selection",
         json={"path_option": "review_only"},
@@ -261,7 +269,40 @@ def test_finalize_and_path_selection_create_track(client):
     with _session_for_client(client) as session:
         goal = session.get(LearningGoal, UUID(learning_goal_id))
         assert goal.status == "in_progress"
+        assessment = session.get(AssessmentSession, UUID(session_id))
+        assert "diagnosis" in assessment.metadata_json
         assert session.scalar(select(TrackModule).where(TrackModule.track_id == goal.track.id)) is not None
+
+
+def test_assessment_dashboard_without_pretest_returns_start_state(client):
+    _override_account(client)
+    assert client.get("/api/v1/home").status_code == 200
+    with _session_for_client(client) as session:
+        subject = session.scalar(select(Subject).where(Subject.code == "matematika"))
+        assert subject is not None
+        concept = session.scalar(select(KnowledgeConcept).where(KnowledgeConcept.subject_id == subject.id))
+        assert concept is not None
+        goal = LearningGoal(
+            user_id=ACCOUNT_ID,
+            subject_id=subject.id,
+            target_concept_id=concept.id,
+            raw_topic="dashboard no pretest",
+            normalized_topic="dashboard no pretest",
+            status="pretest_ready",
+            metadata_json={"source": "test"},
+        )
+        session.add(goal)
+        session.commit()
+        learning_goal_id = str(goal.id)
+
+    dashboard = client.get(f"/api/v1/learning-goals/{learning_goal_id}/assessment-dashboard")
+
+    assert dashboard.status_code == 200
+    payload = dashboard.json()
+    assert payload["state"] == "needs_pretest"
+    assert payload["pretest"] is None
+    assert payload["posttest"] is None
+    assert payload["primary_action"]["action_type"] == "start_pretest"
 
 
 def test_cancel_abandons_active_pretest_and_releases_lock(client):
@@ -325,6 +366,14 @@ def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, 
     assert final.status_code == 200
     assert final.json()["retake_required_concepts"] == [concept_code]
 
+    dashboard = client.get(f"/api/v1/learning-goals/{learning_goal_id}/assessment-dashboard")
+    assert dashboard.status_code == 200
+    dashboard_payload = dashboard.json()
+    assert dashboard_payload["state"] == "needs_retake"
+    assert dashboard_payload["posttest"]["passed"] is False
+    assert dashboard_payload["posttest"]["answer_percent"] == 66.67
+    assert dashboard_payload["posttest"]["retake_required_concepts"] == [concept_code]
+
     with _session_for_client(client) as session:
         state = session.scalar(
             select(LearnerConceptState).where(
@@ -366,6 +415,14 @@ def test_posttest_three_of_three_passes_and_marks_concept_mastered(client):
     final = client.post(f"/api/v1/posttests/{payload['session_id']}/finalize")
     assert final.status_code == 200
     assert final.json()["retake_required_concepts"] == []
+
+    dashboard = client.get(f"/api/v1/learning-goals/{learning_goal_id}/assessment-dashboard")
+    assert dashboard.status_code == 200
+    dashboard_payload = dashboard.json()
+    assert dashboard_payload["state"] == "mastered"
+    assert dashboard_payload["posttest"]["passed"] is True
+    assert dashboard_payload["posttest"]["passed_node_count"] == 1
+    assert dashboard_payload["posttest"]["nodes"][0]["score_percent"] == 100
 
     with _session_for_client(client) as session:
         state = session.scalar(

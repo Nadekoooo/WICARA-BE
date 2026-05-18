@@ -29,6 +29,11 @@ from app.modules.learning.models import (
     TrackModule,
 )
 from app.modules.learning.schemas import (
+    AssessmentDashboardActionRead,
+    AssessmentDashboardComparisonRead,
+    AssessmentDashboardPosttestRead,
+    AssessmentDashboardPretestRead,
+    AssessmentDashboardResponse,
     AnimationJobStatusResponse,
     AnimationQueueResponse,
     ActionRead,
@@ -70,6 +75,7 @@ from app.modules.learning.schemas import (
     WeeklyReportResponse,
     ProgressRead,
 )
+from app.modules.posttests.schemas import PosttestNodeResultRead
 from app.modules.learning.render_engine import (
     RenderEngineError,
     RenderOutput,
@@ -268,6 +274,61 @@ def read_learning_goal(
     )
 
 
+def get_assessment_dashboard(
+    session: Session,
+    *,
+    user: UserAccount,
+    learning_goal_id: UUID,
+) -> AssessmentDashboardResponse | None:
+    goal = session.scalar(
+        select(LearningGoal)
+        .where(LearningGoal.id == learning_goal_id, LearningGoal.user_id == user.id)
+        .options(selectinload(LearningGoal.track), selectinload(LearningGoal.assessment_sessions))
+    )
+    if goal is None:
+        return None
+
+    target = session.get(KnowledgeConcept, goal.target_concept_id) if goal.target_concept_id else None
+    pretest_session = _latest_assessment_session(goal.assessment_sessions, session_type="pretest")
+    posttest_session = _latest_assessment_session(goal.assessment_sessions, session_type="posttest")
+    pretest = _assessment_dashboard_pretest(goal=goal, assessment=pretest_session)
+    posttest = _assessment_dashboard_posttest(posttest_session)
+    paired_scores = _paired_pre_post_scores(session, user=user, learning_goal_id=goal.id)
+    comparison = AssessmentDashboardComparisonRead(
+        available=bool(paired_scores["paired_concept_count"]),
+        pretest_score_percent=paired_scores["pretest_score_percent"],
+        posttest_score_percent=paired_scores["posttest_score_percent"],
+        learning_gain_percent=paired_scores["learning_gain_percent"],
+        paired_concept_count=int(paired_scores["paired_concept_count"] or 0),
+    )
+    state = _assessment_dashboard_state(
+        goal=goal,
+        pretest=pretest,
+        posttest=posttest,
+        posttest_session=posttest_session,
+    )
+    recommendations = _assessment_dashboard_recommendations(
+        state=state,
+        pretest=pretest,
+        posttest=posttest,
+    )
+    return AssessmentDashboardResponse(
+        learning_goal_id=goal.id,
+        target_title=target.title if target else goal.normalized_topic,
+        state=state,
+        pretest=pretest,
+        posttest=posttest,
+        comparison=comparison,
+        primary_action=_assessment_dashboard_action(
+            state=state,
+            goal=goal,
+            pretest_session=pretest_session,
+            posttest_session=posttest_session,
+        ),
+        recommendations=recommendations,
+    )
+
+
 def get_pretest_for_goal(
     session: Session,
     *,
@@ -294,6 +355,197 @@ def get_pretest_for_goal(
         status=assessment.status,
         questions=[question_to_schema(question) for question in assessment.questions],
     )
+
+
+def _latest_assessment_session(
+    assessments: list[AssessmentSession],
+    *,
+    session_type: str,
+) -> AssessmentSession | None:
+    candidates = [item for item in assessments if item.session_type == session_type]
+    if not candidates:
+        return None
+    return sorted(
+        candidates,
+        key=lambda item: _as_utc(item.completed_at or item.created_at)
+        if (item.completed_at or item.created_at)
+        else datetime.min.replace(tzinfo=UTC),
+        reverse=True,
+    )[0]
+
+
+def _assessment_dashboard_pretest(
+    *,
+    goal: LearningGoal,
+    assessment: AssessmentSession | None,
+) -> AssessmentDashboardPretestRead | None:
+    diagnosis = None
+    if assessment is not None:
+        metadata_diagnosis = (assessment.metadata_json or {}).get("diagnosis")
+        if isinstance(metadata_diagnosis, dict):
+            diagnosis = metadata_diagnosis
+    if diagnosis is None:
+        goal_diagnosis = (goal.metadata_json or {}).get("diagnosis")
+        if isinstance(goal_diagnosis, dict):
+            diagnosis = goal_diagnosis
+    if diagnosis is None:
+        return None
+
+    analysis = diagnosis.get("analysis") if isinstance(diagnosis.get("analysis"), dict) else {}
+    nodes = diagnosis.get("nodes") if isinstance(diagnosis.get("nodes"), list) else []
+    return AssessmentDashboardPretestRead(
+        session_id=assessment.id if assessment is not None else None,
+        status=assessment.status if assessment is not None else "completed",
+        score_percent=_float_value(diagnosis.get("score_percent"), fallback=0.0),
+        overall_mastery_percent=_float_value(
+            diagnosis.get("overall_mastery_percent"),
+            fallback=_float_value(analysis.get("overall_mastery_percent"), fallback=0.0),
+        ),
+        confidence_percent=_float_value(diagnosis.get("confidence_percent"), fallback=0.0),
+        recommended_path=str(diagnosis.get("recommended_path") or ""),
+        summary=str(diagnosis.get("summary") or ""),
+        strengths=_string_list(analysis.get("strengths")),
+        gaps=_string_list(analysis.get("gaps")),
+        evidence_notes=_string_list(analysis.get("evidence_notes")),
+        nodes=[dict(node) for node in nodes if isinstance(node, dict)],
+    )
+
+
+def _assessment_dashboard_posttest(
+    assessment: AssessmentSession | None,
+) -> AssessmentDashboardPosttestRead | None:
+    if assessment is None:
+        return None
+    node_results = (assessment.metadata_json or {}).get("node_results")
+    if not isinstance(node_results, dict):
+        state = assessment.decision_state_json or {}
+        node_results = state.get("node_results") if isinstance(state.get("node_results"), dict) else {}
+    nodes = [
+        _assessment_dashboard_posttest_node(concept_code, payload)
+        for concept_code, payload in node_results.items()
+        if isinstance(payload, dict)
+    ]
+    passed_count = len([node for node in nodes if node.passed])
+    total_count = len(nodes)
+    passed = total_count > 0 and passed_count == total_count
+    return AssessmentDashboardPosttestRead(
+        session_id=assessment.id,
+        status=assessment.status,
+        answer_percent=_average([node.answer_percent for node in nodes]),
+        evidence_percent=_average([node.evidence_percent for node in nodes]),
+        score_percent=_average([node.score_percent for node in nodes]),
+        confidence_percent=_average([node.confidence_percent for node in nodes]),
+        passed_node_count=passed_count,
+        total_node_count=total_count,
+        retake_required_concepts=[node.concept_code for node in nodes if node.retake_required],
+        passed=passed,
+        nodes=nodes,
+    )
+
+
+def _assessment_dashboard_posttest_node(
+    concept_code: str,
+    payload: dict[str, Any],
+) -> PosttestNodeResultRead:
+    concept_id = payload.get("concept_id")
+    return PosttestNodeResultRead(
+        concept_id=UUID(str(concept_id)) if concept_id else None,
+        concept_code=concept_code,
+        concept_title=str(payload.get("concept_title") or concept_code),
+        total_questions=int(payload.get("total_questions") or 3),
+        answered_count=int(payload.get("answered_count") or 0),
+        correct_count=int(payload.get("correct_count") or 0),
+        answer_percent=_float_value(payload.get("answer_percent"), fallback=0.0),
+        evidence_percent=_float_value(payload.get("evidence_percent"), fallback=0.0),
+        score_percent=_float_value(payload.get("score_percent"), fallback=0.0),
+        confidence_percent=_float_value(payload.get("confidence_percent"), fallback=0.0),
+        scaled_score=_float_value(payload.get("scaled_score"), fallback=0.0),
+        passed=bool(payload.get("passed")),
+        retake_required=bool(payload.get("retake_required", not bool(payload.get("passed")))),
+        metric_source=str(payload.get("metric_source") or "adaptive_posttest_evidence"),
+    )
+
+
+def _assessment_dashboard_state(
+    *,
+    goal: LearningGoal,
+    pretest: AssessmentDashboardPretestRead | None,
+    posttest: AssessmentDashboardPosttestRead | None,
+    posttest_session: AssessmentSession | None,
+) -> str:
+    if pretest is None:
+        return "needs_pretest"
+    if posttest_session is not None and posttest_session.status in {"active", "awaiting_answer"}:
+        return "posttest_in_progress"
+    if posttest is not None and posttest.total_node_count > 0:
+        return "mastered" if posttest.passed else "needs_retake"
+    if goal.status == "in_progress" and goal.track is not None and goal.track.progress_percent > 0:
+        return "learning_in_progress"
+    return "diagnosed"
+
+
+def _assessment_dashboard_action(
+    *,
+    state: str,
+    goal: LearningGoal,
+    pretest_session: AssessmentSession | None,
+    posttest_session: AssessmentSession | None,
+) -> AssessmentDashboardActionRead:
+    if state == "needs_pretest":
+        return AssessmentDashboardActionRead(
+            label="Start pretest",
+            action_type="start_pretest",
+            target_id=str(pretest_session.id if pretest_session else goal.id),
+        )
+    if state == "posttest_in_progress":
+        return AssessmentDashboardActionRead(
+            label="Continue posttest",
+            action_type="continue_posttest",
+            target_id=str(posttest_session.id) if posttest_session else None,
+        )
+    if state == "needs_retake":
+        return AssessmentDashboardActionRead(
+            label="Review weak nodes",
+            action_type="review",
+            target_id=str(goal.track.id if goal.track else goal.id),
+        )
+    return AssessmentDashboardActionRead(
+        label="Continue learning",
+        action_type="continue_learning",
+        target_id=str(goal.track.id if goal.track else goal.id),
+    )
+
+
+def _assessment_dashboard_recommendations(
+    *,
+    state: str,
+    pretest: AssessmentDashboardPretestRead | None,
+    posttest: AssessmentDashboardPosttestRead | None,
+) -> list[str]:
+    if state == "needs_retake" and posttest is not None:
+        return [f"Review: {concept_code}" for concept_code in posttest.retake_required_concepts]
+    if pretest is not None:
+        return pretest.gaps[:3] or pretest.strengths[:3]
+    return []
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _average(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    return round(sum(values) / len(values), 2)
+
+
+def _float_value(value: object, *, fallback: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
 
 
 def submit_answer(
@@ -1625,6 +1877,7 @@ def _paired_pre_post_scores(
     user: UserAccount,
     submitted_from: datetime | None = None,
     submitted_before: datetime | None = None,
+    learning_goal_id: UUID | None = None,
 ) -> dict[str, int | None]:
     query = (
         select(AssessmentAttempt, AssessmentQuestion.concept_id, AssessmentSession.session_type)
@@ -1641,6 +1894,8 @@ def _paired_pre_post_scores(
         query = query.where(AssessmentAttempt.submitted_at >= submitted_from)
     if submitted_before is not None:
         query = query.where(AssessmentAttempt.submitted_at < submitted_before)
+    if learning_goal_id is not None:
+        query = query.where(AssessmentSession.learning_goal_id == learning_goal_id)
 
     by_concept: dict[UUID, dict[str, list[float]]] = {}
     for attempt, concept_id, session_type in session.execute(query):

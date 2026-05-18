@@ -74,7 +74,6 @@ class PretestDiagnosisService:
         goal = session.get(LearningGoal, assessment.learning_goal_id) if assessment.learning_goal_id else None
         if goal is not None and goal.status != "in_progress":
             goal.status = "diagnosed"
-            goal.metadata_json = {**(goal.metadata_json or {}), "diagnosis": diagnosis}
         if goal is not None:
             auto_session_goal = _auto_prepare_session_goal_from_diagnosis(
                 session,
@@ -90,10 +89,11 @@ class PretestDiagnosisService:
                     except ValueError:
                         pass
                 diagnosis["session_goal"] = auto_session_goal
-                goal.metadata_json = {
-                    **(goal.metadata_json or {}),
-                    "session_goal": auto_session_goal,
-                }
+            goal_metadata = {**(goal.metadata_json or {}), "diagnosis": diagnosis}
+            if auto_session_goal is not None:
+                goal_metadata["session_goal"] = auto_session_goal
+            goal.metadata_json = goal_metadata
+        assessment.metadata_json = {**(assessment.metadata_json or {}), "diagnosis": diagnosis}
         session.commit()
         return diagnosis
 
