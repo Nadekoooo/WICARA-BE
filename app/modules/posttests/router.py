@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,6 +14,7 @@ from app.modules.posttests.service import AdaptivePosttestService, DuplicateQues
 
 router = APIRouter()
 service = AdaptivePosttestService()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/posttests/start")
@@ -25,11 +27,21 @@ def start_posttest(
         result = service.start(
             session,
             user=user,
+            workspace_session_id=payload.workspace_session_id,
             learning_goal_id=payload.learning_goal_id,
             track_id=payload.track_id,
             module_id=payload.module_id,
         )
     except ValueError as exc:
+        logger.warning(
+            "Posttest start rejected: user_id=%s workspace_session_id=%s learning_goal_id=%s track_id=%s module_id=%s error=%s",
+            user.id,
+            payload.workspace_session_id,
+            payload.learning_goal_id,
+            payload.track_id,
+            payload.module_id,
+            exc,
+        )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Learning goal or track not found.")

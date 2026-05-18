@@ -23,7 +23,7 @@ from app.modules.learning.models import (
 from app.modules.pretests.question_validator import QuestionValidator
 
 PACK_PROMPT_VERSION = "adaptive_node_pack_v6_flexible_subject_tasks"
-FRESH_QUESTION_PROMPT_VERSION = "fresh_assessment_node_batch_v2"
+FRESH_QUESTION_PROMPT_VERSION = "fresh_assessment_node_batch_v3_workspace_posttest"
 DEFAULT_PACK_GENERATION_MAX_ATTEMPTS = 4
 
 
@@ -290,7 +290,11 @@ class AdaptivePretestGenerationService:
                 "correct_option_key": _correct_label(payload),
                 "explanation": payload["explanation"],
                 "learner_language": metadata.get("learner_language", "en"),
+                "language": payload.get("language") or metadata.get("learner_language", "en"),
                 "node_role": metadata.get("node_role", ""),
+                "question_type": payload.get("question_type", ""),
+                "difficulty_reason": payload.get("difficulty_reason", ""),
+                "distractor_rationales": payload.get("distractor_rationales", {}),
                 "freshness_note": payload.get("freshness_note", ""),
                 "misconception_tags": payload.get("misconception_tags", []),
                 "non_reusable": True,
@@ -551,18 +555,6 @@ class AdaptivePretestGenerationService:
         diagnosis_context: str,
         previous_questions: list[str],
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        ai_questions, ai_metadata = self._try_generate_fresh_questions_with_ai(
-            concept=concept,
-            difficulties=difficulties,
-            assessment_type=assessment_type,
-            language=language,
-            node_role=node_role,
-            prerequisite_context=prerequisite_context,
-            diagnosis_context=diagnosis_context,
-            previous_questions=previous_questions,
-        )
-        if ai_questions is not None:
-            return ai_questions, ai_metadata
         if _allow_dev_fallback_questions():
             fallback_pack = self._fallback_pack(concept=concept, language=language)
             fallback_questions = [
@@ -578,10 +570,22 @@ class AdaptivePretestGenerationService:
                 "llm_provider": "deterministic",
                 "llm_model": "dev_template_v1",
                 "prompt_version": FRESH_QUESTION_PROMPT_VERSION,
-                "fallback_reason": ai_metadata,
+                "fallback_reason": "WICARA_ASSESSMENT_DEV_FALLBACK_QUESTIONS enabled",
                 "batch_size": len(difficulties),
                 "difficulty_sequence": difficulties,
             }
+        ai_questions, ai_metadata = self._try_generate_fresh_questions_with_ai(
+            concept=concept,
+            difficulties=difficulties,
+            assessment_type=assessment_type,
+            language=language,
+            node_role=node_role,
+            prerequisite_context=prerequisite_context,
+            diagnosis_context=diagnosis_context,
+            previous_questions=previous_questions,
+        )
+        if ai_questions is not None:
+            return ai_questions, ai_metadata
         reason = ai_metadata.get("reason") if isinstance(ai_metadata, dict) else None
         raise AssessmentQuestionGenerationError(
             reason or "AI assessment question generation failed. Please retry."
@@ -609,7 +613,7 @@ class AdaptivePretestGenerationService:
             pass
 
         validation_errors: list[str] = []
-        max_attempts = _max_generation_attempts()
+        max_attempts = _max_generation_attempts(assessment_type=assessment_type)
         for attempt in range(1, max_attempts + 1):
             prompt = _fresh_question_prompt(
                 concept=concept,
@@ -679,10 +683,15 @@ def _math_pack(
     pack: dict[str, dict[str, Any]] = {}
     labels = ["A", "B", "C", "D"]
     for difficulty, prompt, correct, options, explanation in rows:
+        question_type = {
+            "easy": "concept_application",
+            "medium": "word_problem",
+            "hard": "multi_step_application",
+        }.get(difficulty, "concept_application")
         pack[difficulty] = {
             "concept_code": concept_code,
             "difficulty": difficulty,
-            "question_type": "multiple_choice",
+            "question_type": question_type,
             "prompt": prompt,
             "helper_text": f"Pilih jawaban yang paling tepat untuk {title}.",
             "options": [
@@ -691,6 +700,19 @@ def _math_pack(
             ],
             "explanation": explanation,
             "expected_reasoning": explanation,
+            "difficulty_reason": {
+                "easy": "Cek konsep dasar dengan satu langkah sederhana.",
+                "medium": "Aplikasi konsep dalam konteks singkat, bukan sekadar hitung langsung.",
+                "hard": "Membutuhkan lebih dari satu langkah atau penerapan konsep dalam konteks lebih kompleks.",
+            }.get(difficulty, "Cocok dengan kompleksitas yang diminta."),
+            "distractor_rationales": {
+                label: (
+                    "Jawaban benar."
+                    if text == correct
+                    else "Distraktor mewakili kesalahan hitung atau salah memilih operasi."
+                )
+                for label, text in zip(labels, options, strict=True)
+            },
             "rubric": {
                 "correct_answer_score": 1.0,
                 "reasoning_score_available": True,
@@ -783,6 +805,8 @@ Each question object must contain:
 - options: exactly 4 options with label, text, is_correct
 - explanation
 - expected_reasoning
+- difficulty_reason
+- distractor_rationales for every option label
 - rubric
 
 Exactly one option must be correct per question.
@@ -847,14 +871,34 @@ The previous generated question failed backend validation.
 Regenerate the full question and fix these validation errors:
 {compact_errors}
 """.rstrip()
-    posttest_rules = ""
+    assessment_specific_rules = ""
+    if assessment_type == "pretest":
+        assessment_specific_rules = """
+
+Pretest-specific rules:
+- You are generating one node-level question set for an adaptive pretest, not a fixed-size test.
+- For each node, the backend may request easy, medium, and hard together so later adaptive branching can reuse the same node set without another model call.
+- The frontend still asks questions sequentially; do not imply all generated questions will be shown.
+- Do not assume max_questions means the pretest should contain that many questions.
+- max_questions is only a backend safety cap; it is not a target question count.
+- Return exactly the number of question objects requested by the difficulty sequence.
+- If the difficulty sequence is easy, medium, hard, make the three questions meaningfully different.
+- The backend decision engine controls traversal: target medium correct leads to target hard, then the pretest finalizes immediately after that hard answer.
+- Prerequisite checks happen only after the learner misses the target medium question and then answers the target easy question.
+""".rstrip()
     if assessment_type == "posttest":
-        posttest_rules = """
+        assessment_specific_rules = """
 
 Posttest-specific rules:
-- Use only medium and hard questions.
-- Test mastery after learning, not recall from the pretest.
-- Prefer new contexts that require applying the same concept.
+- You are generating a fixed-size posttest for the selected learning goal after the learner completed a workspace learning session.
+- Use the compact workspace learning summary in Diagnosis context as the primary source.
+- Evaluate whether the learner mastered the goal concept that was studied, not pretest remediation nodes.
+- Generate exactly 10 questions when 10 difficulties are requested: 3 medium and 7 hard.
+- Do not generate easy questions unless explicitly requested.
+- Medium questions test application in context, simple story problems, equation representation, or choosing a correct strategy.
+- Hard questions test complex reasoning, multi-step story problems, error analysis, misconception detection, strategy comparison, table interpretation, missing value reasoning, or transfer.
+- Difficulty must not differ only by larger numbers.
+- For math, hard questions should often include story problems, wrong-solution analysis, multi-step reasoning, or realistic misconception traps.
 """.rstrip()
 
     return f"""
@@ -892,20 +936,25 @@ Freshness requirements:
 
 Question quality requirements:
 - Use concrete applied tasks, not vague theory checks.
+- You must make easy, medium, and hard questions meaningfully different by cognitive demand.
 - Exactly one correct option per question.
 - Provide 4 answer options.
 - Distractors must be plausible and reveal misconceptions.
+- Provide distractor_rationales for A, B, C, and D.
 - Options should be similar in length and style.
 - Do not use "all of the above" or "none of the above".
 - Do not make the correct answer obvious by wording length or detail.
 - Avoid trick questions and ambiguous wording.
 - Use age-appropriate, curriculum-appropriate language.
+- Use Markdown and LaTeX when useful.
+- Every question must explain why its difficulty label is appropriate in difficulty_reason.
 
 Difficulty rules:
 - Easy: direct recognition or basic one-step application.
-- Medium: normal application requiring understanding, not recall.
-- Hard: transfer, multi-step reasoning, or misconception-sensitive application.
-{posttest_rules}
+- Medium: application in context, simple word problem, equation representation, or choosing the correct operation/strategy; usually 1-2 reasoning steps.
+- Hard: multi-step reasoning, error analysis, strategy comparison, table interpretation, missing value/inverse reasoning, transfer, or misconception-heavy application.
+- Do not make difficulty differ only by using larger numbers.
+{assessment_specific_rules}
 
 Before returning JSON, internally verify:
 - exactly one correct answer
@@ -919,8 +968,11 @@ Return JSON shaped exactly as:
 {{
   "questions": [
     {{
+      "language": "id | en",
+      "concept_code": "{concept.code}",
       "stem": "string",
       "difficulty": "easy | medium | hard",
+      "question_type": "direct_computation | concept_recognition | word_problem | equation_representation | error_analysis | missing_value | strategy_comparison | table_interpretation | multi_step_application | concept_application",
       "options": [
         {{"id": "A", "text": "string"}},
         {{"id": "B", "text": "string"}},
@@ -931,6 +983,8 @@ Return JSON shaped exactly as:
       "expected_reasoning": "string",
       "explanation": "string",
       "misconception_tags": ["string"],
+      "distractor_rationales": {{"A": "string", "B": "string", "C": "string", "D": "string"}},
+      "difficulty_reason": "string",
       "freshness_note": "short note explaining how this differs from prior session questions"
     }}
   ]
@@ -957,7 +1011,12 @@ def _normalize_fresh_question_payload(
 ) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise QuestionGenerationPayloadError("Question payload must be an object.")
-    correct_option_id = str(payload.get("correct_option_id") or payload.get("correct_option_key") or "").strip()
+    correct_option_id = str(
+        payload.get("correct_option_id")
+        or payload.get("correct_option")
+        or payload.get("correct_option_key")
+        or ""
+    ).strip()
     raw_options = payload.get("options")
     if not isinstance(raw_options, list):
         raise QuestionGenerationPayloadError("Question options must be an array.")
@@ -977,12 +1036,19 @@ def _normalize_fresh_question_payload(
     return {
         "concept_code": concept_code,
         "difficulty": str(payload.get("difficulty") or difficulty).strip().lower(),
-        "question_type": "multiple_choice",
+        "language": str(payload.get("language") or "").strip().lower(),
+        "question_type": str(payload.get("question_type") or "concept_application").strip().lower(),
         "prompt": str(payload.get("prompt") or payload.get("stem") or "").strip(),
         "helper_text": str(payload.get("helper_text") or "").strip(),
         "options": options,
         "explanation": str(payload.get("explanation") or "").strip(),
         "expected_reasoning": str(payload.get("expected_reasoning") or "").strip(),
+        "difficulty_reason": str(payload.get("difficulty_reason") or "").strip(),
+        "distractor_rationales": (
+            payload.get("distractor_rationales")
+            if isinstance(payload.get("distractor_rationales"), dict)
+            else {}
+        ),
         "freshness_note": str(payload.get("freshness_note") or "").strip(),
         "misconception_tags": payload.get("misconception_tags") if isinstance(payload.get("misconception_tags"), list) else [],
         "rubric": payload.get("rubric") if isinstance(payload.get("rubric"), dict) else {
@@ -1040,14 +1106,19 @@ def _extract_pack_payload(payload: Any) -> Any:
     return questions if isinstance(questions, dict) else payload
 
 
-def _max_generation_attempts() -> int:
-    raw_value = os.getenv("WICARA_PRETEST_LLM_MAX_ATTEMPTS", "").strip()
+def _max_generation_attempts(*, assessment_type: str | None = None) -> int:
+    if assessment_type == "posttest":
+        raw_value = os.getenv("WICARA_POSTTEST_LLM_MAX_ATTEMPTS", "").strip()
+        default_attempts = 2
+    else:
+        raw_value = os.getenv("WICARA_PRETEST_LLM_MAX_ATTEMPTS", "").strip()
+        default_attempts = DEFAULT_PACK_GENERATION_MAX_ATTEMPTS
     if not raw_value:
-        return DEFAULT_PACK_GENERATION_MAX_ATTEMPTS
+        return default_attempts
     try:
         return max(1, min(8, int(raw_value)))
     except ValueError:
-        return DEFAULT_PACK_GENERATION_MAX_ATTEMPTS
+        return default_attempts
 
 
 def _previous_question_summary(

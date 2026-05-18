@@ -796,34 +796,7 @@ def _posttest_required_concept_ids(
     user: UserAccount | None,
     concept_ids: list[UUID],
 ) -> set[UUID]:
-    if user is None or not concept_ids:
-        return set()
-    concept_id_set = set(concept_ids)
-    required: set[UUID] = set()
-    goals = list(
-        session.scalars(
-            select(LearningGoal)
-            .where(LearningGoal.user_id == user.id)
-            .order_by(LearningGoal.updated_at.desc())
-            .limit(20)
-        )
-    )
-    for goal in goals:
-        diagnosis = (goal.metadata_json or {}).get("diagnosis", {})
-        nodes = diagnosis.get("nodes", []) if isinstance(diagnosis, dict) else []
-        for node in nodes:
-            if not isinstance(node, dict):
-                continue
-            if str(node.get("status")) not in {"gap", "fragile", "partial"}:
-                continue
-            concept_id = node.get("concept_id")
-            try:
-                concept_uuid = UUID(str(concept_id))
-            except (TypeError, ValueError):
-                continue
-            if concept_uuid in concept_id_set:
-                required.add(concept_uuid)
-    return required
+    return set()
 
 
 def _latest_posttest_pass_by_concept(

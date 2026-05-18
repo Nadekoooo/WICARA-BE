@@ -15,7 +15,6 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
-    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -31,20 +30,6 @@ json_dict_type = JSON().with_variant(JSONB, "postgresql")
 
 class LearningGoal(Base):
     __tablename__ = "learning_goals"
-    __table_args__ = (
-        Index(
-            "uq_learning_goals_active_user_target",
-            "user_id",
-            "target_concept_id",
-            unique=True,
-            postgresql_where=text(
-                "target_concept_id is not null and status in ('confirmed', 'pretest_in_progress', 'diagnosed', 'in_progress')"
-            ),
-            sqlite_where=text(
-                "target_concept_id is not null and status in ('confirmed', 'pretest_in_progress', 'diagnosed', 'in_progress')"
-            ),
-        ),
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4

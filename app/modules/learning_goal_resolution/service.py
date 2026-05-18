@@ -7,7 +7,6 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.language import is_indonesian_language, normalize_language_code
@@ -396,19 +395,6 @@ class GoalResolverService:
             requested_language=resolution.language or None,
         )
         resolution.language = response_language
-        active_for_target = _active_goal_for_target(
-            session,
-            user=user,
-            target_concept_id=concept.id,
-        )
-        if active_for_target is not None:
-            raise ActiveLearningGoalExists(
-                _active_goal_to_read(
-                    session,
-                    active_for_target,
-                    language=response_language,
-                )
-            )
         subject = session.get(Subject, concept.subject_id)
         goal = LearningGoal(
             user_id=user.id,
@@ -430,24 +416,7 @@ class GoalResolverService:
         resolution.status = "confirmed"
         resolution.confirmed_at = datetime.now(UTC)
         session.add(goal)
-        try:
-            session.commit()
-        except IntegrityError as exc:
-            session.rollback()
-            active_after_race = _active_goal_for_target(
-                session,
-                user=user,
-                target_concept_id=concept.id,
-            )
-            if active_after_race is not None:
-                raise ActiveLearningGoalExists(
-                    _active_goal_to_read(
-                        session,
-                        active_after_race,
-                        language=response_language,
-                    )
-                ) from exc
-            raise
+        session.commit()
         return ConfirmLearningGoalResponse(
             learning_goal_id=goal.id,
             status=goal.status,
@@ -485,20 +454,6 @@ class GoalResolverService:
         if concept is None:
             raise ValueError("Selected concept was not found.")
 
-        active_for_target = _active_goal_for_target(
-            session,
-            user=user,
-            target_concept_id=concept.id,
-        )
-        if active_for_target is not None:
-            raise ActiveLearningGoalExists(
-                _active_goal_to_read(
-                    session,
-                    active_for_target,
-                    language=response_language,
-                )
-            )
-
         subject = session.get(Subject, concept.subject_id)
         title = _concept_display_title(concept, language=response_language)
         goal = LearningGoal(
@@ -516,24 +471,7 @@ class GoalResolverService:
             },
         )
         session.add(goal)
-        try:
-            session.commit()
-        except IntegrityError as exc:
-            session.rollback()
-            active_after_race = _active_goal_for_target(
-                session,
-                user=user,
-                target_concept_id=concept.id,
-            )
-            if active_after_race is not None:
-                raise ActiveLearningGoalExists(
-                    _active_goal_to_read(
-                        session,
-                        active_after_race,
-                        language=response_language,
-                    )
-                ) from exc
-            raise
+        session.commit()
 
         return ConfirmLearningGoalResponse(
             learning_goal_id=goal.id,
@@ -1265,7 +1203,7 @@ def _preferred_response_language(
         if user.learner_profile and user.learner_profile.preferred_language
         else None
     )
-    return _normalize_response_language(profile_language or requested_language)
+    return _normalize_response_language(requested_language or profile_language)
 
 
 def _normalize_response_language(language: str | None) -> str:
@@ -1552,27 +1490,6 @@ def _graph_focus(
 
 def _is_indonesian_language(language: str) -> bool:
     return is_indonesian_language(language)
-
-
-def _active_goal_for_target(
-    session: Session,
-    *,
-    user: UserAccount,
-    target_concept_id: UUID,
-) -> LearningGoal | None:
-    return session.scalar(
-        select(LearningGoal)
-        .where(
-            LearningGoal.user_id == user.id,
-            LearningGoal.target_concept_id == target_concept_id,
-            LearningGoal.status.in_(ACTIVE_GOAL_STATUSES),
-        )
-        .options(
-            selectinload(LearningGoal.track),
-            selectinload(LearningGoal.assessment_sessions),
-        )
-        .order_by(LearningGoal.created_at.desc())
-    )
 
 
 def _active_goal_to_read(
