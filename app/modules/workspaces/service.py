@@ -44,6 +44,14 @@ _mastery_service = WorkspaceMasteryService()
 _posttest_service = AdaptivePosttestService()
 
 _PILOT_TEMPLATE_ID = "manim.number_line_quantity.v1"
+_PHASE_SEQUENCE = ("engage", "explore", "explain", "elaborate", "evaluate")
+_DEFAULT_PHASE_MIN_TURNS: dict[str, int] = {
+    "engage": 1,
+    "explore": 2,
+    "explain": 2,
+    "elaborate": 2,
+    "evaluate": 1,
+}
 
 
 def create_or_resume_workspace(
@@ -89,6 +97,7 @@ def create_or_resume_workspace(
         )
 
     if workspace is None:
+        now_iso = datetime.now(UTC).isoformat()
         workspace = WorkspaceSession(
             user_id=user.id,
             track_id=track.id,
@@ -96,7 +105,22 @@ def create_or_resume_workspace(
             current_topic=topic_title or module.title,
             content_mode=_normalize_content_mode(content_mode),
             status="active",
-            metadata_json={"source": "workspace_api"},
+            metadata_json={
+                "source": "workspace_api",
+                "current_phase": "engage",
+                "phase_transition_pending": False,
+                "posttest_eligible": False,
+                "phase_min_turns": dict(_DEFAULT_PHASE_MIN_TURNS),
+                "phase_history": [
+                    {
+                        "phase": "engage",
+                        "entered_at": now_iso,
+                        "exited_at": None,
+                        "turn_count": 0,
+                    }
+                ],
+                "visited_5e_phases": ["engage"],
+            },
         )
         session.add(workspace)
     else:
@@ -109,6 +133,10 @@ def create_or_resume_workspace(
         workspace=workspace,
         module=module,
         language=language,
+    )
+    workspace.metadata_json = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
     )
     module.status = "active"
     track.status = "active"
@@ -160,6 +188,112 @@ def list_workspace_sessions(
     )
 
 
+def advance_workspace_phase(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID,
+    force: bool = False,
+) -> WorkspaceRead | None:
+    workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
+    if workspace is None:
+        return None
+
+    metadata = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
+    )
+    current_phase = str(metadata.get("current_phase") or "engage")
+    if current_phase == "evaluate":
+        raise ValueError("Already at the final 5E phase.")
+
+    phase_index = _PHASE_SEQUENCE.index(current_phase)
+    next_phase = _PHASE_SEQUENCE[phase_index + 1]
+    phase_min_turns = _phase_min_turns(metadata)
+    min_turns = int(phase_min_turns.get(current_phase, 1))
+    current_turns = _current_phase_turns(metadata)
+    pending = bool(metadata.get("phase_transition_pending", False))
+
+    if not force and not pending:
+        raise ValueError(
+            "Phase transition not ready per tutor. Use force=true to override."
+        )
+    if current_turns < min_turns:
+        raise ValueError(
+            f"Minimum {min_turns} learner turns required for phase '{current_phase}'."
+        )
+
+    now_iso = datetime.now(UTC).isoformat()
+    history = list(metadata.get("phase_history", []))
+    if history:
+        history[-1]["exited_at"] = now_iso
+    history.append(
+        {
+            "phase": next_phase,
+            "entered_at": now_iso,
+            "exited_at": None,
+            "turn_count": 0,
+        }
+    )
+    metadata["current_phase"] = next_phase
+    metadata["phase_history"] = history
+    metadata["phase_transition_pending"] = False
+    metadata["posttest_eligible"] = bool(metadata.get("posttest_eligible", False)) or (
+        next_phase == "evaluate"
+    )
+    workspace.metadata_json = _ensure_phase_metadata(
+        metadata,
+        created_at=workspace.created_at,
+    )
+    workspace.updated_at = datetime.now(UTC)
+    session.commit()
+
+    workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
+    if workspace is None:
+        return None
+    return workspace_to_schema(session, workspace, user=user)
+
+
+def start_posttest(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID,
+) -> WorkspaceRead | None:
+    workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
+    if workspace is None:
+        return None
+
+    metadata = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
+    )
+    if not bool(metadata.get("posttest_eligible", False)):
+        raise ValueError("Posttest is not eligible yet. Reach Evaluate phase first.")
+
+    _resolve_owned_track_module(
+        session,
+        user=user,
+        track_id=workspace.track_id,
+        module_id=workspace.module_id,
+    )
+    _complete_workspace_module(session, user=user, workspace=workspace)
+    refreshed_metadata = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
+    )
+    refreshed_metadata["posttest_eligible"] = False
+    refreshed_metadata["phase_transition_pending"] = False
+    workspace.metadata_json = refreshed_metadata
+    workspace.updated_at = datetime.now(UTC)
+    session.commit()
+
+    workspace = _load_workspace(session, user=user, workspace_id=workspace_id)
+    if workspace is None:
+        return None
+    return workspace_to_schema(session, workspace, user=user)
+
+
 async def append_workspace_event(
     session: Session,
     *,
@@ -191,12 +325,20 @@ async def append_workspace_event(
         if topic_title:
             workspace.current_topic = topic_title
 
+    phase_metadata = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
+    )
+    workspace.metadata_json = phase_metadata
+    current_phase = str(phase_metadata.get("current_phase") or "engage")
+
     # Call Gemini before saving so audit info goes into event metadata
     tutor_response, ai_audit = await generate_tutor_response(
         workspace=workspace,
         event_type=normalized_event_type,
         text_payload=text_payload,
         events=list(workspace.events),
+        current_phase=current_phase,
         learner_language=_preferred_language(user),
     )
     if (
@@ -270,23 +412,42 @@ async def append_workspace_event(
                 "source": "workspace_tutor_response",
                 "intent": tutor_response.intent,
                 "next_actions": list(tutor_response.next_actions),
+                "next_phase_ready": tutor_response.next_phase_ready,
+                "phase_reasoning": tutor_response.phase_reasoning,
             },
         )
-    if normalized_event_type != "quiz_answer":
-        stage = ai_audit.get("stage")
-        if stage in {"engage", "explore", "explain", "elaborate"}:
-            visited: set[str] = set((workspace.metadata_json or {}).get("visited_5e_phases", []))
-            visited.add(stage)
-            workspace.metadata_json = {
-                **dict(workspace.metadata_json or {}),
-                "visited_5e_phases": sorted(visited),
-            }
 
-    _5E_PREREQ = {"engage", "explore", "explain", "elaborate"}
-    if normalized_event_type == "quiz_answer" and audit_metadata.get("is_correct") is True:
-        visited_phases: set[str] = set((workspace.metadata_json or {}).get("visited_5e_phases", []))
-        if _5E_PREREQ.issubset(visited_phases):
-            _complete_workspace_module(session, user=user, workspace=workspace)
+    metadata_json = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
+    )
+    history = list(metadata_json.get("phase_history", []))
+    if normalized_actor_type == "learner" and normalized_event_type != "system":
+        if history:
+            history[-1]["turn_count"] = int(history[-1].get("turn_count", 0)) + 1
+        else:
+            now_iso = datetime.now(UTC).isoformat()
+            history = [
+                {
+                    "phase": current_phase,
+                    "entered_at": now_iso,
+                    "exited_at": None,
+                    "turn_count": 1,
+                }
+            ]
+        metadata_json["phase_history"] = history
+
+    if (
+        tutor_response is not None
+        and tutor_response.next_phase_ready
+        and current_phase != "evaluate"
+    ):
+        metadata_json["phase_transition_pending"] = True
+
+    workspace.metadata_json = _ensure_phase_metadata(
+        metadata_json,
+        created_at=workspace.created_at,
+    )
 
     workspace.updated_at = datetime.now(UTC)
     session.add(event)
@@ -414,6 +575,10 @@ def workspace_to_schema(
         )
         topic_title = localized_title or topic_title
         topic_description = localized_description
+    metadata = _ensure_phase_metadata(
+        dict(workspace.metadata_json or {}),
+        created_at=workspace.created_at,
+    )
     return WorkspaceRead(
         id=workspace.id,
         track_id=workspace.track_id,
@@ -427,6 +592,9 @@ def workspace_to_schema(
         last_image_asset_id=_latest_image_asset_id(events),
         latest_media=media_artifact_to_schema(latest_media) if latest_media else None,
         posttest_trigger=_posttest_trigger_payload(workspace),
+        current_phase=str(metadata.get("current_phase") or "engage"),
+        phase_transition_pending=bool(metadata.get("phase_transition_pending", False)),
+        posttest_eligible=bool(metadata.get("posttest_eligible", False)),
     )
 
 
@@ -571,6 +739,132 @@ def _normalize_generation_mode(generation_mode: str) -> str:
     if normalized not in {"manual", "context_auto"}:
         raise ValueError("generation_mode must be either 'manual' or 'context_auto'.")
     return normalized
+
+
+def _ensure_phase_metadata(
+    metadata: dict[str, Any],
+    *,
+    created_at: datetime | None = None,
+) -> dict[str, Any]:
+    safe = dict(metadata or {})
+    now_iso = (created_at or datetime.now(UTC)).isoformat()
+    current_phase = _normalize_phase(str(safe.get("current_phase") or "engage"))
+    min_turns = _phase_min_turns(safe)
+
+    history: list[dict[str, Any]] = []
+    raw_history = safe.get("phase_history")
+    if isinstance(raw_history, list):
+        for item in raw_history:
+            if not isinstance(item, dict):
+                continue
+            phase = _normalize_phase(str(item.get("phase") or current_phase))
+            turn_count = max(0, _safe_int(item.get("turn_count"), 0))
+            entered_at = str(item.get("entered_at") or now_iso).strip() or now_iso
+            exited_raw = item.get("exited_at")
+            exited_at = str(exited_raw).strip() if exited_raw is not None else None
+            if exited_at == "":
+                exited_at = None
+            history.append(
+                {
+                    "phase": phase,
+                    "entered_at": entered_at,
+                    "exited_at": exited_at,
+                    "turn_count": turn_count,
+                }
+            )
+
+    if not history:
+        visited = safe.get("visited_5e_phases")
+        if isinstance(visited, list):
+            for value in visited:
+                phase = _normalize_phase(str(value or current_phase))
+                history.append(
+                    {
+                        "phase": phase,
+                        "entered_at": now_iso,
+                        "exited_at": None,
+                        "turn_count": 0,
+                    }
+                )
+
+    if not history:
+        history = [
+            {
+                "phase": current_phase,
+                "entered_at": now_iso,
+                "exited_at": None,
+                "turn_count": 0,
+            }
+        ]
+    else:
+        if history[-1]["phase"] != current_phase:
+            history.append(
+                {
+                    "phase": current_phase,
+                    "entered_at": now_iso,
+                    "exited_at": None,
+                    "turn_count": 0,
+                }
+            )
+        for item in history[:-1]:
+            if item.get("exited_at") is None:
+                item["exited_at"] = now_iso
+        history[-1]["exited_at"] = None
+
+    visited_phases: list[str] = []
+    for item in history:
+        phase = _normalize_phase(str(item.get("phase") or "engage"))
+        if phase not in visited_phases:
+            visited_phases.append(phase)
+
+    if "posttest_eligible" in safe:
+        posttest_eligible = bool(safe.get("posttest_eligible", False))
+    else:
+        posttest_eligible = current_phase == "evaluate"
+    safe.update(
+        {
+            "current_phase": current_phase,
+            "phase_history": history,
+            "phase_transition_pending": bool(safe.get("phase_transition_pending", False))
+            and current_phase != "evaluate",
+            "posttest_eligible": posttest_eligible,
+            "phase_min_turns": min_turns,
+            "visited_5e_phases": visited_phases,
+        }
+    )
+    return safe
+
+
+def _phase_min_turns(metadata: dict[str, Any]) -> dict[str, int]:
+    resolved = dict(_DEFAULT_PHASE_MIN_TURNS)
+    value = metadata.get("phase_min_turns")
+    if isinstance(value, dict):
+        for phase in _PHASE_SEQUENCE:
+            candidate = _safe_int(value.get(phase), resolved[phase])
+            resolved[phase] = max(1, candidate)
+    return resolved
+
+
+def _normalize_phase(value: str) -> str:
+    phase = value.strip().lower()
+    return phase if phase in _PHASE_SEQUENCE else "engage"
+
+
+def _current_phase_turns(metadata: dict[str, Any]) -> int:
+    history = metadata.get("phase_history")
+    if not isinstance(history, list) or not history:
+        return 0
+    last_entry = history[-1]
+    if not isinstance(last_entry, dict):
+        return 0
+    return max(0, _safe_int(last_entry.get("turn_count"), 0))
+
+
+def _safe_int(value: Any, fallback: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
 
 
 def _preferred_language(user: UserAccount) -> str:

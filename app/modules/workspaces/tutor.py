@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+import re
 from typing import Any
 
 from app.modules.ai import ai_client
@@ -13,6 +15,39 @@ from app.modules.workspaces.schemas import TutorResponseRead
 logger = logging.getLogger(__name__)
 
 PROMPT_VERSION = "wicara_5e_profile_language_v2"
+PHASE_SEQUENCE = ("engage", "explore", "explain", "elaborate", "evaluate")
+
+_PHASE_TRANSITION_CRITERIA: dict[str, str] = {
+    "engage": (
+        "Learner has shown initial curiosity or prior knowledge related to the topic, "
+        "and is ready to do a discovery task."
+    ),
+    "explore": (
+        "Learner has attempted exploration/discovery and shared observations, "
+        "so they are ready for explicit explanation."
+    ),
+    "explain": (
+        "Learner can restate the key concept and connect it to at least one worked idea/example, "
+        "so they are ready for application."
+    ),
+    "elaborate": (
+        "Learner can apply the concept to a new/contextualized case with reasonable reasoning, "
+        "so they are ready for evaluation."
+    ),
+    "evaluate": (
+        "Final stage. Keep evaluating understanding and giving feedback."
+    ),
+}
+
+_TUTOR_OUTPUT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "text": {"type": "string"},
+        "next_phase_ready": {"type": "boolean"},
+        "phase_reasoning": {"type": "string"},
+    },
+    "required": ["text", "next_phase_ready"],
+}
 
 _SYSTEM_INSTRUCTION = """
 You are Wicara, a Socratic AI tutor for a STEAM learning platform.
@@ -114,25 +149,8 @@ def _build_history(events: list[WorkspaceEvent], max_turns: int = 10) -> str:
     return "\n".join(lines) if lines else "(no prior conversation)"
 
 
-def _infer_stage(events: list[WorkspaceEvent], event_type: str) -> str:
-    if event_type == "quiz_answer":
-        return "evaluate"
-    learner_turns = sum(
-        1 for e in events if e.actor_type == "learner" and e.text_payload.strip()
-    )
-    if learner_turns == 0:
-        return "engage"
-    if learner_turns <= 2:
-        return "explore"
-    if learner_turns <= 5:
-        return "explain"
-    if learner_turns <= 9:
-        return "elaborate"
-    return "evaluate"
-
-
 def _build_user_instruction(
-    stage: str,
+    current_phase: str,
     topic: str,
     history: str,
     message: str,
@@ -140,7 +158,18 @@ def _build_user_instruction(
     learner_language: str | None,
     response_language: str,
 ) -> str:
-    template = _PROMPTS.get(stage, _PROMPTS["chat"])
+    template = _PROMPTS.get(current_phase, _PROMPTS["chat"])
+    next_phase = _next_phase(current_phase)
+    transition_instruction = (
+        "Phase transition check:\n"
+        f"- Current phase: {current_phase}\n"
+        f"- Next phase candidate: {next_phase if next_phase else '(none, final phase)'}\n"
+        f"- Transition criteria: {_PHASE_TRANSITION_CRITERIA.get(current_phase, _PHASE_TRANSITION_CRITERIA['engage'])}\n"
+        "- Set next_phase_ready=true only if the learner is pedagogically ready for the next phase.\n"
+        "- If current phase is evaluate, always return next_phase_ready=false.\n\n"
+        "Output format requirement:\n"
+        "Return JSON object with keys exactly: text (string), next_phase_ready (boolean), phase_reasoning (string)."
+    )
     language_context = (
         f"Learner profile language: {learner_language or 'unknown'}\n"
         f"Required response language: {response_language}\n\n"
@@ -161,6 +190,7 @@ def _build_user_instruction(
                 learner_language=learner_language,
                 response_language=response_language,
             ),
+            transition_instruction,
         ]
     )
 
@@ -170,6 +200,7 @@ async def generate_tutor_response(
     event_type: str,
     text_payload: str,
     events: list[WorkspaceEvent],
+    current_phase: str,
     learner_language: str | None = None,
 ) -> tuple[TutorResponseRead | None, dict[str, Any]]:
     """
@@ -183,14 +214,11 @@ async def generate_tutor_response(
 
     topic = workspace.current_topic or "this module"
     history = _build_history(events)
-    stage = _infer_stage(events, event_type)
+    phase = _normalize_phase(current_phase)
     language_code, response_language = _normalize_tutor_language(learner_language)
 
-    if event_type == "canvas_sent":
-        stage = "explore"
-
     user_instruction = _build_user_instruction(
-        stage=stage,
+        current_phase=phase,
         topic=topic,
         history=history,
         message=text_payload or "(no message)",
@@ -200,7 +228,8 @@ async def generate_tutor_response(
 
     audit: dict[str, Any] = {
         "prompt_version": PROMPT_VERSION,
-        "stage": stage,
+        "phase": phase,
+        "stage": phase,
         "topic": topic,
         "event_type": event_type,
         "learner_language": learner_language or language_code,
@@ -214,6 +243,10 @@ async def generate_tutor_response(
         ai_response: AIGenerationResponse = await ai_client.generate(
             system_instruction=_SYSTEM_INSTRUCTION,
             user_instruction=user_instruction,
+            params={
+                "response_mime_type": "application/json",
+                "response_schema": _TUTOR_OUTPUT_SCHEMA,
+            },
         )
         audit.update(
             {
@@ -225,22 +258,35 @@ async def generate_tutor_response(
                 "output_tokens": ai_response.usage.output_tokens if ai_response.usage else None,
             }
         )
-        tutor_text = ai_response.text.strip()
+        parsed = _parse_structured_tutor_output(ai_response.text)
+        tutor_text = parsed["text"].strip()
+        next_phase_ready = parsed["next_phase_ready"]
+        phase_reasoning = parsed["phase_reasoning"]
         if not tutor_text:
             tutor_text = _fallback_text(event_type, language_code=language_code)
+            next_phase_ready = False
+            phase_reasoning = "fallback_due_to_empty_text"
             audit["ai_source"] = "gemini_empty_fallback"
-
+        audit["structured_parse_ok"] = parsed["parse_ok"]
+        if not parsed["parse_ok"]:
+            audit["structured_parse_fallback"] = True
         return TutorResponseRead(
             text=tutor_text,
-            intent=_STAGE_INTENT.get(stage, "ask_followup"),
-            next_actions=_STAGE_ACTIONS.get(stage, ["ask_followup"]),
+            intent=_STAGE_INTENT.get(phase, "ask_followup"),
+            next_actions=_STAGE_ACTIONS.get(phase, ["ask_followup"]),
+            next_phase_ready=bool(next_phase_ready) if phase != "evaluate" else False,
+            phase_reasoning=phase_reasoning,
         ), audit
 
     except AIError as exc:
         logger.warning("Gemini tutor call failed, using deterministic fallback: %s", exc)
         audit["ai_source"] = "deterministic_fallback"
         audit["fallback_reason"] = str(exc)
-        return _fallback_response(event_type, text_payload, language_code=language_code), audit
+        return _fallback_response(
+            event_type,
+            language_code=language_code,
+            current_phase=phase,
+        ), audit
 
 
 def _fallback_text(event_type: str, *, language_code: str) -> str:
@@ -280,25 +326,99 @@ def _fallback_text(event_type: str, *, language_code: str) -> str:
 
 def _fallback_response(
     event_type: str,
-    text_payload: str,
     *,
     language_code: str,
+    current_phase: str,
 ) -> TutorResponseRead:
-    stage = "chat"
-    if event_type == "quiz_answer":
-        stage = "evaluate"
-    elif event_type == "canvas_sent":
-        stage = "explore"
-    elif text_payload.strip():
-        stage = "chat"
+    stage = _normalize_phase(current_phase)
 
     return TutorResponseRead(
         text=_fallback_text(event_type, language_code=language_code),
         intent=_STAGE_INTENT.get(stage, "ask_followup"),
         next_actions=_STAGE_ACTIONS.get(stage, ["ask_followup"]),
+        next_phase_ready=False,
+        phase_reasoning=None,
     )
 
 
 def _normalize_tutor_language(language: str | None) -> tuple[str, str]:
     language_code = normalize_language_code(language)
     return language_code, language_display_name(language_code)
+
+
+def _normalize_phase(phase: str | None) -> str:
+    normalized = str(phase or "").strip().lower()
+    return normalized if normalized in PHASE_SEQUENCE else "engage"
+
+
+def _next_phase(phase: str) -> str | None:
+    normalized = _normalize_phase(phase)
+    index = PHASE_SEQUENCE.index(normalized)
+    if index >= len(PHASE_SEQUENCE) - 1:
+        return None
+    return PHASE_SEQUENCE[index + 1]
+
+
+def _parse_structured_tutor_output(raw_text: str) -> dict[str, Any]:
+    payload: dict[str, Any] | None = None
+    text = str(raw_text or "").strip()
+    if not text:
+        return {
+            "text": "",
+            "next_phase_ready": False,
+            "phase_reasoning": None,
+            "parse_ok": False,
+        }
+
+    payload = _parse_json_payload(text)
+    if payload is None:
+        match = re.search(r"\{[\s\S]*\}", text)
+        if match:
+            payload = _parse_json_payload(match.group(0))
+    if payload is None:
+        return {
+            "text": text,
+            "next_phase_ready": False,
+            "phase_reasoning": None,
+            "parse_ok": False,
+        }
+
+    parsed_text = str(payload.get("text") or "").strip()
+    if not parsed_text:
+        parsed_text = text
+    next_phase_raw = payload.get("next_phase_ready")
+    next_phase_ready = _coerce_bool(next_phase_raw)
+    phase_reasoning_value = payload.get("phase_reasoning")
+    phase_reasoning = (
+        str(phase_reasoning_value).strip() if phase_reasoning_value is not None else None
+    )
+    if phase_reasoning == "":
+        phase_reasoning = None
+    return {
+        "text": parsed_text,
+        "next_phase_ready": next_phase_ready,
+        "phase_reasoning": phase_reasoning,
+        "parse_ok": True,
+    }
+
+
+def _parse_json_payload(value: str) -> dict[str, Any] | None:
+    try:
+        parsed = json.loads(value)
+    except ValueError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "yes", "1"}:
+            return True
+        if lowered in {"false", "no", "0"}:
+            return False
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return False

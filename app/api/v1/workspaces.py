@@ -92,6 +92,52 @@ async def append_workspace_event(
     return response
 
 
+@router.post("/{workspace_id}/advance-phase", response_model=schemas.WorkspaceRead)
+def advance_workspace_phase(
+    workspace_id: UUID,
+    force: bool = False,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WorkspaceRead:
+    try:
+        response = service.advance_workspace_phase(
+            session,
+            user=account,
+            workspace_id=workspace_id,
+            force=force,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    if response is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace was not found.")
+    return response
+
+
+@router.post("/{workspace_id}/start-posttest", response_model=schemas.WorkspaceRead)
+def start_workspace_posttest(
+    workspace_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WorkspaceRead:
+    try:
+        response = service.start_posttest(
+            session,
+            user=account,
+            workspace_id=workspace_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    if response is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace was not found.")
+    return response
+
+
 @router.post(
     "/{workspace_id}/generate-video",
     response_model=schemas.WorkspaceGenerateVideoResponse,

@@ -110,6 +110,11 @@ class AIGenerationParams(BaseModel):
         validation_alias=AliasChoices("response_mime_type", "responseMimeType"),
         serialization_alias="responseMimeType",
     )
+    response_schema: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("response_schema", "responseSchema"),
+        serialization_alias="responseSchema",
+    )
 
 
 class AIGenerationRequest(BaseModel):
