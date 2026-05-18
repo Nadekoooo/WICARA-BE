@@ -109,6 +109,7 @@ from app.modules.question_bank.service import (
     SelectedQuestion,
     ensure_question_bank_seeded,
     import_seed_directory,
+    resolve_learner_step,
     select_daily_questions,
 )
 
@@ -1443,6 +1444,7 @@ def get_or_create_daily_evaluation(
 ) -> DailyEvaluationResponse:
     ensure_curriculum_seeded(session)
     today = datetime.now(UTC).date().isoformat()
+    refresh_reason: str | None = None
     assessment = session.scalar(
         select(AssessmentSession)
         .where(
@@ -1459,6 +1461,7 @@ def get_or_create_daily_evaluation(
         assessment=assessment,
         user=user,
     ):
+        refresh_reason = assessment.metadata_json.get("refresh_reason")
         session.delete(assessment)
         session.flush()
         assessment = None
@@ -1484,6 +1487,7 @@ def get_or_create_daily_evaluation(
             review_date=today,
             learner_step=learner_step,
             selected_questions=selected_questions,
+            refresh_reason=refresh_reason,
         )
         session.commit()
         assessment = session.scalar(
@@ -1778,6 +1782,13 @@ def _should_refresh_daily_assessment_from_bank(
     if assessment.metadata_json.get("policy") != "personalized_daily_v2":
         return True
 
+    resolved_step = resolve_learner_step(session, user=user)
+    if _daily_assessment_track_changed(assessment, learner_step=resolved_step):
+        metadata = dict(assessment.metadata_json or {})
+        metadata["refresh_reason"] = "active_track_changed"
+        assessment.metadata_json = metadata
+        return True
+
     preferred_language = _language_for_user(user)
     stored_language = normalize_language_code(
         str(assessment.metadata_json.get("preferred_language") or "")
@@ -1791,6 +1802,28 @@ def _should_refresh_daily_assessment_from_bank(
         if question.metadata_json.get("question_bank_language")
     }
     return bool(question_languages and preferred_language not in question_languages)
+
+
+def _daily_assessment_track_changed(
+    assessment: AssessmentSession,
+    *,
+    learner_step: LearnerStep,
+) -> bool:
+    stored_track_id = assessment.track_id or _uuid_from_metadata(
+        assessment.metadata_json.get("active_track_id")
+    )
+    return stored_track_id != learner_step.active_track_id
+
+
+def _uuid_from_metadata(value: Any) -> UUID | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, UUID):
+        return value
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None
 
 
 def _daily_concept_titles_by_id(
@@ -3058,7 +3091,39 @@ def _create_daily_assessment_from_bank(
     review_date: str,
     learner_step: LearnerStep,
     selected_questions: list[SelectedQuestion],
+    refresh_reason: str | None = None,
 ) -> AssessmentSession:
+    metadata = {
+        "review_date": review_date,
+        "policy": "personalized_daily_v2",
+        "selector_version": DAILY_SELECTOR_VERSION,
+        "track_resolution_strategy": "latest_non_completed_track_updated_at_desc",
+        "resolved_at": datetime.now(UTC).isoformat(),
+        "selected_subject_code": learner_step.subject.code,
+        "education_level": learner_step.education_level,
+        "preferred_language": learner_step.preferred_language,
+        "active_track_id": str(learner_step.active_track_id)
+        if learner_step.active_track_id
+        else None,
+        "active_module_id": str(learner_step.active_module_id)
+        if learner_step.active_module_id
+        else None,
+        "active_concept_id": str(learner_step.active_concept_id)
+        if learner_step.active_concept_id
+        else None,
+        "selection_slots": [
+            {
+                "slot": selected.slot,
+                "reason": selected.reason,
+                "question_bank_external_id": selected.item.external_id,
+                "concept_code": selected.item.concept_code,
+                "assessment_types": selected.item.assessment_types_json,
+            }
+            for selected in selected_questions
+        ],
+    }
+    if refresh_reason:
+        metadata["refresh_reason"] = refresh_reason
     assessment = AssessmentSession(
         user_id=user.id,
         learning_goal_id=None,
@@ -3066,33 +3131,7 @@ def _create_daily_assessment_from_bank(
         session_type="daily_evaluation",
         title="Daily Evaluation",
         status="active",
-        metadata_json={
-            "review_date": review_date,
-            "policy": "personalized_daily_v2",
-            "selector_version": DAILY_SELECTOR_VERSION,
-            "selected_subject_code": learner_step.subject.code,
-            "education_level": learner_step.education_level,
-            "preferred_language": learner_step.preferred_language,
-            "active_track_id": str(learner_step.active_track_id)
-            if learner_step.active_track_id
-            else None,
-            "active_module_id": str(learner_step.active_module_id)
-            if learner_step.active_module_id
-            else None,
-            "active_concept_id": str(learner_step.active_concept_id)
-            if learner_step.active_concept_id
-            else None,
-            "selection_slots": [
-                {
-                    "slot": selected.slot,
-                    "reason": selected.reason,
-                    "question_bank_external_id": selected.item.external_id,
-                    "concept_code": selected.item.concept_code,
-                    "assessment_types": selected.item.assessment_types_json,
-                }
-                for selected in selected_questions
-            ],
-        },
+        metadata_json=metadata,
     )
     session.add(assessment)
     session.flush()

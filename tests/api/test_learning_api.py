@@ -16,6 +16,9 @@ from app.modules.learning.models import (
     AssessmentOption,
     AssessmentQuestion,
     AssessmentSession,
+    LearningGoal,
+    LearningTrack,
+    TrackModule,
 )
 from app.modules.question_bank.models import QuestionBankItem
 from app.modules.question_bank.service import import_seed_directory
@@ -158,6 +161,60 @@ def test_daily_evaluation_uses_indonesian_question_bank_after_profile_switch(cli
     assert payload["progress"]["label"] == "1 dari 3"
     assert "Which topic" not in payload["question"]["prompt"]
     assert "A quick review" not in payload["question"]["prompt"]
+
+
+def test_daily_evaluation_refreshes_unanswered_session_when_latest_track_changes(client):
+    _override_account(client, seed_question_bank=True, preferred_language="en")
+
+    first_response = client.get("/api/v1/daily-evaluations/today")
+    assert first_response.status_code == 200
+    first_session_id = first_response.json()["session_id"]
+
+    with _session_for_client(client) as session:
+        track = _create_test_track(session, raw_topic="latest daily track")
+        track_id = str(track.id)
+
+    refreshed_response = client.get("/api/v1/daily-evaluations/today")
+
+    assert refreshed_response.status_code == 200
+    refreshed_payload = refreshed_response.json()
+    assert refreshed_payload["session_id"] != first_session_id
+    with _session_for_client(client) as session:
+        assessment = session.get(AssessmentSession, UUID(refreshed_payload["session_id"]))
+        assert assessment is not None
+        assert str(assessment.track_id) == track_id
+        assert assessment.metadata_json["active_track_id"] == track_id
+        assert assessment.metadata_json["track_resolution_strategy"] == (
+            "latest_non_completed_track_updated_at_desc"
+        )
+        assert assessment.metadata_json["refresh_reason"] == "active_track_changed"
+        assert assessment.metadata_json["resolved_at"]
+
+
+def test_daily_evaluation_preserves_answered_session_when_latest_track_changes(client):
+    _override_account(client, seed_question_bank=True, preferred_language="en")
+
+    first_response = client.get("/api/v1/daily-evaluations/today")
+    assert first_response.status_code == 200
+    first_payload = first_response.json()
+    question = first_payload["questions"][0]
+    answer_response = client.post(
+        f"/api/v1/daily-evaluations/{first_payload['session_id']}/answers",
+        json={
+            "question_id": question["id"],
+            "option_id": question["options"][0]["id"],
+            "confidence": 6,
+        },
+    )
+    assert answer_response.status_code == 200
+
+    with _session_for_client(client) as session:
+        _create_test_track(session, raw_topic="new track after answer")
+
+    preserved_response = client.get("/api/v1/daily-evaluations/today")
+
+    assert preserved_response.status_code == 200
+    assert preserved_response.json()["session_id"] == first_payload["session_id"]
 
 
 def test_weekly_report_returns_richer_learning_report_payload(client):
@@ -430,3 +487,48 @@ def _override_account(
         return account
 
     client.app.dependency_overrides[get_current_account] = override_current_account
+
+
+def _create_test_track(session: Session, *, raw_topic: str) -> LearningTrack:
+    account = session.get(UserAccount, ACCOUNT_ID)
+    assert account is not None
+    subject = session.scalar(select(Subject).where(Subject.code == "matematika"))
+    concept = session.scalar(
+        select(KnowledgeConcept).where(KnowledgeConcept.code == "km_d_matematika_bilangan_rasional")
+    )
+    assert subject is not None
+    assert concept is not None
+    goal = LearningGoal(
+        user_id=account.id,
+        subject_id=subject.id,
+        raw_topic=raw_topic,
+        normalized_topic=raw_topic,
+        status="pretest_ready",
+    )
+    session.add(goal)
+    session.flush()
+    track = LearningTrack(
+        user_id=account.id,
+        learning_goal_id=goal.id,
+        title=raw_topic,
+        subtitle="test track",
+        status="in_progress",
+        progress_percent=0,
+    )
+    session.add(track)
+    session.flush()
+    session.add(
+        TrackModule(
+            track_id=track.id,
+            concept_id=concept.id,
+            title="Active module",
+            description="",
+            estimated_minutes=10,
+            difficulty_label="Medium",
+            sort_order=1,
+            status="ready",
+        )
+    )
+    session.commit()
+    session.refresh(track)
+    return track

@@ -585,7 +585,11 @@ def _active_track(session: Session, *, user: UserAccount) -> LearningTrack | Non
         select(LearningTrack)
         .where(LearningTrack.user_id == user.id, LearningTrack.status != "completed")
         .options(selectinload(LearningTrack.modules), selectinload(LearningTrack.learning_goal))
-        .order_by(LearningTrack.updated_at.desc(), LearningTrack.created_at.desc())
+        .order_by(
+            LearningTrack.updated_at.desc(),
+            LearningTrack.created_at.desc(),
+            LearningTrack.id.desc(),
+        )
     )
 
 
