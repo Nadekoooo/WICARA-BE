@@ -7,6 +7,28 @@
   "language": "id",
   "title": "Nilai Tak Diketahui sebagai Keseimbangan",
   "subtitle": "Kotak kosong dapat dicari dengan menjaga agar kedua sisi tetap seimbang.",
+  "equation": "x + 4 = 9",
+  "left_expression": "x + 4",
+  "right_expression": "9",
+  "solution_steps": [
+    {
+      "operation": "Kurangi 4 pada kedua sisi",
+      "value": 4,
+      "left_result": "x",
+      "right_result": "5",
+      "explanation": "Kurangi 4 di ruas kiri dan kanan agar x berdiri sendiri.",
+      "narration": "Kurangi 4 pada kedua sisi. Sekarang tersisa x sama dengan 5."
+    },
+    {
+      "operation": "Tulis hasil akhir",
+      "value": 0,
+      "left_result": "x",
+      "right_result": "5",
+      "explanation": "Setelah operasi setara, nilai variabel dapat ditulis langsung.",
+      "narration": "Keseimbangan tetap terjaga, jadi nilai akhirnya x sama dengan 5."
+    }
+  ],
+  "final_solution": "x = 5",
   "equation_latex": "x + 4 = 9",
   "left_terms": [
     "x",
@@ -19,16 +41,20 @@
   "steps": [
     {
       "title": "Lihat keseimbangan",
-      "body": "Persamaan berarti nilai kiri dan kanan harus sama."
+      "body": "Persamaan berarti nilai kiri dan kanan harus sama.",
+      "narration": "Persamaan berarti dua ruas punya nilai yang sama."
     },
     {
       "title": "Balik operasi",
-      "body": "Untuk mencari x, kurangi kedua sisi dengan 4."
+      "body": "Untuk mencari x, kurangi kedua sisi dengan 4.",
+      "narration": "Gunakan operasi kebalikan dengan mengurangi 4 di kedua sisi."
     },
     {
       "title": "Temukan nilai",
-      "body": "Setelah disederhanakan, diperoleh x sama dengan 5."
+      "body": "Setelah disederhanakan, diperoleh x sama dengan 5.",
+      "narration": "Sekarang x sudah sendiri dan nilainya terlihat jelas."
     }
   ],
+  "voiceover_script": "Persamaan bekerja seperti timbangan. Jika satu sisi diubah, sisi lain harus ikut diubah.",
   "summary": "Model keseimbangan memudahkan pemahaman tentang makna persamaan dan nilai yang belum diketahui."
 }

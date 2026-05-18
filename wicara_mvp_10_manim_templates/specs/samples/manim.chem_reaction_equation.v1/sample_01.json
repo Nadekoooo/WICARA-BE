@@ -7,6 +7,28 @@
   "language": "id",
   "title": "Persamaan Reaksi dan Kekekalan",
   "subtitle": "Jumlah atom harus tetap sama di ruas kiri dan kanan persamaan reaksi.",
+  "equation": "H2 + O2 -> H2O",
+  "left_expression": "H2 + O2",
+  "right_expression": "H2O",
+  "solution_steps": [
+    {
+      "operation": "Hitung atom awal",
+      "value": 0,
+      "left_result": "H:2, O:2",
+      "right_result": "H:2, O:1",
+      "explanation": "Bandingkan jumlah atom di kedua ruas sebelum menyeimbangkan.",
+      "narration": "Hitung atom di kiri dan kanan. Unsur oksigen belum seimbang."
+    },
+    {
+      "operation": "Setarakan koefisien",
+      "value": 0,
+      "left_result": "2H2 + O2",
+      "right_result": "2H2O",
+      "explanation": "Ubah koefisien agar jumlah atom H dan O sama di kedua ruas.",
+      "narration": "Ubah koefisien tanpa mengubah rumus zat, lalu cek ulang jumlah atom."
+    }
+  ],
+  "final_solution": "2H2 + O2 -> 2H2O",
   "unbalanced_equation": "H2 + O2 -> H2O",
   "balanced_equation": "2H2 + O2 -> 2H2O",
   "reactant_counts": [
@@ -36,16 +58,20 @@
   "steps": [
     {
       "title": "Hitung atom",
-      "body": "Setiap unsur dihitung pada pereaksi dan hasil reaksi."
+      "body": "Setiap unsur dihitung pada pereaksi dan hasil reaksi.",
+      "narration": "Langkah pertama, hitung jumlah atom di kiri dan kanan."
     },
     {
       "title": "Setarakan koefisien",
-      "body": "Koefisien diubah tanpa mengubah rumus kimia zat."
+      "body": "Koefisien diubah tanpa mengubah rumus kimia zat.",
+      "narration": "Ubah koefisien saja, rumus zatnya tidak diubah."
     },
     {
       "title": "Cek kekekalan",
-      "body": "Jumlah atom akhir harus sama pada kedua ruas."
+      "body": "Jumlah atom akhir harus sama pada kedua ruas.",
+      "narration": "Terakhir, pastikan jumlah atom sama di kedua ruas."
     }
   ],
+  "voiceover_script": "Persamaan reaksi harus seimbang karena atom tidak diciptakan atau dimusnahkan dalam reaksi kimia.",
   "summary": "Penyetaraan persamaan reaksi menegaskan hukum kekekalan massa pada tingkat partikel."
 }

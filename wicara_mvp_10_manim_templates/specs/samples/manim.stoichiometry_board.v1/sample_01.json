@@ -7,6 +7,28 @@
   "language": "id",
   "title": "Stoikiometri dari Koefisien Reaksi",
   "subtitle": "Koefisien persamaan seimbang menjadi rasio mol antar zat.",
+  "equation": "N2 + 3H2 -> 2NH3",
+  "left_expression": "N2 + 3H2",
+  "right_expression": "2NH3",
+  "solution_steps": [
+    {
+      "operation": "Baca koefisien reaksi",
+      "value": 0,
+      "left_result": "N2:1, H2:3",
+      "right_result": "NH3:2",
+      "explanation": "Koefisien menunjukkan rasio mol antar zat.",
+      "narration": "Mulai dari koefisien persamaan, karena itu adalah rasio mol antar zat."
+    },
+    {
+      "operation": "Konversi mol dengan rasio",
+      "value": 0,
+      "left_result": "2 mol N2",
+      "right_result": "4 mol NH3",
+      "explanation": "Gunakan perbandingan 1 banding 2 untuk menghitung mol target.",
+      "narration": "Dua mol N2 dikali rasio dua per satu, sehingga menghasilkan empat mol NH3."
+    }
+  ],
+  "final_solution": "NH3 = 4 mol",
   "balanced_equation": "N₂ + 3H₂ → 2NH₃",
   "species": [
     {

@@ -82,6 +82,9 @@ class WorkspaceRead(BaseModel):
     last_image_asset_id: UUID | None = None
     latest_media: MediaArtifactRead | None = None
     posttest_trigger: dict[str, Any] | None = None
+    current_phase: str = "engage"
+    phase_transition_pending: bool = False
+    posttest_eligible: bool = False
 
 
 class WorkspaceSessionSummaryRead(BaseModel):
@@ -103,6 +106,8 @@ class TutorResponseRead(BaseModel):
     text: str
     intent: str
     next_actions: list[str] = Field(default_factory=list)
+    next_phase_ready: bool = False
+    phase_reasoning: str | None = None
 
 
 class WorkspaceMasteryUpdateRead(BaseModel):
