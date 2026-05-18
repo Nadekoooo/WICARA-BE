@@ -437,12 +437,43 @@ async def append_workspace_event(
             ]
         metadata_json["phase_history"] = history
 
+    auto_advanced_next_phase: str | None = None
     if (
         tutor_response is not None
         and tutor_response.next_phase_ready
         and current_phase != "evaluate"
     ):
         metadata_json["phase_transition_pending"] = True
+        min_turns = int(_phase_min_turns(metadata_json).get(current_phase, 1))
+        current_turns = _current_phase_turns(metadata_json)
+        if current_turns >= min_turns:
+            next_phase = _PHASE_SEQUENCE[_PHASE_SEQUENCE.index(current_phase) + 1]
+            now_iso = datetime.now(UTC).isoformat()
+            transition_history = list(metadata_json.get("phase_history", []))
+            if transition_history:
+                transition_history[-1]["exited_at"] = now_iso
+            transition_history.append(
+                {
+                    "phase": next_phase,
+                    "entered_at": now_iso,
+                    "exited_at": None,
+                    "turn_count": 0,
+                }
+            )
+            metadata_json["current_phase"] = next_phase
+            metadata_json["phase_history"] = transition_history
+            metadata_json["phase_transition_pending"] = False
+            if next_phase == "evaluate":
+                metadata_json["posttest_eligible"] = True
+            auto_advanced_next_phase = next_phase
+
+    if tutor_event is not None and auto_advanced_next_phase is not None:
+        tutor_event.metadata_json = {
+            **dict(tutor_event.metadata_json or {}),
+            "auto_phase_advanced": True,
+            "advanced_from": current_phase,
+            "advanced_to": auto_advanced_next_phase,
+        }
 
     workspace.metadata_json = _ensure_phase_metadata(
         metadata_json,
