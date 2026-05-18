@@ -86,7 +86,7 @@ def test_resolve_does_not_create_goal_and_confirm_enforces_target_lock(client):
 def test_resolve_tolerates_null_llm_confidence(client, monkeypatch):
     _override_account(client)
 
-    async def fake_resolve_with_ai(*, raw_query, candidates):
+    async def fake_resolve_with_ai(*, raw_query, candidates, **_kwargs):
         return {
             "status": "needs_confirmation",
             "concept_code": candidates[0].concept.code,
