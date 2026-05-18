@@ -7,8 +7,8 @@ from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-DEFAULT_AI_PROVIDER = "gemini"
-DEFAULT_AI_MODEL = "gemini-2.5-flash"
+DEFAULT_AI_PROVIDER = "openrouter"
+DEFAULT_AI_MODEL = "google/gemma-4-26b-a4b-it"
 _ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
 
 
@@ -21,13 +21,13 @@ class AISettings(BaseSettings):
         default=DEFAULT_AI_MODEL,
         validation_alias=AliasChoices("AI_MODEL", "WICARA_AI_MODEL"),
     )
-    gemini_api_key: str = Field(
+    openrouter_api_key: str = Field(
         default="",
-        validation_alias=AliasChoices("GEMINI_API_KEY", "WICARA_GEMINI_API_KEY"),
+        validation_alias=AliasChoices("OPENROUTER_API_KEY", "WICARA_OPENROUTER_API_KEY"),
     )
-    gemini_base_url: str = Field(
-        default="https://generativelanguage.googleapis.com/v1beta",
-        validation_alias=AliasChoices("GEMINI_BASE_URL", "WICARA_GEMINI_BASE_URL"),
+    openrouter_base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        validation_alias=AliasChoices("OPENROUTER_BASE_URL", "WICARA_OPENROUTER_BASE_URL"),
     )
     ai_request_timeout_seconds: float = Field(
         default=30.0,

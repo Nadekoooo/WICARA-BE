@@ -231,7 +231,7 @@ def _evaluate_reasoning_with_ai(
     if os.getenv("WICARA_PRETEST_LLM_EVALUATION", "true").strip().lower() in {"0", "false", "no"}:
         return None
     settings = get_ai_settings()
-    if not settings.gemini_api_key.strip():
+    if not settings.openrouter_api_key.strip():
         return None
     try:
         asyncio.get_running_loop()
@@ -252,7 +252,7 @@ def _evaluate_reasoning_with_ai(
             ai_client.generate(
                 system_instruction="Return valid JSON only.",
                 user_instruction=prompt,
-                params={"temperature": 0.0, "response_mime_type": "application/json"},
+                params={"temperature": 0.0, "response_format": {"type": "json_object"}},
             )
         )
         payload = json.loads(response.text)

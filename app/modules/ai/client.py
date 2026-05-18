@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from app.modules.ai.config import AISettings, get_ai_settings
 from app.modules.ai.errors import AIInputError, AIProviderNotFoundError
-from app.modules.ai.providers import AIProvider, GeminiProvider
+from app.modules.ai.providers import AIProvider, OpenRouterProvider
 from app.modules.ai.schemas import AIGenerationRequest, AIGenerationResponse
 
 
@@ -19,7 +19,7 @@ class AIClient:
     ) -> None:
         self._settings = settings or get_ai_settings()
         self._providers: dict[str, AIProvider] = {}
-        for provider in providers or (GeminiProvider(self._settings),):
+        for provider in providers or (OpenRouterProvider(self._settings),):
             self.register_provider(provider)
 
     def register_provider(self, provider: AIProvider) -> None:

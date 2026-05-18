@@ -272,7 +272,7 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 | Item | Label | First Dependency |
 |---|---|---|
 | OCR and symbolic image parser | Proposed | Image evidence and input events exist. |
-| Gemini grading and tutor response | Proposed | Assessment attempts and service interfaces exist. |
+| OpenRouter grading and tutor response | Proposed | Assessment attempts and service interfaces exist. |
 | SSE/WebSocket streaming | Proposed | REST endpoints and job status lifecycle exist. |
 | Cross-subject graph unlock | Proposed | Single-subject graph and mastery state work. |
 | Real TTS/FFmpeg media pipeline | Proposed | Media artifact and render job model exists. |
@@ -291,7 +291,7 @@ First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile 
 | Async jobs | Celery + Redis | Durable workers for OCR, AI grading, Manim, TTS, FFmpeg, reports. |
 | Cache/session | Redis | Job status cache, rate limits, LLM/media cache, short-lived session data. |
 | Media storage | object storage abstraction | Local filesystem in dev, S3-compatible store later. |
-| AI integration | Gemini, Google Vision/Tesseract, Google TTS, Manim, FFmpeg | Proposed engines from architecture reference. |
+| AI integration | OpenRouter Gemma, Google Vision/Tesseract, Google TTS, Manim, FFmpeg | Proposed engines from architecture reference. |
 | Observability | `/health`, structured logs, job status, metrics hooks | Required for debugging async media and AI workflows. |
 
 ## 5. Planned Backend Directory Structure
@@ -481,7 +481,7 @@ backend/
 | `ImageAssetService` | Store or reference exported images from canvas/uploads. | image file or upload metadata | `image_asset_id` | Local/object-storage reference only; no canvas stroke history. |
 | `MasteryService` | Update learner concept state. | attempts, parser output | status/mastery update | Fixed rule mapping for first pretest. |
 | `PathEngineService` | Build next modules/queue. | goal, graph, mastery | track/modules | Seeded Calculus path first. |
-| `ExplanationService` | Generate tutor text and explanation artifacts. | input event, context | response text, prompt metadata | Static templates until Gemini integration. |
+| `ExplanationService` | Generate tutor text and explanation artifacts. | input event, context | response text, prompt metadata | Static templates until OpenRouter integration. |
 | `ManimMediaService` | Create media artifact and render job. | workspace/module/concept/language | artifact/job status | Queue job row; worker can mark mock `READY`. |
 | `ReportService` | Build weekly report and streak summary. | events, attempts, mastery | report DTO | Aggregate deterministic DB data. |
 | `ObservabilityService` | Health checks and job diagnostics. | infra clients | status payload | Real DB/Redis checks when configured. |
@@ -492,8 +492,8 @@ backend/
 |---|---|---|---|---|---|
 | `GeneratePretestJob` | `POST /learning-goals` | user, goal, subject | assessment session/questions | Create deterministic seeded questions synchronously or eager Celery. | Adaptive KST question selection. |
 | `ParseImageEvidenceJob` | canvas image sent | image asset ID | parser output JSON | Mark unparsed and keep image reference only. | OCR/math symbol parsing, partial-work detection from image. |
-| `GradeAssessmentJob` | answer/reasoning submitted | attempt/input event | score + KnowledgeState | Rule-based answer check. | Gemini/rubric mixed-input grading. |
-| `GenerateExplanationJob` | workspace text or explanation choice | session context | tutor response | Static response template. | Gemini localized explanation and analogy. |
+| `GradeAssessmentJob` | answer/reasoning submitted | attempt/input event | score + KnowledgeState | Rule-based answer check. | OpenRouter/rubric mixed-input grading. |
+| `GenerateExplanationJob` | workspace text or explanation choice | session context | tutor response | Static response template. | OpenRouter localized explanation and analogy. |
 | `GenerateManimVideoJob` | generate-video endpoint | artifact/job scene spec | raw Manim MP4 URL | Create job and optional fake ready artifact in dev. | Render Manim scene with parameters. |
 | `MergeVoiceoverJob` | Manim render complete | raw video, script, voice | merged video URL | Not run in MVP. | TTS generation and FFmpeg merge. |
 | `CompressVideoJob` | merged video complete | video URL, target profile | compressed URL + metadata | Not run in MVP. | Low-bandwidth profiles and thumbnails. |
