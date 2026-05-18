@@ -6,7 +6,8 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
@@ -1291,6 +1292,7 @@ def get_weekly_report(
     start: date,
     end: date,
 ) -> WeeklyReportResponse:
+    snapshot_table_available = _weekly_snapshot_table_exists(session)
     start_at, end_at = _date_range_bounds(start, end)
     range_attempts = _assessment_attempt_rows(
         session,
@@ -1330,7 +1332,11 @@ def get_weekly_report(
     retention_minutes = int(sum(state.evidence_count for state in states) * 6) if states else 18
     concept_names = _recent_concept_names(session, user=user)
     trends = _report_trends(range_attempts=range_attempts, baseline_attempts=baseline_attempts)
-    previous_snapshot = _latest_snapshot_before_range(session, user=user, start=start)
+    previous_snapshot = (
+        _latest_snapshot_before_range(session, user=user, start=start)
+        if snapshot_table_available
+        else None
+    )
     fixed_delta = _fixed_gap_delta(
         fixed_gaps=fixed_gaps,
         fixed_in_range=fixed_in_range,
@@ -1402,6 +1408,7 @@ def get_weekly_report(
         current_fixed_gaps=fixed_gaps,
         current_remaining_gaps=remaining_gaps,
         current_attempt_count=attempts_count,
+        snapshot_table_available=snapshot_table_available,
     )
     weekly_narrative = _weekly_narrative(
         concept_movers=concept_movers,
@@ -1427,7 +1434,11 @@ def get_weekly_report(
         concepts=", ".join(concept_names) if concept_names else "Limits, graph reading",
         summary_notes=[
             "Report is aggregated from persisted attempts submitted inside the selected date range.",
-            "Gap deltas and movers are now stabilized with weekly snapshots when history exists.",
+            (
+                "Gap deltas and movers are stabilized with weekly snapshots when history exists."
+                if snapshot_table_available
+                else "Weekly snapshot table is not available yet; report uses runtime inference."
+            ),
         ],
         trends=trends,
         performance_groups=[
@@ -1466,18 +1477,19 @@ def get_weekly_report(
         weekly_timeline=weekly_timeline,
         weekly_narrative=weekly_narrative,
     )
-    _upsert_weekly_report_snapshot(
-        session=session,
-        user=user,
-        start=start,
-        end=end,
-        report=report,
-        attempt_count=attempts_count,
-        active_days=effort_impact.active_days,
-        overdue_reviews=review_due,
-        new_gaps=new_gaps,
-    )
-    session.commit()
+    if snapshot_table_available:
+        _upsert_weekly_report_snapshot(
+            session=session,
+            user=user,
+            start=start,
+            end=end,
+            report=report,
+            attempt_count=attempts_count,
+            active_days=effort_impact.active_days,
+            overdue_reviews=review_due,
+            new_gaps=new_gaps,
+        )
+        session.commit()
     return report
 
 
@@ -2107,20 +2119,37 @@ def _report_trends(
     ]
 
 
+def _weekly_snapshot_table_exists(session: Session) -> bool:
+    try:
+        return bool(inspect(session.get_bind()).has_table("weekly_report_snapshots"))
+    except Exception:
+        logger.warning(
+            "Unable to inspect weekly_report_snapshots table; fallback to attempts-only report."
+        )
+        return False
+
+
 def _latest_snapshot_before_range(
     session: Session,
     *,
     user: UserAccount,
     start: date,
 ) -> WeeklyReportSnapshot | None:
-    return session.scalar(
-        select(WeeklyReportSnapshot)
-        .where(
-            WeeklyReportSnapshot.user_id == user.id,
-            WeeklyReportSnapshot.range_end < start,
+    try:
+        return session.scalar(
+            select(WeeklyReportSnapshot)
+            .where(
+                WeeklyReportSnapshot.user_id == user.id,
+                WeeklyReportSnapshot.range_end < start,
+            )
+            .order_by(WeeklyReportSnapshot.range_end.desc())
         )
-        .order_by(WeeklyReportSnapshot.range_end.desc())
-    )
+    except ProgrammingError:
+        session.rollback()
+        logger.warning(
+            "weekly_report_snapshots query failed; continuing without snapshot baseline."
+        )
+        return None
 
 
 def _fixed_gap_delta(
@@ -2395,19 +2424,29 @@ def _weekly_timeline(
     current_fixed_gaps: int,
     current_remaining_gaps: int,
     current_attempt_count: int,
+    snapshot_table_available: bool,
 ) -> list[WeeklyTimelinePointRead]:
     anchor_week_start = selected_end - timedelta(days=selected_end.weekday())
     rows: list[WeeklyTimelinePointRead] = []
     for offset in range(3, -1, -1):
         week_start = anchor_week_start - timedelta(days=offset * 7)
         week_end = week_start + timedelta(days=6)
-        snapshot = session.scalar(
-            select(WeeklyReportSnapshot).where(
-                WeeklyReportSnapshot.user_id == user.id,
-                WeeklyReportSnapshot.range_start == week_start,
-                WeeklyReportSnapshot.range_end == week_end,
-            )
-        )
+        snapshot = None
+        if snapshot_table_available:
+            try:
+                snapshot = session.scalar(
+                    select(WeeklyReportSnapshot).where(
+                        WeeklyReportSnapshot.user_id == user.id,
+                        WeeklyReportSnapshot.range_start == week_start,
+                        WeeklyReportSnapshot.range_end == week_end,
+                    )
+                )
+            except ProgrammingError:
+                session.rollback()
+                logger.warning(
+                    "weekly_report_snapshots timeline lookup failed; using attempts-only timeline."
+                )
+                snapshot_table_available = False
         if snapshot is not None:
             rows.append(
                 WeeklyTimelinePointRead(
@@ -2506,32 +2545,38 @@ def _upsert_weekly_report_snapshot(
     overdue_reviews: int,
     new_gaps: int,
 ) -> None:
-    snapshot = session.scalar(
-        select(WeeklyReportSnapshot).where(
-            WeeklyReportSnapshot.user_id == user.id,
-            WeeklyReportSnapshot.range_start == start,
-            WeeklyReportSnapshot.range_end == end,
+    try:
+        snapshot = session.scalar(
+            select(WeeklyReportSnapshot).where(
+                WeeklyReportSnapshot.user_id == user.id,
+                WeeklyReportSnapshot.range_start == start,
+                WeeklyReportSnapshot.range_end == end,
+            )
         )
-    )
-    if snapshot is None:
-        snapshot = WeeklyReportSnapshot(
-            user_id=user.id,
-            range_start=start,
-            range_end=end,
-        )
-        session.add(snapshot)
+        if snapshot is None:
+            snapshot = WeeklyReportSnapshot(
+                user_id=user.id,
+                range_start=start,
+                range_end=end,
+            )
+            session.add(snapshot)
 
-    snapshot.status = report.status
-    snapshot.source = report.source
-    snapshot.score = report.score
-    snapshot.attempt_count = attempt_count
-    snapshot.active_days = active_days
-    snapshot.fixed_gaps = report.fixed_gaps
-    snapshot.remaining_gaps = report.remaining_gaps
-    snapshot.overdue_reviews = overdue_reviews
-    snapshot.new_gaps = new_gaps
-    snapshot.paired_concept_count = report.paired_concept_count
-    snapshot.payload_json = report.model_dump(mode="json")
+        snapshot.status = report.status
+        snapshot.source = report.source
+        snapshot.score = report.score
+        snapshot.attempt_count = attempt_count
+        snapshot.active_days = active_days
+        snapshot.fixed_gaps = report.fixed_gaps
+        snapshot.remaining_gaps = report.remaining_gaps
+        snapshot.overdue_reviews = overdue_reviews
+        snapshot.new_gaps = new_gaps
+        snapshot.paired_concept_count = report.paired_concept_count
+        snapshot.payload_json = report.model_dump(mode="json")
+    except ProgrammingError:
+        session.rollback()
+        logger.warning(
+            "weekly_report_snapshots upsert failed; report returned without snapshot persistence."
+        )
 
 
 def _recent_concept_names(session: Session, *, user: UserAccount) -> list[str]:
