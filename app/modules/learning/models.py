@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     DateTime,
@@ -21,6 +21,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, Uuid
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.modules.curriculum.models import Subject
 
 json_dict_type = JSON().with_variant(JSONB, "postgresql")
 
@@ -74,6 +77,7 @@ class LearningGoal(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     track: Mapped[LearningTrack | None] = relationship(back_populates="learning_goal")
+    subject: Mapped["Subject"] = relationship()
     assessment_sessions: Mapped[list[AssessmentSession]] = relationship(
         back_populates="learning_goal", cascade="all, delete-orphan"
     )
