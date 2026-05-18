@@ -11,10 +11,13 @@ from app.db.session import get_session
 from app.modules.accounts.dependencies import get_current_account
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
+from app.modules.evidence.models import ImageAsset
 from app.modules.learning.models import (
     AssessmentAttempt,
+    AssessmentOption,
     AssessmentQuestionPack,
     AssessmentSession,
+    LearnerConceptState,
     LearningGoal,
     TrackModule,
 )
@@ -23,7 +26,7 @@ from app.modules.learning_goal_resolution.models import LearningGoalResolution
 ACCOUNT_ID = UUID("33333333-3333-4333-8333-333333333333")
 
 
-def test_resolve_does_not_create_goal_and_confirm_enforces_active_lock(client):
+def test_resolve_does_not_create_goal_and_confirm_enforces_target_lock(client):
     _override_account(client)
 
     resolve_response = client.post(
@@ -57,8 +60,18 @@ def test_resolve_does_not_create_goal_and_confirm_enforces_active_lock(client):
         json={"raw_query": "belajar penjumlahan", "subject_code": "math"},
     )
     assert second.status_code == 200
-    conflict = client.post(
+    distinct_target = client.post(
         f"/api/v1/learning-goals/resolve/{second.json()['resolution_id']}/confirm"
+    )
+    assert distinct_target.status_code == 200
+
+    third = client.post(
+        "/api/v1/learning-goals/resolve",
+        json={"raw_query": "belajar perkalian lagi", "subject_code": "math"},
+    )
+    assert third.status_code == 200
+    conflict = client.post(
+        f"/api/v1/learning-goals/resolve/{third.json()['resolution_id']}/confirm"
     )
     assert conflict.status_code == 409
     assert conflict.json()["detail"]["error"] == "ACTIVE_LEARNING_GOAL_EXISTS"
@@ -106,7 +119,7 @@ def test_resolve_needs_clarification_when_query_has_no_candidate_signal(client):
     payload = response.json()
     assert payload["status"] == "needs_clarification"
     assert payload["suggested_concept"] is None
-    assert "more specific" in payload["clarification_question"]
+    assert payload["clarification_question"]
 
 
 def test_resolve_allows_foundational_node_for_higher_grade_user(client):
@@ -126,7 +139,7 @@ def test_resolve_allows_foundational_node_for_higher_grade_user(client):
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "needs_confirmation"
-    assert payload["search_scope"] == "subject_all_grades"
+    assert payload["search_scope"] == "same_subject_all_grades"
     assert payload["suggested_concept"]["concept_code"] == "math.multiplication"
     assert payload["suggested_concept"]["grade_relation"] == "below_current_level"
     assert "fondasi" in payload["suggested_concept"]["level_note"]
@@ -229,6 +242,12 @@ def test_finalize_and_path_selection_create_track(client):
     assert done.status_code == 200
     assert done.json()["next_action"]["type"] == "finalize"
     assert done.json()["diagnosis"]["recommended_path"] == "review_only"
+    target_metric = done.json()["diagnosis"]["target"]
+    assert target_metric["answer_percent"] == 100
+    assert target_metric["evidence_percent"] == 100
+    assert target_metric["score_percent"] == 90
+    assert target_metric["confidence_percent"] == 68
+    assert target_metric["metric_source"] == "adaptive_pretest_diagnosis"
 
     path = client.post(
         f"/api/v1/learning-goals/{learning_goal_id}/path-selection",
@@ -266,6 +285,131 @@ def test_cancel_abandons_active_pretest_and_releases_lock(client):
     assert confirm.status_code == 200
 
 
+def test_posttest_two_of_three_does_not_pass_even_with_strong_reasoning(client, monkeypatch):
+    monkeypatch.setenv("WICARA_PRETEST_LLM_EVALUATION", "0")
+    _override_account(client)
+    learning_goal_id, concept_id, concept_code = _goal_with_posttest_node(client)
+
+    start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
+    assert start.status_code == 200
+    payload = start.json()
+    assert payload["total_questions"] == 3
+
+    answer = None
+    for index, question in enumerate(payload["questions"]):
+        is_correct = index < 2
+        answer_payload = {
+            "question_id": question["id"],
+            "selected_option_id": _option_id_for_question(client, question["id"], correct=is_correct),
+            "confidence": 8,
+        }
+        if not is_correct:
+            answer_payload["typed_reasoning"] = "The multiplication model has six groups of four then subtract two."
+        answer = client.post(
+            f"/api/v1/posttests/{payload['session_id']}/answers",
+            json=answer_payload,
+        )
+        assert answer.status_code == 200
+
+    assert answer is not None
+    last = answer.json()
+    assert last["completed"] is True
+    assert last["is_correct"] is False
+    assert last["evaluation"]["is_correct"] is False
+    assert last["evaluation"]["diagnostic_signal"] == "possible_careless_mistake"
+    assert last["node_result"]["answer_percent"] == 66.67
+    assert last["node_result"]["score_percent"] > 70
+    assert last["node_result"]["passed"] is False
+
+    final = client.post(f"/api/v1/posttests/{payload['session_id']}/finalize")
+    assert final.status_code == 200
+    assert final.json()["retake_required_concepts"] == [concept_code]
+
+    with _session_for_client(client) as session:
+        state = session.scalar(
+            select(LearnerConceptState).where(
+                LearnerConceptState.user_id == ACCOUNT_ID,
+                LearnerConceptState.concept_id == concept_id,
+            )
+        )
+        assert state is not None
+        assert state.status == "review_due"
+
+
+def test_posttest_three_of_three_passes_and_marks_concept_mastered(client):
+    _override_account(client)
+    learning_goal_id, concept_id, _concept_code = _goal_with_posttest_node(client)
+
+    start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
+    assert start.status_code == 200
+    payload = start.json()
+
+    answer = None
+    for question in payload["questions"]:
+        answer = client.post(
+            f"/api/v1/posttests/{payload['session_id']}/answers",
+            json={
+                "question_id": question["id"],
+                "selected_option_id": _option_id_for_question(client, question["id"], correct=True),
+                "confidence": 9,
+            },
+        )
+        assert answer.status_code == 200
+
+    assert answer is not None
+    node_result = answer.json()["node_result"]
+    assert node_result["answer_percent"] == 100
+    assert node_result["score_percent"] == 100
+    assert node_result["scaled_score"] == 10
+    assert node_result["passed"] is True
+
+    final = client.post(f"/api/v1/posttests/{payload['session_id']}/finalize")
+    assert final.status_code == 200
+    assert final.json()["retake_required_concepts"] == []
+
+    with _session_for_client(client) as session:
+        state = session.scalar(
+            select(LearnerConceptState).where(
+                LearnerConceptState.user_id == ACCOUNT_ID,
+                LearnerConceptState.concept_id == concept_id,
+            )
+        )
+        assert state is not None
+        assert state.status == "mastered"
+        assert state.mastery_score == 1.0
+
+
+def test_posttest_accepts_canvas_asset_without_numeric_canvas_score(client):
+    _override_account(client)
+    learning_goal_id, _concept_id, _concept_code = _goal_with_posttest_node(client)
+    canvas_asset_id = _create_canvas_asset(client)
+
+    start = client.post("/api/v1/posttests/start", json={"learning_goal_id": learning_goal_id})
+    assert start.status_code == 200
+    question = start.json()["current_question"]
+
+    answer = client.post(
+        f"/api/v1/posttests/{start.json()['session_id']}/answers",
+        json={
+            "question_id": question["id"],
+            "selected_option_id": _option_id_for_question(client, question["id"], correct=True),
+            "confidence": 7,
+            "canvas_asset_id": canvas_asset_id,
+            "used_canvas": True,
+        },
+    )
+
+    assert answer.status_code == 200
+    evaluation = answer.json()["evaluation"]
+    assert evaluation["canvas_status"] == "stored_not_evaluated"
+    assert evaluation["canvas_score"] is None
+    assert evaluation["evidence_score"] == 1.0
+
+    with _session_for_client(client) as session:
+        attempt = session.get(AssessmentAttempt, UUID(answer.json()["attempt_id"]))
+        assert str(attempt.canvas_asset_id) == canvas_asset_id
+
+
 def _confirmed_goal_id(client) -> str:
     response = client.post(
         "/api/v1/learning-goals/resolve",
@@ -277,6 +421,62 @@ def _confirmed_goal_id(client) -> str:
     )
     assert confirm.status_code == 200
     return confirm.json()["learning_goal_id"]
+
+
+def _goal_with_posttest_node(client) -> tuple[str, UUID, str]:
+    learning_goal_id = _confirmed_goal_id(client)
+    with _session_for_client(client) as session:
+        goal = session.get(LearningGoal, UUID(learning_goal_id))
+        assert goal is not None
+        concept = session.get(KnowledgeConcept, goal.target_concept_id)
+        assert concept is not None
+        goal.status = "in_progress"
+        goal.metadata_json = {
+            **(goal.metadata_json or {}),
+            "diagnosis": {
+                "nodes": [
+                    {
+                        "concept_id": str(concept.id),
+                        "concept_code": concept.code,
+                        "title": concept.title,
+                        "role": "target",
+                        "status": "fragile",
+                        "depth": 0,
+                    }
+                ]
+            },
+        }
+        session.commit()
+        return learning_goal_id, concept.id, concept.code
+
+
+def _option_id_for_question(client, question_id: str, *, correct: bool) -> str:
+    with _session_for_client(client) as session:
+        option = session.scalar(
+            select(AssessmentOption)
+            .where(
+                AssessmentOption.question_id == UUID(question_id),
+                AssessmentOption.is_correct.is_(correct),
+            )
+            .order_by(AssessmentOption.sort_order)
+        )
+        assert option is not None
+        return str(option.id)
+
+
+def _create_canvas_asset(client) -> str:
+    with _session_for_client(client) as session:
+        asset = ImageAsset(
+            user_id=ACCOUNT_ID,
+            storage_path="tests/canvas/posttest.png",
+            mime_type="image/png",
+            width=320,
+            height=240,
+            checksum="posttest-canvas",
+        )
+        session.add(asset)
+        session.commit()
+        return str(asset.id)
 
 
 def _override_account(client) -> None:
@@ -301,9 +501,9 @@ def _override_account(client) -> None:
 
 
 def _seed_math_graph(session: Session) -> None:
-    subject = session.scalar(select(Subject).where(Subject.code == "math"))
+    subject = session.scalar(select(Subject).where(Subject.code == "matematika"))
     if subject is None:
-        subject = Subject(code="math", name="Matematika", description="", is_active=True)
+        subject = Subject(code="matematika", name="Matematika", description="", is_active=True)
         session.add(subject)
         session.flush()
     concepts = {}

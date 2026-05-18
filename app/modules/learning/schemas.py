@@ -295,6 +295,10 @@ class WeeklyReportResponse(BaseModel):
     status: str
     source: str
     score: int
+    pretest_score_percent: int | None = None
+    posttest_score_percent: int | None = None
+    learning_gain_percent: int | None = None
+    paired_concept_count: int = 0
     fixed_gaps: int
     fixed_gaps_delta: int
     remaining_gaps: int

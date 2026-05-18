@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
+from app.modules.assessments.metrics import PASS_PERCENT
 from app.modules.curriculum.models import ConceptEdge, KnowledgeConcept, Subject
 from app.modules.curriculum.schemas import (
     ConceptDetailResponse,
@@ -735,6 +736,48 @@ def _latest_posttest_pass_by_concept(
 ) -> dict[UUID, bool]:
     if user is None or not concept_ids:
         return {}
+    concept_id_set = set(concept_ids)
+    result: dict[UUID, bool] = {}
+    completed_sessions = list(
+        session.scalars(
+            select(AssessmentSession)
+            .where(
+                AssessmentSession.user_id == user.id,
+                AssessmentSession.session_type == "posttest",
+                AssessmentSession.status == "completed",
+            )
+            .order_by(AssessmentSession.completed_at.desc().nullslast(), AssessmentSession.created_at.desc())
+            .limit(50)
+        )
+    )
+    for assessment in completed_sessions:
+        node_results = (assessment.metadata_json or {}).get("node_results")
+        if not isinstance(node_results, dict):
+            node_results = (assessment.decision_state_json or {}).get("node_results")
+        if not isinstance(node_results, dict):
+            continue
+        for payload in node_results.values():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                concept_uuid = UUID(str(payload.get("concept_id")))
+            except (TypeError, ValueError):
+                continue
+            if concept_uuid not in concept_id_set or concept_uuid in result:
+                continue
+            answered_count = _safe_int(payload.get("answered_count"), fallback=0)
+            total_questions = max(1, _safe_int(payload.get("total_questions"), fallback=3))
+            answer_percent = _safe_float(payload.get("answer_percent"), fallback=0.0)
+            score_percent = _safe_float(
+                payload.get("score_percent"),
+                fallback=_safe_float(payload.get("scaled_score"), fallback=0.0) * 10,
+            )
+            result[concept_uuid] = (
+                answered_count >= total_questions
+                and answer_percent >= PASS_PERCENT
+                and score_percent >= PASS_PERCENT
+            )
+
     rows = list(
         session.execute(
             select(
@@ -754,20 +797,19 @@ def _latest_posttest_pass_by_concept(
     )
     latest: dict[UUID, dict[str, int]] = {}
     for concept_id, is_correct, _submitted_at in rows:
-        if concept_id is None:
+        if concept_id is None or concept_id in result:
             continue
         payload = latest.setdefault(concept_id, {"answered": 0, "correct": 0})
         if payload["answered"] >= 3:
             continue
         payload["answered"] += 1
         payload["correct"] += 1 if is_correct else 0
-    result: dict[UUID, bool] = {}
     for concept_id, payload in latest.items():
         answered = payload["answered"]
         if answered <= 0:
             continue
-        scaled = round((payload["correct"] / max(1, answered)) * 10)
-        result[concept_id] = scaled >= 7.0 and answered >= 3
+        score_percent = (payload["correct"] / max(1, answered)) * 100
+        result[concept_id] = score_percent >= PASS_PERCENT and answered >= 3
     return result
 
 
@@ -1012,6 +1054,13 @@ def _normalize_status(status: str) -> str:
 def _safe_int(value: Any, *, fallback: int) -> int:
     try:
         return int(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _safe_float(value: Any, *, fallback: float) -> float:
+    try:
+        return float(value)
     except (TypeError, ValueError):
         return fallback
 

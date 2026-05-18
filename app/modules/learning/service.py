@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.modules.accounts.models import UserAccount
+from app.modules.assessments.metrics import attempt_answer_score, attempt_evidence_score
 from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
@@ -313,6 +314,7 @@ def submit_answer(
         question_id=question_id,
         option_id=option_id,
     )
+    answer_score = 1.0 if option.is_correct else 0.0
     attempt = AssessmentAttempt(
         session_id=assessment.id,
         question_id=question.id,
@@ -320,11 +322,16 @@ def submit_answer(
         confidence=confidence,
         explanation_text=explanation.strip(),
         used_canvas=used_canvas,
-        score=1.0 if option.is_correct else 0.0,
+        score=answer_score,
+        is_correct=bool(option.is_correct),
+        answer_score=answer_score,
+        evidence_score=answer_score,
+        diagnostic_signal="correct_mcq_only" if option.is_correct else "concept_gap_likely",
         evaluated_result={
             "verdict": "CORRECT" if option.is_correct else "INCORRECT",
             "grading": "deterministic_seed",
         },
+        evaluation_metadata_json={"source": "legacy_objective", "confidence": confidence},
     )
     session.add(attempt)
     _update_mastery(session, user=user, question=question, is_correct=option.is_correct)
@@ -1038,6 +1045,12 @@ def get_weekly_report(
     states = list(
         session.scalars(select(LearnerConceptState).where(LearnerConceptState.user_id == user.id))
     )
+    paired_scores = _paired_pre_post_scores(
+        session,
+        user=user,
+        submitted_from=start_at,
+        submitted_before=end_at,
+    )
     mastered_or_ready = len([state for state in states if state.status in {"mastered", "ready"}])
     review_due = len([state for state in states if state.status in {"review_due", "gap"}])
     fixed_in_range = len(
@@ -1087,6 +1100,10 @@ def get_weekly_report(
         status=status,
         source=source,
         score=score,
+        pretest_score_percent=paired_scores["pretest_score_percent"],
+        posttest_score_percent=paired_scores["posttest_score_percent"],
+        learning_gain_percent=paired_scores["learning_gain_percent"],
+        paired_concept_count=paired_scores["paired_concept_count"],
         fixed_gaps=fixed_gaps,
         fixed_gaps_delta=fixed_delta,
         remaining_gaps=remaining_gaps,
@@ -1295,7 +1312,7 @@ def get_daily_evaluation_result(
         )
     )
     reviewed_count = len(attempts)
-    correct_count = len([attempt for attempt in attempts if attempt.score >= 1.0])
+    correct_count = len([attempt for attempt in attempts if attempt_answer_score(attempt) >= 1.0])
     review_again_count = max(0, reviewed_count - correct_count)
     score_percent = int(round((correct_count / reviewed_count) * 100)) if reviewed_count else 0
     interval_days = 3 if review_again_count else 7
@@ -1602,10 +1619,69 @@ def _assessment_attempt_rows(
     return [(attempt, question) for attempt, question in session.execute(query)]
 
 
+def _paired_pre_post_scores(
+    session: Session,
+    *,
+    user: UserAccount,
+    submitted_from: datetime | None = None,
+    submitted_before: datetime | None = None,
+) -> dict[str, int | None]:
+    query = (
+        select(AssessmentAttempt, AssessmentQuestion.concept_id, AssessmentSession.session_type)
+        .join(AssessmentSession, AssessmentAttempt.session_id == AssessmentSession.id)
+        .join(AssessmentQuestion, AssessmentAttempt.question_id == AssessmentQuestion.id)
+        .where(
+            AssessmentSession.user_id == user.id,
+            AssessmentSession.session_type.in_({"pretest", "posttest"}),
+            AssessmentQuestion.concept_id.is_not(None),
+        )
+        .order_by(AssessmentAttempt.submitted_at)
+    )
+    if submitted_from is not None:
+        query = query.where(AssessmentAttempt.submitted_at >= submitted_from)
+    if submitted_before is not None:
+        query = query.where(AssessmentAttempt.submitted_at < submitted_before)
+
+    by_concept: dict[UUID, dict[str, list[float]]] = {}
+    for attempt, concept_id, session_type in session.execute(query):
+        if concept_id is None:
+            continue
+        concept_scores = by_concept.setdefault(concept_id, {"pretest": [], "posttest": []})
+        if session_type in concept_scores:
+            concept_scores[str(session_type)].append(attempt_evidence_score(attempt))
+
+    paired_pre: list[float] = []
+    paired_post: list[float] = []
+    for scores in by_concept.values():
+        pre_scores = scores["pretest"]
+        post_scores = scores["posttest"]
+        if not pre_scores or not post_scores:
+            continue
+        paired_pre.append(sum(pre_scores) / len(pre_scores))
+        paired_post.append(sum(post_scores) / len(post_scores))
+
+    paired_count = len(paired_pre)
+    if paired_count == 0:
+        return {
+            "pretest_score_percent": None,
+            "posttest_score_percent": None,
+            "learning_gain_percent": None,
+            "paired_concept_count": 0,
+        }
+    pretest_score = int(round((sum(paired_pre) / paired_count) * 100))
+    posttest_score = int(round((sum(paired_post) / paired_count) * 100))
+    return {
+        "pretest_score_percent": pretest_score,
+        "posttest_score_percent": posttest_score,
+        "learning_gain_percent": posttest_score - pretest_score,
+        "paired_concept_count": paired_count,
+    }
+
+
 def _attempt_correct_percent(rows: list[tuple[AssessmentAttempt, AssessmentQuestion]]) -> int:
     if not rows:
         return 0
-    correct = len([attempt for attempt, _question in rows if attempt.score >= 1.0])
+    correct = len([attempt for attempt, _question in rows if attempt_answer_score(attempt) >= 1.0])
     return int(round((correct / len(rows)) * 100))
 
 
@@ -1617,7 +1693,7 @@ def _weighted_analysis_percent(rows: list[tuple[AssessmentAttempt, AssessmentQue
     for attempt, _question in rows:
         confidence_weight = max(1, min(10, attempt.confidence or 1)) / 10
         total_weight += confidence_weight
-        weighted_score += (attempt.score or 0.0) * confidence_weight
+        weighted_score += attempt_evidence_score(attempt) * confidence_weight
     return int(round((weighted_score / max(total_weight, 0.01)) * 100))
 
 
@@ -1903,7 +1979,8 @@ def _reviewed_concepts(
         if attempt is None:
             continue
         state = state_by_concept.get(question.concept_id) if question.concept_id else None
-        mastery_score = state.mastery_score if state else (0.68 if attempt.score >= 1.0 else 0.32)
+        is_correct = attempt_answer_score(attempt) >= 1.0
+        mastery_score = state.mastery_score if state else (0.68 if is_correct else 0.32)
         rows.append(
             ReviewedConceptRead(
                 concept_id=str(question.concept_id) if question.concept_id else None,
@@ -1914,7 +1991,7 @@ def _reviewed_concepts(
                 )
                 or question.topic,
                 status_label=_concept_status_label(
-                    is_correct=attempt.score >= 1.0,
+                    is_correct=is_correct,
                     mastery_score=mastery_score,
                 ),
                 mastery_score=round(float(mastery_score), 2),

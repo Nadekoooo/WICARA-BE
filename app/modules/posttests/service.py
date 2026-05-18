@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -8,7 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.accounts.models import UserAccount
+from app.modules.assessments.metrics import AssessmentEvidenceEvaluator, PASS_PERCENT
 from app.modules.curriculum.models import KnowledgeConcept
+from app.modules.evidence.models import ImageAsset
 from app.modules.learning.models import (
     AssessmentAttempt,
     AssessmentOption,
@@ -22,6 +25,7 @@ from app.modules.learning.models import (
 )
 from app.modules.posttests.schemas import (
     PosttestAnswerResponse,
+    PosttestEvaluationRead,
     PosttestFinalizeResponse,
     PosttestNodeResultRead,
     PosttestQuestionRead,
@@ -35,14 +39,20 @@ class DuplicateQuestionAttempt(Exception):
 
 
 REMEDIATION_NODE_STATUSES = {"gap", "fragile", "partial", "probably_gap"}
-POSTTEST_PASS_SCORE = 7.0
+POSTTEST_PASS_SCORE = PASS_PERCENT
 POSTTEST_QUESTIONS_PER_NODE = 3
 POSTTEST_MAX_QUESTIONS = 10
 
 
 class AdaptivePosttestService:
-    def __init__(self, *, generation_service: AdaptivePretestGenerationService | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        generation_service: AdaptivePretestGenerationService | None = None,
+        evidence_evaluator: AssessmentEvidenceEvaluator | None = None,
+    ) -> None:
         self.generation_service = generation_service or AdaptivePretestGenerationService()
+        self.evidence_evaluator = evidence_evaluator or AssessmentEvidenceEvaluator()
 
     def start(
         self,
@@ -180,9 +190,18 @@ class AdaptivePosttestService:
                     "total_questions": len(item["question_ids"]),
                     "answered_count": 0,
                     "correct_count": 0,
+                    "answer_score_sum": 0.0,
+                    "evidence_score_sum": 0.0,
+                    "confidence_sum": 0.0,
+                    "answer_percent": 0.0,
+                    "evidence_percent": 0.0,
+                    "score_percent": 0.0,
+                    "confidence_percent": 0.0,
                     "scaled_score": 0.0,
                     "passed": False,
                     "retake_required": True,
+                    "metric_source": "adaptive_posttest_evidence",
+                    "attempts": [],
                 }
                 for item in queue
             },
@@ -194,7 +213,7 @@ class AdaptivePosttestService:
         assessment = _load_assessment(session, user=user, session_id=session_id)
         if assessment is None:
             return None
-        state = assessment.decision_state_json or {}
+        state = deepcopy(assessment.decision_state_json or {})
         question_queue = [str(item) for item in state.get("question_queue", [])]
         current_index = int(state.get("current_index", 0))
         current_question = None
@@ -230,6 +249,9 @@ class AdaptivePosttestService:
         question_id: UUID,
         selected_option_id: UUID,
         confidence: int,
+        typed_reasoning: str = "",
+        canvas_asset_id: UUID | None = None,
+        used_canvas: bool = False,
     ) -> PosttestAnswerResponse | None:
         assessment = _load_assessment(session, user=user, session_id=session_id)
         if assessment is None:
@@ -246,29 +268,55 @@ class AdaptivePosttestService:
         option = next((item for item in question.options if item.id == selected_option_id), None)
         if option is None:
             raise LookupError("Selected option was not found for this question.")
+        if canvas_asset_id is not None:
+            asset = session.get(ImageAsset, canvas_asset_id)
+            if asset is None or asset.user_id != user.id:
+                raise LookupError("Canvas asset was not found.")
 
-        is_correct = bool(option.is_correct)
+        evaluation = self.evidence_evaluator.evaluate(
+            session,
+            question=question,
+            selected_option=option,
+            typed_reasoning=typed_reasoning,
+            canvas_asset_id=canvas_asset_id,
+            used_canvas=used_canvas,
+        )
+        is_correct = bool(evaluation["is_correct"])
         attempt = AssessmentAttempt(
             session_id=assessment.id,
             question_id=question.id,
             selected_option_id=option.id,
+            canvas_asset_id=canvas_asset_id,
             confidence=confidence,
-            explanation_text="",
-            typed_reasoning="",
-            used_canvas=False,
-            score=1.0 if is_correct else 0.0,
+            explanation_text=typed_reasoning.strip(),
+            typed_reasoning=typed_reasoning.strip(),
+            used_canvas=used_canvas or canvas_asset_id is not None,
+            score=float(evaluation["answer_score"]),
             is_correct=is_correct,
-            answer_score=1.0 if is_correct else 0.0,
-            reasoning_score=None,
-            canvas_score=None,
-            evidence_score=1.0 if is_correct else 0.0,
-            diagnostic_signal="posttest_correct" if is_correct else "posttest_incorrect",
-            evaluated_result={"verdict": "CORRECT" if is_correct else "INCORRECT"},
-            evaluation_metadata_json={"source": "posttest_objective", "confidence": confidence},
+            answer_score=float(evaluation["answer_score"]),
+            reasoning_score=evaluation["reasoning_score"],
+            canvas_score=evaluation["canvas_score"],
+            evidence_score=float(evaluation["evidence_score"]),
+            diagnostic_signal=str(evaluation["diagnostic_signal"]),
+            evaluated_result={
+                "verdict": "CORRECT" if is_correct else "INCORRECT",
+                "diagnostic_signal": evaluation["diagnostic_signal"],
+                "reasoning_signal": evaluation["reasoning_signal"],
+                "reasoning_feedback": evaluation["reasoning_feedback"],
+            },
+            evaluation_metadata_json={
+                "source": "posttest_evidence",
+                "self_reported_confidence": confidence,
+                "confidence": evaluation["confidence"],
+                "canvas_status": evaluation["canvas_status"],
+                "reasoning_signal": evaluation["reasoning_signal"],
+                "reasoning_feedback": evaluation["reasoning_feedback"],
+                "reasoning_evaluation_source": evaluation["reasoning_evaluation_source"],
+            },
         )
         session.add(attempt)
 
-        state = assessment.decision_state_json or {}
+        state = deepcopy(assessment.decision_state_json or {})
         node_results = state.get("node_results", {}) if isinstance(state.get("node_results"), dict) else {}
         concept_code = str(question.metadata_json.get("concept_code") or _concept_code(session, question))
         node_state = node_results.get(concept_code)
@@ -277,6 +325,42 @@ class AdaptivePosttestService:
 
         node_state["answered_count"] = int(node_state.get("answered_count", 0)) + 1
         node_state["correct_count"] = int(node_state.get("correct_count", 0)) + (1 if is_correct else 0)
+        node_state["answer_score_sum"] = round(
+            float(node_state.get("answer_score_sum") or 0.0) + float(evaluation["answer_score"]),
+            4,
+        )
+        node_state["evidence_score_sum"] = round(
+            float(node_state.get("evidence_score_sum") or 0.0) + float(evaluation["evidence_score"]),
+            4,
+        )
+        node_state["confidence_sum"] = round(
+            float(node_state.get("confidence_sum") or 0.0) + float(evaluation["confidence"]),
+            4,
+        )
+        attempts = node_state.setdefault("attempts", [])
+        if isinstance(attempts, list):
+            attempts.append(
+                {
+                    "question_id": str(question.id),
+                    "is_correct": is_correct,
+                    "answer_score": round(float(evaluation["answer_score"]), 4),
+                    "reasoning_score": (
+                        round(float(evaluation["reasoning_score"]), 4)
+                        if evaluation["reasoning_score"] is not None
+                        else None
+                    ),
+                    "canvas_score": (
+                        round(float(evaluation["canvas_score"]), 4)
+                        if evaluation["canvas_score"] is not None
+                        else None
+                    ),
+                    "evidence_score": round(float(evaluation["evidence_score"]), 4),
+                    "confidence": round(float(evaluation["confidence"]), 4),
+                    "diagnostic_signal": str(evaluation["diagnostic_signal"]),
+                    "reasoning_signal": str(evaluation["reasoning_signal"]),
+                    "canvas_status": evaluation["canvas_status"],
+                }
+            )
         _refresh_node_result_score(node_state)
 
         question_queue = [str(item) for item in state.get("question_queue", [])]
@@ -297,6 +381,7 @@ class AdaptivePosttestService:
         return PosttestAnswerResponse(
             attempt_id=attempt.id,
             is_correct=is_correct,
+            evaluation=_evaluation_to_read(evaluation),
             node_result=_node_result_read(concept_code, node_state),
             next_question=_question_to_read(session, next_question, current=current_index + 1, total=len(question_queue)) if next_question else None,
             completed=completed,
@@ -345,6 +430,7 @@ class AdaptivePosttestService:
 
         assessment.status = "completed"
         assessment.completed_at = assessment.completed_at or datetime.now(UTC)
+        assessment.decision_state_json = {**state, "node_results": node_results}
         assessment.metadata_json = {
             **(assessment.metadata_json or {}),
             "posttest_finalized_at": now_iso,
@@ -444,7 +530,13 @@ class AdaptivePosttestService:
                     break
 
         if len(selected_ids) < 3:
-            raise ValueError(f"Could not generate 3 medium-hard posttest questions for concept {concept.code}.")
+            question = self.generation_service.question_for_difficulty(pack, difficulty="easy")
+            key = question.prompt.strip().lower()
+            if key not in seen_prompts:
+                selected_ids.append(str(question.id))
+
+        if len(selected_ids) < 3:
+            raise ValueError(f"Could not generate 3 posttest questions for concept {concept.code}.")
         return selected_ids[:3]
 
 
@@ -563,15 +655,36 @@ def _node_result_read(concept_code: str, payload: dict[str, Any]) -> PosttestNod
         total_questions=int(payload.get("total_questions", 3)),
         answered_count=int(payload.get("answered_count", 0)),
         correct_count=int(payload.get("correct_count", 0)),
+        answer_percent=float(payload.get("answer_percent", 0.0)),
+        evidence_percent=float(payload.get("evidence_percent", 0.0)),
+        score_percent=float(payload.get("score_percent", 0.0)),
+        confidence_percent=float(payload.get("confidence_percent", 0.0)),
         scaled_score=float(payload.get("scaled_score", 0.0)),
         passed=bool(payload.get("passed", False)),
         retake_required=bool(payload.get("retake_required", True)),
+        metric_source=str(payload.get("metric_source") or "adaptive_posttest_evidence"),
     )
 
 
 def _node_results_read(state: dict[str, Any]) -> list[PosttestNodeResultRead]:
     node_results = state.get("node_results", {}) if isinstance(state.get("node_results"), dict) else {}
     return [_node_result_read(code, payload) for code, payload in node_results.items() if isinstance(payload, dict)]
+
+
+def _evaluation_to_read(evaluation: dict[str, Any]) -> PosttestEvaluationRead:
+    return PosttestEvaluationRead(
+        is_correct=bool(evaluation["is_correct"]),
+        answer_score=float(evaluation["answer_score"]),
+        reasoning_score=evaluation["reasoning_score"],
+        reasoning_signal=evaluation["reasoning_signal"],
+        reasoning_feedback=evaluation["reasoning_feedback"],
+        reasoning_evaluation_source=evaluation["reasoning_evaluation_source"],
+        canvas_score=evaluation["canvas_score"],
+        evidence_score=float(evaluation["evidence_score"]),
+        confidence=float(evaluation["confidence"]),
+        diagnostic_signal=str(evaluation["diagnostic_signal"]),
+        canvas_status=evaluation["canvas_status"],
+    )
 
 
 def _remediation_nodes(nodes: object) -> list[dict[str, Any]]:
@@ -609,23 +722,45 @@ def _refresh_node_result_score(payload: dict[str, Any]) -> None:
     total_questions = max(1, int(payload.get("total_questions") or 3))
     answered_count = max(0, int(payload.get("answered_count") or 0))
     correct_count = max(0, int(payload.get("correct_count") or 0))
-    scaled_score = _posttest_scaled_score(
-        correct_count=correct_count,
-        total_questions=total_questions,
+    answered_for_average = max(1, answered_count)
+    answer_score_sum = _float_value(payload.get("answer_score_sum"), fallback=float(correct_count))
+    evidence_score_sum = _float_value(payload.get("evidence_score_sum"), fallback=answer_score_sum)
+    confidence_sum = _float_value(payload.get("confidence_sum"), fallback=0.0)
+    answer_percent = round((answer_score_sum / answered_for_average) * 100, 2)
+    evidence_percent = round((evidence_score_sum / answered_for_average) * 100, 2)
+    score_percent = evidence_percent
+    confidence_percent = round((confidence_sum / answered_for_average) * 100, 2) if answered_count else 0.0
+    scaled_score = _posttest_scaled_score(score_percent=score_percent)
+    passed = (
+        answered_count >= total_questions
+        and answer_percent >= POSTTEST_PASS_SCORE
+        and score_percent >= POSTTEST_PASS_SCORE
     )
-    passed = answered_count >= total_questions and scaled_score >= POSTTEST_PASS_SCORE
     payload["total_questions"] = total_questions
     payload["answered_count"] = answered_count
     payload["correct_count"] = correct_count
+    payload["answer_score_sum"] = round(answer_score_sum, 4)
+    payload["evidence_score_sum"] = round(evidence_score_sum, 4)
+    payload["confidence_sum"] = round(confidence_sum, 4)
+    payload["answer_percent"] = answer_percent
+    payload["evidence_percent"] = evidence_percent
+    payload["score_percent"] = score_percent
+    payload["confidence_percent"] = confidence_percent
     payload["scaled_score"] = scaled_score
     payload["passed"] = passed
     payload["retake_required"] = not passed
+    payload["metric_source"] = str(payload.get("metric_source") or "adaptive_posttest_evidence")
 
 
-def _posttest_scaled_score(*, correct_count: int, total_questions: int) -> float:
-    if total_questions <= 0:
-        return 0.0
-    return float(round((max(0, correct_count) / total_questions) * 10, 2))
+def _posttest_scaled_score(*, score_percent: float) -> float:
+    return float(round(max(0.0, min(100.0, score_percent)) / 10, 2))
+
+
+def _float_value(value: object, *, fallback: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
 
 
 def _clamp01(value: float) -> float:
