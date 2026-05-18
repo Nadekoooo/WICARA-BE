@@ -1,0 +1,16 @@
+.git
+.pytest_cache
+.ruff_cache
+.venv
+__pycache__
+*.py[cod]
+*.egg-info
+.env
+tmp
+media
+wicara_mvp_10_manim_templates/media
+wicara_mvp_10_manim_templates/renders
+wicara_mvp_10_manim_templates/tmp_render
+wicara_mvp_10_manim_templates/**/__pycache__
+wicara_remotion_templates/node_modules
+wicara_remotion_templates/.npm
