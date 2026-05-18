@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -348,6 +349,47 @@ class LearnerConceptState(Base):
     evidence_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_evaluated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class WeeklyReportSnapshot(Base):
+    __tablename__ = "weekly_report_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "range_start",
+            "range_end",
+            name="uq_weekly_report_snapshots_user_range",
+        ),
+        Index("ix_weekly_report_snapshots_user_start", "user_id", "range_start"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False
+    )
+    range_start: Mapped[date] = mapped_column(Date, nullable=False)
+    range_end: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="seeded_baseline")
+    source: Mapped[str] = mapped_column(String(96), nullable=False, default="seeded_mvp")
+    score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    active_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    fixed_gaps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    remaining_gaps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    overdue_reviews: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    new_gaps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    paired_concept_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(
+        json_dict_type, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
 
 class MediaArtifact(Base):

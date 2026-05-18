@@ -31,6 +31,7 @@ from app.modules.learning.models import (
     MediaArtifact,
     MediaJob,
     TrackModule,
+    WeeklyReportSnapshot,
 )
 from app.modules.learning.schemas import (
     AssessmentDashboardActionRead,
@@ -48,6 +49,9 @@ from app.modules.learning.schemas import (
     DailyEvaluationResponse,
     DailyEvaluationResultResponse,
     DailySummaryRead,
+    ReportDataQualityRead,
+    ReportEffortImpactRead,
+    ReportConceptMoverRead,
     GapMetricRead,
     HomeSummaryResponse,
     KnowledgeStateResponse,
@@ -76,6 +80,8 @@ from app.modules.learning.schemas import (
     UnlockedConceptSummaryRead,
     UpcomingRecommendationRead,
     ConsistencySummaryRead,
+    WeeklyTimelinePointRead,
+    WeeklyNarrativeRead,
     WeeklyReportResponse,
     ProgressRead,
 )
@@ -1324,8 +1330,23 @@ def get_weekly_report(
     retention_minutes = int(sum(state.evidence_count for state in states) * 6) if states else 18
     concept_names = _recent_concept_names(session, user=user)
     trends = _report_trends(range_attempts=range_attempts, baseline_attempts=baseline_attempts)
-    fixed_delta = fixed_in_range if attempts_count or states else 4
-    remaining_delta = -max(1, min(3, remaining_gaps)) if attempts_count else -2
+    previous_snapshot = _latest_snapshot_before_range(session, user=user, start=start)
+    fixed_delta = _fixed_gap_delta(
+        fixed_gaps=fixed_gaps,
+        fixed_in_range=fixed_in_range,
+        attempts_count=attempts_count,
+        has_state=bool(states),
+        previous_snapshot=previous_snapshot,
+    )
+    remaining_delta = _remaining_gap_delta(
+        remaining_gaps=remaining_gaps,
+        attempts_count=attempts_count,
+        previous_snapshot=previous_snapshot,
+    )
+    new_gaps = _new_gaps_count(
+        remaining_gaps=remaining_gaps,
+        previous_snapshot=previous_snapshot,
+    )
     unlocked_count = max(1, min(8, mastered_or_ready or len(concept_names) or 3))
     unlocked_concepts = concept_names[:unlocked_count] or [
         "Limits from graphs",
@@ -1349,7 +1370,45 @@ def get_weekly_report(
         source = "derived_from_mastery_state"
     else:
         source = "seeded_mvp"
-    return WeeklyReportResponse(
+    data_quality = _report_data_quality(
+        attempts_count=attempts_count,
+        paired_concepts=int(paired_scores["paired_concept_count"] or 0),
+        has_baseline=has_baseline,
+        has_state=bool(states),
+        status=status,
+        source=source,
+    )
+    effort_impact = _report_effort_impact(
+        attempts_count=attempts_count,
+        retention_minutes=retention_minutes,
+        review_due_count=review_due,
+        new_gaps_count=new_gaps,
+        trends=trends,
+        learning_gain_percent=paired_scores["learning_gain_percent"],
+        range_attempts=range_attempts,
+    )
+    concept_movers = _report_concept_movers(
+        session=session,
+        range_attempts=range_attempts,
+        baseline_attempts=baseline_attempts,
+        states=states,
+    )
+    weekly_timeline = _weekly_timeline(
+        session=session,
+        user=user,
+        selected_start=start,
+        selected_end=end,
+        current_score=score,
+        current_fixed_gaps=fixed_gaps,
+        current_remaining_gaps=remaining_gaps,
+        current_attempt_count=attempts_count,
+    )
+    weekly_narrative = _weekly_narrative(
+        concept_movers=concept_movers,
+        remaining_gaps=remaining_gaps,
+        recommendations=recommendations,
+    )
+    report = WeeklyReportResponse(
         range_label=_format_week_label(start, end),
         range_start=start.isoformat(),
         range_end=end.isoformat(),
@@ -1368,7 +1427,7 @@ def get_weekly_report(
         concepts=", ".join(concept_names) if concept_names else "Limits, graph reading",
         summary_notes=[
             "Report is aggregated from persisted attempts submitted inside the selected date range.",
-            "Gap deltas are inferred from current mastery because historical state snapshots are not yet stored.",
+            "Gap deltas and movers are now stabilized with weekly snapshots when history exists.",
         ],
         trends=trends,
         performance_groups=[
@@ -1401,7 +1460,25 @@ def get_weekly_report(
             narrative="Keep it up - your future self will thank you.",
             signal="daily_review_and_gap_closure",
         ),
+        data_quality=data_quality,
+        effort_impact=effort_impact,
+        concept_movers=concept_movers,
+        weekly_timeline=weekly_timeline,
+        weekly_narrative=weekly_narrative,
     )
+    _upsert_weekly_report_snapshot(
+        session=session,
+        user=user,
+        start=start,
+        end=end,
+        report=report,
+        attempt_count=attempts_count,
+        active_days=effort_impact.active_days,
+        overdue_reviews=review_due,
+        new_gaps=new_gaps,
+    )
+    session.commit()
+    return report
 
 
 def get_or_create_daily_evaluation(
@@ -2028,6 +2105,433 @@ def _report_trends(
         ),
         ReportTrendRead(label="Analysis", before=analysis_before / 100, after=analysis_after / 100),
     ]
+
+
+def _latest_snapshot_before_range(
+    session: Session,
+    *,
+    user: UserAccount,
+    start: date,
+) -> WeeklyReportSnapshot | None:
+    return session.scalar(
+        select(WeeklyReportSnapshot)
+        .where(
+            WeeklyReportSnapshot.user_id == user.id,
+            WeeklyReportSnapshot.range_end < start,
+        )
+        .order_by(WeeklyReportSnapshot.range_end.desc())
+    )
+
+
+def _fixed_gap_delta(
+    *,
+    fixed_gaps: int,
+    fixed_in_range: int,
+    attempts_count: int,
+    has_state: bool,
+    previous_snapshot: WeeklyReportSnapshot | None,
+) -> int:
+    if previous_snapshot is not None:
+        return fixed_gaps - previous_snapshot.fixed_gaps
+    if attempts_count or has_state:
+        return fixed_in_range
+    return 4
+
+
+def _remaining_gap_delta(
+    *,
+    remaining_gaps: int,
+    attempts_count: int,
+    previous_snapshot: WeeklyReportSnapshot | None,
+) -> int:
+    if previous_snapshot is not None:
+        return remaining_gaps - previous_snapshot.remaining_gaps
+    return -max(1, min(3, remaining_gaps)) if attempts_count else -2
+
+
+def _new_gaps_count(
+    *,
+    remaining_gaps: int,
+    previous_snapshot: WeeklyReportSnapshot | None,
+) -> int:
+    if previous_snapshot is None:
+        return 0
+    return max(0, remaining_gaps - previous_snapshot.remaining_gaps)
+
+
+def _active_days_from_rows(rows: list[tuple[AssessmentAttempt, AssessmentQuestion]]) -> int:
+    if not rows:
+        return 0
+    return len(
+        {
+            _as_utc(attempt.submitted_at).date()
+            for attempt, _ in rows
+            if attempt.submitted_at is not None
+        }
+    )
+
+
+def _report_data_quality(
+    *,
+    attempts_count: int,
+    paired_concepts: int,
+    has_baseline: bool,
+    has_state: bool,
+    status: str,
+    source: str,
+) -> ReportDataQualityRead:
+    confidence_score = 20
+    confidence_score += min(40, attempts_count * 4)
+    if has_baseline:
+        confidence_score += 20
+    if paired_concepts > 0:
+        confidence_score += 15
+    if has_state:
+        confidence_score += 5
+    confidence_score = max(0, min(100, confidence_score))
+    if confidence_score >= 80:
+        confidence_label = "high"
+    elif confidence_score >= 55:
+        confidence_label = "medium"
+    else:
+        confidence_label = "low"
+
+    if status == "seeded_baseline":
+        coverage_status = "seeded_baseline"
+    elif source == "derived_from_range_assessments_no_baseline":
+        coverage_status = "partial_history"
+    else:
+        coverage_status = "evidence_backed"
+
+    notes = [
+        f"{attempts_count} assessment attempts in selected range.",
+        f"{paired_concepts} paired pretest/posttest concepts detected.",
+    ]
+    if coverage_status == "seeded_baseline":
+        notes.append("Insights are seeded until attempts or mastery history are available.")
+    elif coverage_status == "partial_history":
+        notes.append("Range attempts exist, but historical baseline is still limited.")
+    else:
+        notes.append("Report uses persisted attempts and baseline context.")
+
+    return ReportDataQualityRead(
+        confidence_label=confidence_label,
+        confidence_score=confidence_score,
+        coverage_status=coverage_status,
+        attempts_covered=attempts_count,
+        paired_concepts=paired_concepts,
+        notes=notes,
+    )
+
+
+def _report_effort_impact(
+    *,
+    attempts_count: int,
+    retention_minutes: int,
+    review_due_count: int,
+    new_gaps_count: int,
+    trends: list[ReportTrendRead],
+    learning_gain_percent: int | None,
+    range_attempts: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+) -> ReportEffortImpactRead:
+    active_days = _active_days_from_rows(range_attempts)
+    if learning_gain_percent is not None:
+        impact_score_delta = learning_gain_percent
+    elif trends:
+        impact_score_delta = round((trends[0].after - trends[0].before) * 100)
+    else:
+        impact_score_delta = 0
+
+    if attempts_count == 0:
+        efficiency_label = "no_signal"
+    elif impact_score_delta >= 10 and active_days >= 3:
+        efficiency_label = "high_leverage"
+    elif impact_score_delta >= 0:
+        efficiency_label = "steady"
+    else:
+        efficiency_label = "needs_focus"
+
+    narrative = (
+        f"{attempts_count} attempts across {active_days} active days "
+        f"produced {impact_score_delta:+d}% impact trend."
+    )
+
+    return ReportEffortImpactRead(
+        attempt_count=attempts_count,
+        active_days=active_days,
+        retention_minutes=retention_minutes,
+        review_due_count=review_due_count,
+        new_gaps_count=new_gaps_count,
+        impact_score_delta=impact_score_delta,
+        efficiency_label=efficiency_label,
+        narrative=narrative,
+    )
+
+
+def _report_concept_movers(
+    *,
+    session: Session,
+    range_attempts: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+    baseline_attempts: list[tuple[AssessmentAttempt, AssessmentQuestion]],
+    states: list[LearnerConceptState],
+) -> list[ReportConceptMoverRead]:
+    range_scores: dict[UUID, list[float]] = {}
+    baseline_scores: dict[UUID, list[float]] = {}
+    for attempt, question in range_attempts:
+        if question.concept_id is None:
+            continue
+        range_scores.setdefault(question.concept_id, []).append(attempt_evidence_score(attempt))
+    for attempt, question in baseline_attempts:
+        if question.concept_id is None:
+            continue
+        baseline_scores.setdefault(question.concept_id, []).append(attempt_evidence_score(attempt))
+
+    state_by_concept = {state.concept_id: state for state in states}
+    candidate_ids: set[UUID] = set(range_scores)
+    candidate_ids.update(
+        state.concept_id for state in states if state.status in {"review_due", "gap"}
+    )
+    if not candidate_ids:
+        return []
+
+    concept_rows = session.execute(
+        select(KnowledgeConcept.id, KnowledgeConcept.title).where(
+            KnowledgeConcept.id.in_(candidate_ids)
+        )
+    )
+    title_by_concept: dict[UUID, str] = {concept_id: title for concept_id, title in concept_rows}
+
+    improved: list[ReportConceptMoverRead] = []
+    at_risk: list[ReportConceptMoverRead] = []
+    for concept_id in candidate_ids:
+        state = state_by_concept.get(concept_id)
+        current_scores = range_scores.get(concept_id, [])
+        previous_scores = baseline_scores.get(concept_id, [])
+        if current_scores:
+            mastery_after = sum(current_scores) / len(current_scores)
+        elif state is not None:
+            mastery_after = state.mastery_score
+        else:
+            mastery_after = 0.0
+
+        if previous_scores:
+            mastery_before = sum(previous_scores) / len(previous_scores)
+        elif current_scores:
+            mastery_before = max(0.0, mastery_after - 0.12)
+        elif state is not None:
+            mastery_before = state.mastery_score
+        else:
+            mastery_before = 0.0
+
+        delta_percent = int(round((mastery_after - mastery_before) * 100))
+        evidence_delta = len(current_scores)
+        status = state.status if state is not None else ("in_progress" if current_scores else "unknown")
+        next_review_date = (
+            state.next_review_at.date().isoformat()
+            if state is not None and state.next_review_at is not None
+            else None
+        )
+        title = title_by_concept.get(concept_id, "Concept")
+
+        if evidence_delta > 0 and delta_percent >= 5:
+            improved.append(
+                ReportConceptMoverRead(
+                    concept_id=str(concept_id),
+                    title=title,
+                    movement_type="improved",
+                    status=status,
+                    mastery_before_percent=int(round(mastery_before * 100)),
+                    mastery_after_percent=int(round(mastery_after * 100)),
+                    mastery_delta_percent=delta_percent,
+                    evidence_delta=evidence_delta,
+                    next_review_date=next_review_date,
+                    reason="Answer evidence improved in this range.",
+                )
+            )
+            continue
+
+        if status in {"review_due", "gap"} or delta_percent <= -3:
+            reason = (
+                "Concept is currently marked as gap/review due."
+                if status in {"review_due", "gap"}
+                else "Mastery trend moved down in this range."
+            )
+            at_risk.append(
+                ReportConceptMoverRead(
+                    concept_id=str(concept_id),
+                    title=title,
+                    movement_type="at_risk",
+                    status=status,
+                    mastery_before_percent=int(round(mastery_before * 100)),
+                    mastery_after_percent=int(round(mastery_after * 100)),
+                    mastery_delta_percent=delta_percent,
+                    evidence_delta=evidence_delta,
+                    next_review_date=next_review_date,
+                    reason=reason,
+                )
+            )
+
+    improved.sort(
+        key=lambda item: (item.mastery_delta_percent, item.evidence_delta),
+        reverse=True,
+    )
+    at_risk.sort(
+        key=lambda item: (
+            0 if item.status == "gap" else 1,
+            item.mastery_delta_percent,
+            item.next_review_date or "9999-12-31",
+        )
+    )
+    return [*improved[:3], *at_risk[:3]]
+
+
+def _weekly_timeline(
+    *,
+    session: Session,
+    user: UserAccount,
+    selected_start: date,
+    selected_end: date,
+    current_score: int,
+    current_fixed_gaps: int,
+    current_remaining_gaps: int,
+    current_attempt_count: int,
+) -> list[WeeklyTimelinePointRead]:
+    anchor_week_start = selected_end - timedelta(days=selected_end.weekday())
+    rows: list[WeeklyTimelinePointRead] = []
+    for offset in range(3, -1, -1):
+        week_start = anchor_week_start - timedelta(days=offset * 7)
+        week_end = week_start + timedelta(days=6)
+        snapshot = session.scalar(
+            select(WeeklyReportSnapshot).where(
+                WeeklyReportSnapshot.user_id == user.id,
+                WeeklyReportSnapshot.range_start == week_start,
+                WeeklyReportSnapshot.range_end == week_end,
+            )
+        )
+        if snapshot is not None:
+            rows.append(
+                WeeklyTimelinePointRead(
+                    label=f"W{week_start.isocalendar().week}",
+                    range_start=week_start.isoformat(),
+                    range_end=week_end.isoformat(),
+                    score=snapshot.score,
+                    fixed_gaps=snapshot.fixed_gaps,
+                    remaining_gaps=snapshot.remaining_gaps,
+                    attempt_count=snapshot.attempt_count,
+                )
+            )
+            continue
+
+        if week_start == selected_start and week_end == selected_end:
+            score = current_score
+            attempt_count = current_attempt_count
+            fixed_gaps = current_fixed_gaps
+            remaining_gaps = current_remaining_gaps
+        else:
+            range_start_at, range_end_at = _date_range_bounds(week_start, week_end)
+            attempts = _assessment_attempt_rows(
+                session,
+                user=user,
+                submitted_from=range_start_at,
+                submitted_before=range_end_at,
+            )
+            attempt_count = len(attempts)
+            score = _attempt_correct_percent(attempts) if attempts else 0
+            fixed_gaps = 0
+            remaining_gaps = 0
+
+        rows.append(
+            WeeklyTimelinePointRead(
+                label=f"W{week_start.isocalendar().week}",
+                range_start=week_start.isoformat(),
+                range_end=week_end.isoformat(),
+                score=score,
+                fixed_gaps=fixed_gaps,
+                remaining_gaps=remaining_gaps,
+                attempt_count=attempt_count,
+            )
+        )
+    return rows
+
+
+def _weekly_narrative(
+    *,
+    concept_movers: list[ReportConceptMoverRead],
+    remaining_gaps: int,
+    recommendations: list[UpcomingRecommendationRead],
+) -> WeeklyNarrativeRead:
+    improved = [item for item in concept_movers if item.movement_type == "improved"]
+    at_risk = [item for item in concept_movers if item.movement_type == "at_risk"]
+
+    if improved:
+        top = improved[0]
+        improved_text = (
+            f"{top.title} led improvement at {top.mastery_delta_percent:+d}% mastery change."
+        )
+    else:
+        improved_text = "No strong concept jump yet. Keep building attempt evidence this week."
+
+    if at_risk:
+        top_risk = at_risk[0]
+        stagnant_text = (
+            f"{top_risk.title} remains at risk ({top_risk.status}) with "
+            f"{top_risk.mastery_delta_percent:+d}% trend."
+        )
+    else:
+        stagnant_text = f"{remaining_gaps} gaps remain and need spaced reinforcement."
+
+    if recommendations:
+        focus_text = recommendations[0].title
+        if recommendations[0].due_label:
+            focus_text = f"{focus_text} ({recommendations[0].due_label})"
+    else:
+        focus_text = "Start with review due concepts in the next 7 days."
+
+    return WeeklyNarrativeRead(
+        improved=improved_text,
+        stagnant=stagnant_text,
+        focus=focus_text,
+    )
+
+
+def _upsert_weekly_report_snapshot(
+    *,
+    session: Session,
+    user: UserAccount,
+    start: date,
+    end: date,
+    report: WeeklyReportResponse,
+    attempt_count: int,
+    active_days: int,
+    overdue_reviews: int,
+    new_gaps: int,
+) -> None:
+    snapshot = session.scalar(
+        select(WeeklyReportSnapshot).where(
+            WeeklyReportSnapshot.user_id == user.id,
+            WeeklyReportSnapshot.range_start == start,
+            WeeklyReportSnapshot.range_end == end,
+        )
+    )
+    if snapshot is None:
+        snapshot = WeeklyReportSnapshot(
+            user_id=user.id,
+            range_start=start,
+            range_end=end,
+        )
+        session.add(snapshot)
+
+    snapshot.status = report.status
+    snapshot.source = report.source
+    snapshot.score = report.score
+    snapshot.attempt_count = attempt_count
+    snapshot.active_days = active_days
+    snapshot.fixed_gaps = report.fixed_gaps
+    snapshot.remaining_gaps = report.remaining_gaps
+    snapshot.overdue_reviews = overdue_reviews
+    snapshot.new_gaps = new_gaps
+    snapshot.paired_concept_count = report.paired_concept_count
+    snapshot.payload_json = report.model_dump(mode="json")
 
 
 def _recent_concept_names(session: Session, *, user: UserAccount) -> list[str]:

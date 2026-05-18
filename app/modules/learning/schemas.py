@@ -345,6 +345,55 @@ class ConsistencySummaryRead(BaseModel):
     signal: str
 
 
+class ReportDataQualityRead(BaseModel):
+    confidence_label: str
+    confidence_score: int
+    coverage_status: str
+    attempts_covered: int
+    paired_concepts: int
+    notes: list[str] = Field(default_factory=list)
+
+
+class ReportEffortImpactRead(BaseModel):
+    attempt_count: int
+    active_days: int
+    retention_minutes: int
+    review_due_count: int
+    new_gaps_count: int
+    impact_score_delta: int
+    efficiency_label: str
+    narrative: str
+
+
+class ReportConceptMoverRead(BaseModel):
+    concept_id: str | None = None
+    title: str
+    movement_type: str
+    status: str
+    mastery_before_percent: int
+    mastery_after_percent: int
+    mastery_delta_percent: int
+    evidence_delta: int
+    next_review_date: str | None = None
+    reason: str
+
+
+class WeeklyTimelinePointRead(BaseModel):
+    label: str
+    range_start: str
+    range_end: str
+    score: int
+    fixed_gaps: int
+    remaining_gaps: int
+    attempt_count: int
+
+
+class WeeklyNarrativeRead(BaseModel):
+    improved: str
+    stagnant: str
+    focus: str
+
+
 class WeeklyReportResponse(BaseModel):
     range_label: str
     range_start: str
@@ -369,6 +418,11 @@ class WeeklyReportResponse(BaseModel):
     unlocked_this_week: UnlockedConceptSummaryRead
     upcoming_recommendations: list[UpcomingRecommendationRead]
     consistency_summary: ConsistencySummaryRead
+    data_quality: ReportDataQualityRead
+    effort_impact: ReportEffortImpactRead
+    concept_movers: list[ReportConceptMoverRead]
+    weekly_timeline: list[WeeklyTimelinePointRead]
+    weekly_narrative: WeeklyNarrativeRead
 
 
 class DailyEvaluationResponse(BaseModel):
