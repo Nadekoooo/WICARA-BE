@@ -1,596 +1,679 @@
-# WICARA FastAPI Backend Execution Plan
+# WICARA Backend
 
-## Current Backend Quickstart
+FastAPI backend for WICARA, a prerequisite-first adaptive tutoring system that helps students find the missing foundations behind a STEM learning struggle.
 
-Install the backend dependencies into the active Python 3.11+ environment:
+WICARA is not designed as a generic chatbot. The backend coordinates curriculum graph lookup, adaptive diagnosis, learning goal resolution, workspace events, assessments, mastery state, generated media jobs, and reporting so the mobile app can guide each learner through a structured 5E flow: Engage, Explore, Explain, Elaborate, and Evaluate.
 
-```powershell
-python -m pip install -e ".[test]"
+## What WICARA Solves
+
+Many students give up on STEM because they start believing they are "bad at math" or "not a science person." In many cases the real issue is a hidden prerequisite gap. A student struggling with derivatives may be missing earlier foundations in functions, exponents, graph interpretation, or algebra. If the system never diagnoses that gap, every new lesson feels harder and confidence drops.
+
+WICARA starts from a different assumption: students often do not know what they do not know. The backend therefore focuses on diagnosing the root missing concept, not only answering the latest question.
+
+The project was validated through a demo visit to Yayasan Kampus Diakoneia Modern (KDM), a non-profit foundation in Bekasi, Indonesia that supports underprivileged and street-connected children. That visit reinforced the need for a tutor that can guide students who do not yet know how to prompt an LLM toward the right explanation.
+
+## Current Implementation
+
+| Area | Status | Backend responsibility |
+|---|---:|---|
+| Auth | Implemented | Supabase-backed sign-in, registration, refresh, Google token flow, current user lookup. |
+| Profile/onboarding | Implemented | Learner profile persistence and onboarding update endpoint. |
+| Curriculum graph | Implemented | Subjects, knowledge map, concept lookup, seeded Kurikulum Merdeka graph data. |
+| Learning goals | Implemented | Goal resolution, confirmation, history, path selection, active goal management. |
+| Adaptive pretests | Implemented | Start/read/answer/finalize flows plus adaptive diagnosis services. |
+| Posttests | Implemented | Start/read/answer/finalize flows for lesson checks. |
+| Home/queue/tracks | Implemented | Home summary, queue, tracks, modules, module state updates. |
+| Workspace | Implemented | Workspace creation, event timeline, phase advance, posttest start, media job queueing. |
+| Evidence upload | Implemented | Image asset endpoint for worksheet/canvas evidence. |
+| Media artifacts | Implemented | Media artifact list/detail/status and worker-backed render lifecycle. |
+| Reports | Implemented | Weekly report endpoints and snapshot-backed reporting. |
+| Local/on-device Gemma via LiteRT-LM | Proposed architecture | Not implemented in this backend repo. Current backend AI provider is OpenRouter. |
+
+## Architecture
+
+```text
+Flutter mobile app
+  |
+  | REST JSON, Bearer token
+  v
+FastAPI backend
+  |
+  |-- Supabase Auth / JWT verification
+  |-- PostgreSQL via SQLAlchemy 2.x
+  |-- Alembic migrations
+  |-- Curriculum graph and question-bank seeds
+  |-- OpenRouter provider for Gemma 4 reasoning
+  |-- Media job queue: Redis or noop
+  |-- Media rendering: Manim / Remotion templates, gTTS voiceover, FFmpeg post-process
+  |-- Media storage: local filesystem or Supabase Storage
 ```
 
-Create a local `.env` from the example file and adjust the database or Supabase values:
+### AI model configuration
+
+The current backend AI provider is OpenRouter. The default model is defined in `app/modules/ai/config.py`:
+
+```text
+AI_PROVIDER=openrouter
+AI_MODEL=google/gemma-4-26b-a4b-it
+```
+
+Override it with `AI_MODEL` or `WICARA_AI_MODEL` in `.env`.
+
+The hackathon writeup describes Gemma 4 via LiteRT-LM as the local-first target architecture. This repository does not currently load a LiteRT runtime, DLL, `.task`, `.tflite`, `.gguf`, or other local model file. If the team adds on-device LiteRT later, document the model download source, runtime library placement, checksum, and mobile build flags in the mobile README.
+
+## Repository Structure
+
+```text
+backend/
+  app/
+    main.py                         FastAPI app, CORS, health check, static media mount
+    api/v1/                         HTTP routes for auth, curriculum, learning, profile, workspace
+    core/                           settings, language helpers, path resolution
+    db/                             SQLAlchemy base/session and Alembic migrations
+    modules/
+      accounts/                     Supabase auth and account/profile contracts
+      ai/                           OpenRouter client and Gemma model config
+      curriculum/                   subjects, concepts, graph seed/service
+      evidence/                     image evidence upload
+      inputs/                       normalized input event models/services
+      learning/                     tracks, media artifacts, reports, animation jobs
+      learning_goal_resolution/     goal resolver and selected concept flow
+      pretests/                     adaptive pretest workflow
+      posttests/                    lesson posttest workflow
+      workspaces/                   workspace timeline, tutor flow, mastery updates
+  bank_soal/seeds/                  question-bank seed JSON files
+  tests/                            API, service, model, provider tests
+  wicara_mvp_10_manim_templates/    Manim template library and samples
+  wicara_remotion_templates/        Remotion template library
+  alembic.ini
+  pyproject.toml
+  .env.example
+```
+
+## Requirements
+
+Minimum:
+
+- Python 3.11 or newer
+- PostgreSQL database, local or Supabase pooler
+- `pip`
+- Git
+
+Recommended for the full media pipeline:
+
+- Redis, unless `MEDIA_JOB_QUEUE_BACKEND=noop`
+- FFmpeg and FFprobe available in `PATH`
+- Manim system dependencies
+- Optional SoX if your local `manim-voiceover` setup requires it
+- Node.js and `npx` for Remotion templates
+
+For the Docker workflow:
+
+- Docker Desktop or Docker Engine with Compose v2
+- This backend directory contains `Dockerfile`, `.dockerignore`, and `docker-compose.yml`
+- This backend directory must also contain `.env`
+
+## Quick Start: Docker Backend
+
+Use this path for backend-only Docker runs. It builds and runs the FastAPI backend on the same API port used during local development.
+
+From this backend directory:
 
 ```powershell
+cd "C:\Users\Asus\Documents\Wicara\wicara-backend"
+```
+
+Make sure the env file exists:
+
+```powershell
+Test-Path .\.env
+```
+
+If it does not exist yet:
+
+```powershell
+Copy-Item .\.env.example .\.env
+```
+
+Edit `.env`, then build and run:
+
+```powershell
+docker compose up --build -d
+```
+
+Open:
+
+```text
+Backend: http://127.0.0.1:8000
+Health:  http://127.0.0.1:8000/health
+Docs:    http://127.0.0.1:8000/docs
+```
+
+Check container status:
+
+```powershell
+docker compose ps
+```
+
+Expected status:
+
+```text
+backend   Up ... (healthy)   0.0.0.0:8000->8000/tcp
+```
+
+Expected health response:
+
+```json
+{"status":"ok"}
+```
+
+If you run Flutter separately, point it to this Docker backend:
+
+```powershell
+cd "C:\Users\Asus\Documents\Wicara\wicara-mobile"
+flutter run -d chrome --dart-define=WICARA_API_BASE_URL=http://127.0.0.1:8000
+```
+
+For Flutter web, keep `WICARA_API_BASE_URL` as `http://127.0.0.1:8000`. The API request is made by the user's browser, so `http://backend:8000` will not work there even though it is valid inside the Docker network.
+
+### Docker Database Setup
+
+If the connected PostgreSQL database is fresh, run migrations:
+
+```powershell
+docker compose run --rm backend alembic upgrade head
+```
+
+Seed or refresh the question bank:
+
+```powershell
+docker compose run --rm backend python -m app.modules.question_bank.seed
+```
+
+Preview the seed without writing:
+
+```powershell
+docker compose run --rm backend python -m app.modules.question_bank.seed --dry-run --strict
+```
+
+### Docker Logs and Stop
+
+Follow logs:
+
+```powershell
+docker compose logs -f backend
+```
+
+Stop containers without deleting data volumes:
+
+```powershell
+docker compose down
+```
+
+Stop containers and delete named volumes such as `backend-tmp`:
+
+```powershell
+docker compose down -v
+```
+
+Use `docker compose down -v` only when you intentionally want to delete generated local media/cache volume data.
+
+### Optional Docker Media Worker
+
+The default command starts the API only. To also run the media worker:
+
+```powershell
+docker compose --profile worker up --build -d
+```
+
+With `MEDIA_JOB_QUEUE_BACKEND=noop`, the worker polls queued jobs from the database. With `MEDIA_JOB_QUEUE_BACKEND=redis`, add a Redis service or point `REDIS_URL` at a reachable Redis instance.
+
+### Docker Equivalent Commands
+
+The backend service runs the equivalent of:
+
+```powershell
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+## Quick Start: Local API Without Media Worker
+
+Use this path when you only need the API, auth, curriculum, learning, workspace, and assessment endpoints running.
+
+```powershell
+cd "D:\Gemma Hackathon\backend"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[test]"
 Copy-Item .env.example .env
 ```
 
-For complete local Manim worker setup and troubleshooting, see [Local Manim Setup](#local-manim-setup).
+Edit `.env`, then run:
 
-Run database migrations when PostgreSQL is available:
+```powershell
+alembic upgrade head
+python -m app.modules.question_bank.seed
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/health
+http://127.0.0.1:8000/docs
+```
+
+Expected health response:
+
+```json
+{"status":"ok"}
+```
+
+## Quick Start: API Plus Media Worker
+
+Install render dependencies:
+
+```powershell
+python -m pip install -e ".[test,render]"
+```
+
+Use these env values for the simplest local demo:
+
+```dotenv
+MEDIA_JOB_QUEUE_BACKEND=noop
+MEDIA_STORAGE_BACKEND=local
+MEDIA_STORAGE_LOCAL_DIR=tmp/media_storage
+MEDIA_STORAGE_PUBLIC_BASE_URL=/media-storage
+MEDIA_TTS_PROVIDER=gtts_voiceover
+MEDIA_TTS_REQUIRED=false
+MEDIA_FFMPEG_BINARY=ffmpeg
+MEDIA_FFPROBE_BINARY=ffprobe
+```
+
+Run the API in terminal 1:
+
+```powershell
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Run the media worker in terminal 2:
+
+```powershell
+python -m app.workers.media_worker
+```
+
+With `MEDIA_JOB_QUEUE_BACKEND=noop`, the worker falls back to polling queued jobs from the database. With Redis, job IDs are pushed to the configured Redis list.
+
+## Environment Variables
+
+Create `.env` from `.env.example`. Do not commit real credentials.
+
+### Minimum local development env
+
+This is enough for the API to boot and use local media storage:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/wicara
+REDIS_URL=redis://localhost:6379/0
+
+MEDIA_JOB_QUEUE_BACKEND=noop
+MEDIA_STORAGE_BACKEND=local
+MEDIA_STORAGE_LOCAL_DIR=tmp/media_storage
+MEDIA_STORAGE_PUBLIC_BASE_URL=/media-storage
+MEDIA_TTS_PROVIDER=gtts_voiceover
+MEDIA_TTS_REQUIRED=false
+MEDIA_FFMPEG_BINARY=ffmpeg
+MEDIA_FFPROBE_BINARY=ffprobe
+
+SUPABASE_PROJECT_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_JWKS_URL=https://YOUR_PROJECT_REF.supabase.co/auth/v1/.well-known/jwks.json
+SUPABASE_ISSUER=https://YOUR_PROJECT_REF.supabase.co/auth/v1
+SUPABASE_JWT_AUDIENCE=authenticated
+SUPABASE_ANON_KEY=replace-with-your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=replace-with-your-service-role-key
+
+OPENROUTER_API_KEY=replace-with-your-openrouter-key
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+AI_PROVIDER=openrouter
+AI_MODEL=google/gemma-4-26b-a4b-it
+```
+
+### Supabase pooler database URL
+
+If your database password contains special characters such as `@`, the settings layer will quote credentials automatically. Still, the safest form is:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:6543/postgres?sslmode=require
+```
+
+For Supabase transaction pooler, use the `*.pooler.supabase.com` host from the Supabase dashboard.
+
+### Full media env reference
+
+```dotenv
+MEDIA_JOB_QUEUE_BACKEND=noop
+MEDIA_JOBS_QUEUE_KEY=wicara:media:jobs
+MEDIA_JOB_DEQUEUE_TIMEOUT_SECONDS=5
+MEDIA_RENDER_OUTPUT_DIR=tmp/media_renders
+MEDIA_RENDER_TIMEOUT_SECONDS=240
+MEDIA_RENDER_MAX_ATTEMPTS=2
+
+MEDIA_REMOTION_PROJECT_DIR=wicara_remotion_templates
+MEDIA_REMOTION_ENTRY=src/index.ts
+MEDIA_REMOTION_TIMEOUT_SECONDS=600
+MEDIA_NPX_BINARY=npx
+MEDIA_NODE_BINARY=node
+MEDIA_REMOTION_CONCURRENCY=2
+
+MEDIA_TTS_PROVIDER=gtts_voiceover
+MEDIA_TTS_REQUIRED=false
+MEDIA_FFMPEG_BINARY=ffmpeg
+MEDIA_FFPROBE_BINARY=ffprobe
+MEDIA_POSTPROCESS_TIMEOUT_SECONDS=180
+MEDIA_POSTPROCESS_MAX_ATTEMPTS=2
+
+MEDIA_STORAGE_BACKEND=local
+MEDIA_STORAGE_LOCAL_DIR=tmp/media_storage
+MEDIA_STORAGE_PUBLIC_BASE_URL=/media-storage
+MEDIA_STORAGE_UPLOAD_TIMEOUT_SECONDS=120
+MEDIA_UPLOAD_MAX_ATTEMPTS=3
+MEDIA_STORAGE_SUPABASE_BUCKET=media-artifacts
+
+MEDIA_DURATION_POLICY_MODE=soft_fail
+MEDIA_DURATION_MIN_SECONDS_SD=60
+MEDIA_DURATION_MIN_SECONDS_SMP=90
+MEDIA_DURATION_MIN_SECONDS_SMA=120
+MEDIA_DURATION_MIN_SECONDS_DEFAULT=90
+```
+
+Allowed values:
+
+| Variable | Values | Notes |
+|---|---|---|
+| `MEDIA_JOB_QUEUE_BACKEND` | `noop`, `redis` | `noop` is easiest for demos; `redis` is better for deployed workers. |
+| `MEDIA_STORAGE_BACKEND` | `local`, `supabase` | `local` serves files from `/media-storage`; `supabase` uploads to Supabase Storage. |
+| `MEDIA_TTS_PROVIDER` | `gtts_voiceover`, `none` | Several older aliases normalize to `gtts_voiceover`. |
+| `MEDIA_DURATION_POLICY_MODE` | `off`, `soft_fail`, `hard_fail` | Controls whether too-short generated videos fail or only record warnings. |
+
+## Database and Seed Commands
+
+Run migrations:
 
 ```powershell
 alembic upgrade head
 ```
 
-Seed or refresh the curriculum and question bank data used by Daily Evaluation V2:
+Rollback one revision:
+
+```powershell
+alembic downgrade -1
+```
+
+Show current DB revision:
+
+```powershell
+alembic current
+```
+
+Seed or refresh question bank data:
 
 ```powershell
 python -m app.modules.question_bank.seed
 ```
 
-Preview the import without committing database changes:
+Preview question-bank import without writing:
 
 ```powershell
 python -m app.modules.question_bank.seed --dry-run --strict
 ```
 
-Run the FastAPI development server:
+## Docker Compose
 
-```powershell
-uvicorn app.main:app --reload
-```
+The Docker files for backend-only runs are inside this backend repository:
 
-Run media worker process for animation jobs:
+- `docker-compose.yml` orchestrates the backend API and optional media worker.
+- `Dockerfile` builds the backend image.
+- `.dockerignore` prevents `.env`, caches, generated media, and Remotion `node_modules` from being copied into the image.
 
-```powershell
-python -m app.workers.media_worker
-```
+Use the full workflow in [Quick Start: Docker Backend](#quick-start-docker-backend).
 
-## Local Manim Setup
+The Compose services expose:
 
-Use this workflow when you want to run the backend together with the local Manim worker for video generation.
+| Service | Port | Purpose |
+|---|---:|---|
+| `backend` | `8000` | FastAPI API, `/health`, `/docs`, static local media mount. |
+| `media-worker` | none | Optional worker, enabled with `--profile worker`. |
 
-### 1. Create and activate venv
+## API Surface
 
-```powershell
-cd "C:\Users\antho\OneDrive\Gambar\Dokumen\wicara\WICARA-BE"
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+All v1 endpoints are mounted under `/api/v1`.
 
-### 2. Install dependencies
+### Auth and profile
 
-```powershell
-python -m pip install --upgrade pip
-python -m pip install -e ".[test,render]"
-```
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/auth/supabase` | Exchange Supabase access token for backend session response. |
+| POST | `/api/v1/auth/sign-in` | Email/password sign-in through Supabase. |
+| POST | `/api/v1/auth/register` | Register through Supabase. |
+| POST | `/api/v1/auth/google` | Google identity flow through Supabase. |
+| POST | `/api/v1/auth/refresh` | Refresh current Supabase session. |
+| GET | `/api/v1/auth/me` | Current auth account. |
+| GET | `/api/v1/me` | Current account/profile summary. |
+| GET | `/api/v1/me/profile` | Learner profile. |
+| PUT | `/api/v1/me/profile/onboarding` | Save onboarding profile. |
 
-Notes:
-- `render` extra is required for `manim-voiceover` (GTTS + OpenAI TTS).
-- This repo pins `setuptools<81` so `manim-voiceover` packages that still import `pkg_resources` keep working.
+### Curriculum and knowledge map
 
-### 3. Prepare env file
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/subjects` | List supported subjects. |
+| GET | `/api/v1/knowledge-map` | Return curriculum graph with learner status. |
+| GET | `/api/v1/knowledge-map/concepts/{concept_code}` | Return one concept. |
+| GET | `/api/v1/materials/search` | Search candidate materials/concepts. |
 
-```powershell
-Copy-Item .env.example .env
-```
+### Learning goals and tracks
 
-Minimal config for local Manim testing:
-- `MEDIA_JOB_QUEUE_BACKEND=noop`
-- `MEDIA_STORAGE_BACKEND=local`
-- `MEDIA_STORAGE_PUBLIC_BASE_URL=/media-storage`
-- `MEDIA_TTS_PROVIDER=gtts_voiceover` or `openai_voiceover`
-- `MEDIA_TTS_REQUIRED=true` (optional, but recommended if audio is mandatory)
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/v1/learning-goals/resolve` | Resolve raw learner goal to candidate concept nodes. |
+| POST | `/api/v1/learning-goals/resolve/{resolution_id}/confirm` | Confirm a proposed concept. |
+| POST | `/api/v1/learning-goals/resolve/{resolution_id}/reprompt` | Ask resolver for another candidate. |
+| POST | `/api/v1/learning-goals/resolve/{resolution_id}/select` | Select one candidate manually. |
+| GET | `/api/v1/learning-goals/active` | Active goal. |
+| GET | `/api/v1/learning-goals/history` | Goal/session history. |
+| POST | `/api/v1/learning-goals/from-concept` | Create goal from a known concept. |
+| POST | `/api/v1/learning-goals/{learning_goal_id}/cancel` | Cancel goal. |
+| POST | `/api/v1/learning-goals/{learning_goal_id}/archive` | Archive goal. |
+| POST | `/api/v1/learning-goals/{learning_goal_id}/path-selection` | Save selected path. |
+| POST | `/api/v1/learning-goals` | Create learning goal. |
+| GET | `/api/v1/learning-goals/{learning_goal_id}` | Read learning goal. |
+| GET | `/api/v1/tracks` | List tracks. |
+| GET | `/api/v1/tracks/{track_id}/modules` | Read modules for a track. |
+| PATCH | `/api/v1/tracks/{track_id}/modules/{module_id}/state` | Update module state. |
+| GET | `/api/v1/home` | Home dashboard summary. |
+| GET | `/api/v1/learning-queue` | Learner queue. |
 
-If you use OpenAI TTS, add:
-- `OPENAI_API_KEY=...`
-- `MEDIA_OPENAI_TTS_MODEL_PRIMARY=gpt-4o-mini-tts`
-- `MEDIA_OPENAI_TTS_MODEL_FALLBACK=tts-1`
-- `MEDIA_OPENAI_TTS_VOICE_PRIMARY=marin`
-- `MEDIA_OPENAI_TTS_VOICE_FALLBACK=alloy`
-- `MEDIA_OPENAI_TTS_RESPONSE_FORMAT=mp3`
+### Assessments
 
-For Supabase pooler, use the pooler connection string from the dashboard with host `*.pooler.supabase.com`.
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/pretests/{learning_goal_id}` | Read legacy learning-goal pretest shape. |
+| POST | `/api/v1/pretests/{assessment_session_id}/answers` | Submit legacy pretest answer. |
+| POST | `/api/v1/pretests/{assessment_session_id}/reasoning` | Submit legacy reasoning/canvas context. |
+| POST | `/api/v1/pretests/start` | Start adaptive pretest session. |
+| GET | `/api/v1/pretests/{session_id}` | Read adaptive pretest session. |
+| POST | `/api/v1/pretests/{session_id}/answers` | Submit adaptive pretest answer. |
+| POST | `/api/v1/pretests/{session_id}/finalize` | Finalize adaptive pretest. |
+| POST | `/api/v1/posttests/start` | Start posttest. |
+| GET | `/api/v1/posttests/{session_id}` | Read posttest. |
+| POST | `/api/v1/posttests/{session_id}/answers` | Submit posttest answer. |
+| POST | `/api/v1/posttests/{session_id}/finalize` | Finalize posttest. |
+| GET | `/api/v1/daily-evaluations/today` | Daily review session. |
+| POST | `/api/v1/daily-evaluations/{assessment_session_id}/answers` | Submit daily review answer. |
 
-### 4. Run migration
+Some route names overlap between the legacy mobile-compatible learning API and the newer adaptive pretest module. Check `/docs` for the active OpenAPI schema generated from the running code.
 
-```powershell
-alembic upgrade head
-```
+### Workspace, media, reports, evidence
 
-### 5. Run API and worker
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/workspaces` | Workspace session history. |
+| POST | `/api/v1/workspaces` | Create workspace. |
+| GET | `/api/v1/workspaces/{workspace_id}` | Read workspace timeline. |
+| POST | `/api/v1/workspaces/{workspace_id}/events` | Submit chat/quiz/canvas/image event. |
+| POST | `/api/v1/workspaces/{workspace_id}/advance-phase` | Advance 5E phase. |
+| POST | `/api/v1/workspaces/{workspace_id}/start-posttest` | Start posttest from workspace. |
+| POST | `/api/v1/workspaces/{workspace_id}/generate-video` | Queue generated video/media job. |
+| POST | `/api/v1/evidence/image-assets` | Upload image evidence. |
+| GET | `/api/v1/media-artifacts` | List media artifacts. |
+| GET | `/api/v1/media-artifacts/{artifact_id}` | Read media artifact. |
+| GET | `/api/v1/media-artifacts/{artifact_id}/status` | Poll media artifact status. |
+| GET | `/api/v1/reports/weekly/latest` | Latest weekly report. |
+| GET | `/api/v1/reports/weekly` | Weekly report. |
 
-Terminal 1:
+## Core Feature Map
 
-```powershell
-uvicorn app.main:app --reload
-```
+| Feature | Backend implementation | Gemma 4 role |
+|---|---|---|
+| Curriculum knowledge graph and prerequisite diagnosis | Curriculum seed/service, goal resolver, adaptive pretest modules, mastery services. | Generate/refine diagnostic reasoning, interpret responses, recommend starting node. |
+| Adaptive multimodal workspace and 5E flow | Workspace sessions, workspace events, phase advance, evidence upload, tutor services. | Interpret text/image/canvas evidence and generate phase-aligned feedback. |
+| Template-guided visualization | Media artifacts, animation jobs, Manim/Remotion template registries, worker. | Generate compact scene specs, examples, labels, formulas, narration text. |
+| Posttest and mastery update | Posttest routes/services and workspace mastery helpers. | Generate and evaluate targeted questions aligned to the remediation path. |
+| Daily evaluation | Daily evaluation endpoints, report snapshots, mastery/review data. | Generate review questions and feedback for scheduled concepts. |
 
-Terminal 2:
+## Media Pipeline
 
-```powershell
-python -m app.workers.media_worker
-```
+The media pipeline is intentionally template-guided:
 
-### 6. Verify audio exists in rendered video
+1. Backend creates a media artifact and render job.
+2. Gemma/OpenRouter can generate a compact scene specification.
+3. A tested Manim or Remotion template renders the visual.
+4. gTTS/manim-voiceover can generate narration.
+5. FFmpeg/FFprobe finalize, inspect, thumbnail, and duration-check output.
+6. Storage writes to local disk or Supabase Storage.
+7. Mobile polls the artifact status and plays `video_url`.
 
-```powershell
-ffprobe -v error -select_streams a -show_entries stream=index -of json "<path-to-final_video.mp4>"
-```
+This avoids fragile raw animation-code generation while still allowing personalized examples, labels, language, and narration.
 
-If audio is present, the `streams` field is not empty.
+## Testing
 
-### 7. Common errors and fixes
-
-1. `ModuleNotFoundError: No module named 'pkg_resources'`
-  Reinstall the render dependency in the active venv:
-
-  ```powershell
-  python -m pip install -e ".[render]"
-  ```
-
-2. `'sox' is not recognized as an internal or external command`
-  Install SoX, then refresh the terminal PATH.
-
-  ```powershell
-  winget install --id ChrisBagwell.SoX --exact --accept-source-agreements --accept-package-agreements
-  where sox
-  sox --version
-  ```
-
-  If `where sox` is still empty, close and reopen the terminal. If it still does not resolve, refresh PATH in the active session:
-
-  ```powershell
-  $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
-  where sox
-  ```
-
-3. `prepared statement "_pg3_0" does not exist` or `DuplicatePreparedStatement`
-  Update to the latest code in this repo. Session/engine already disables prepared statements automatically when a Supabase pooler host is detected.
-
-4. Video is `ready` but has no audio
-  - make sure `manim-voiceover` is installed with `python -m pip install -e ".[render]"`
-  - for OpenAI TTS, confirm `OPENAI_API_KEY` is valid
-  - set `MEDIA_TTS_REQUIRED=true` so the job fails if the audio stream is missing
-  - queue the job again
-
-Important for Phase-4 render worker:
-- Install Manim runtime in the worker environment (`python -m pip install manim`).
-- Ensure system dependencies for Manim are available (for example FFmpeg and LaTeX toolchain if your template needs it).
-- Render output is stored locally under `MEDIA_RENDER_OUTPUT_DIR` (default `tmp/media_renders`).
-
-Important for Phase-5 media post-process:
-- Install render extras for voiceover (`python -m pip install -e \".[render]\"`).
-- Set `MEDIA_TTS_PROVIDER=gtts_voiceover`, `openai_voiceover`, or `none`.
-- For OpenAI TTS, set `OPENAI_API_KEY` and optional `MEDIA_OPENAI_TTS_*` overrides in `.env`.
-- Ensure `ffmpeg` and `ffprobe` binaries are available in PATH, or set `MEDIA_FFMPEG_BINARY` and `MEDIA_FFPROBE_BINARY`.
-- Voiceover is generated in-scene via `manim-voiceover` (`GTTSService` or OpenAI Speech API fallback chain).
-- Worker post-process now focuses on finalization, audio stream probe, thumbnail extraction, and duration gate.
-- Storage upload is handled after post-process. Default backend is local (`MEDIA_STORAGE_BACKEND=local`) and files are served from `/media-storage/*`.
-- Worker writes stage-level structured logs keyed by `job_id`/`artifact_id` and stores timing metrics in `render_meta_json.worker_metrics`.
-- `video_url` remains source of truth; `playback_url` mirrors `video_url` as backward-compatible alias.
-
-Run tests:
+Run all tests:
 
 ```powershell
 python -m pytest
 ```
 
-Current implemented API surface:
+Run focused groups:
 
-- `GET /health`
-- `POST /api/v1/auth/supabase`
-- `POST /api/v1/auth/sign-in`
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/google`
-- `GET /api/v1/auth/me`
-- `GET /api/v1/me`
-- `GET /api/v1/me/profile`
-- `PUT /api/v1/me/profile/onboarding`
-- `GET /api/v1/subjects`
-- `GET /api/v1/knowledge-map?subject=matematika`
-- `GET /api/v1/knowledge-map/concepts/{concept_code}`
-- `POST /api/v1/learning-goals`
-- `GET /api/v1/learning-goals/{learning_goal_id}`
-- `GET /api/v1/pretests/{learning_goal_id}`
-- `POST /api/v1/pretests/{assessment_session_id}/answers`
-- `POST /api/v1/pretests/{assessment_session_id}/reasoning`
-- `GET /api/v1/home`
-- `GET /api/v1/learning-queue`
-- `GET /api/v1/tracks`
-- `GET /api/v1/tracks/{track_id}/modules`
-- `PATCH /api/v1/tracks/{track_id}/modules/{module_id}/state`
-- `POST /api/v1/workspaces`
-- `GET /api/v1/workspaces/{workspace_id}`
-- `POST /api/v1/workspaces/{workspace_id}/events`
-- `POST /api/v1/workspaces/{workspace_id}/generate-video`
-- `GET /api/v1/daily-evaluations/today`
-- `POST /api/v1/daily-evaluations/{assessment_session_id}/answers`
-- `GET /api/v1/media-artifacts`
-- `GET /api/v1/media-artifacts/{artifact_id}`
-- `GET /api/v1/media-artifacts/{artifact_id}/status`
-- `POST /api/v1/animation/queue`
-- `GET /api/v1/animation/status/{job_id}`
-- `GET /api/v1/reports/weekly/latest`
+```powershell
+python -m pytest tests\api
+python -m pytest tests\services
+python -m pytest tests\modules
+```
 
-Media URL contract:
-- `video_url` is the source of truth for playback URL.
-- `playback_url` is kept as backward-compatible alias and mirrors `video_url`.
+Run one file:
 
-## 1. Executive Summary
+```powershell
+python -m pytest tests\api\test_workspace_api.py
+```
 
-WICARA needs a FastAPI backend that can replace the current Flutter mock repositories first, then grow into the adaptive tutoring system described in the architecture reference. The first shippable backend supports [Implemented] auth/onboarding/pretest repository contracts and [Mocked] learning goal generation with durable records. The full adaptive system - graph traversal, mixed input diagnosis, Manim video generation, reports, and spaced review - is [Proposed] and should be introduced behind explicit service boundaries. Backend implementation must not modify `mobile/` until a later integration task asks for API-backed repositories.
+## Troubleshooting
 
-First vertical slice: FastAPI skeleton, PostgreSQL connection, accounts/profile models, auth endpoints, onboarding endpoint, and tests.
+### `OPENROUTER_API_KEY is missing`
 
-## 2. Source-of-Truth Findings
+Add a valid key to `.env`:
 
-| Source | Finding | Planning Impact |
-|---|---|---|
-| `AGENTS.md` | [Implemented] Workspace rules require current-state first, explicit labels, and no mobile edits unless requested. | Backend implementation has started; keep future changes scoped and current-state driven. |
-| `TechImple_Django_Adaptive_Canvas_v6_unified_input.md` | [Proposed] Detailed backend architecture now targets FastAPI, SQLAlchemy/Alembic, unified `InputEvent`, mastery, graph, sessions, Manim/TTS/FFmpeg, Celery, Redis. | Use as advanced architecture reference, not as proof of current implementation. |
-| `techdoc.md` | [Inferred] Mobile-aligned API contracts and DB models exist for auth, onboarding, pretest, home, queue, workspace, canvas, media, reports, knowledge map. | Use these contracts as the first API shape. |
-| `plan.md` | [Historical] `mobile/` started as the latest mock product with mock repos and local state. | Replace mock-backed flows incrementally; backend now exists for auth/profile and curriculum map APIs. |
-| `backend-plan-prompt.md` | [Proposed] Planning prompt now points to `appPlan.md` and FastAPI. | Future implementation agents should start from this file. |
-| `mobile/lib/main.dart` | [Implemented] `WicaraApp` receives `MockAuthRepository`, `MockOnboardingRepository`, `MockPretestRepository`. | Only these three contracts are immediately swappable. |
-| `mobile/lib/src/app/app_routes.dart` | [Implemented] Routes: `/`, `/auth/sign-in`, `/onboarding`, `/learning-goal`, `/pretest`, `/home`, `/workspace-modules`. | API groups must support this product journey. |
-| `mobile/lib/src/features/**/domain` | [Implemented] Domain contracts exist only for auth, onboarding, pretest. | Other APIs are inferred from UI state. |
-| `mobile/lib/src/features/home/presentation/app_home_page.dart` | [Mocked] Home, queue, gallery, daily evaluation, reports, profile, knowledge map are local UI/state. | Backend can expose APIs, but mobile clients do not exist yet. |
-| `mobile/lib/src/features/workspace/presentation/workspace_modules_page.dart` | [Mocked] Chat, explanation, quiz, video generation, canvas sent events are local state. | Workspace backend should be event-driven before AI generation. |
-| `mobile/lib/src/features/pretest/presentation/widgets/fishbone_canvas.dart` | [Implemented] Canvas captures local strokes, shapes, eraser, attachment flag, grid, zoom/pan, save version, send version. | Backend should not persist stroke history; when the learner sends canvas work, mobile exports it as an image attachment for chatbot/evaluation. |
+```dotenv
+OPENROUTER_API_KEY=replace-with-your-openrouter-key
+```
 
-## 3. Backend Scope and Non-Scope
+### Supabase token verification fails
 
-### In Scope
+Check:
 
-| Item | Label | Scope |
-|---|---|---|
-| FastAPI backend skeleton | Proposed | `app/main.py`, routers, settings, DB session, Alembic, tests. |
-| Auth and account session | Inferred | Password sign-in and Google sign-in contract compatible with Flutter. |
-| Learner profile/onboarding | Inferred | Persist current `OnboardingProfile` fields and selected subjects. |
-| Learning goals and pretest bootstrap | Inferred | Store raw topic, create initial pretest session, return status. |
-| Assessment attempts | Inferred | Store MC answer, confidence, reasoning, optional image evidence reference, evaluation result. |
-| Unified `InputEvent` | Proposed | Canonical event table for text, MC answer, image evidence, and mixed input. |
-| Canvas image attachment | Inferred/Proposed | Mobile keeps canvas editing local; backend receives only exported image evidence when the user sends it. |
-| Home/queue/track read APIs | Inferred | Return data currently hardcoded in UI. |
-| Media artifact job model | Proposed | Queue/status rows before real Manim rendering. |
-| Knowledge graph and mastery | Proposed | PostgreSQL adjacency list plus learner state. |
-| Reports and streaks | Inferred | Derived from persisted activity, not manually entered. |
+- `SUPABASE_PROJECT_URL`
+- `SUPABASE_JWKS_URL`
+- `SUPABASE_ISSUER`
+- `SUPABASE_JWT_AUDIENCE`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_JWT_SECRET` only if your Supabase project still signs access tokens with HS256
 
-### Non-Scope
+### Supabase storage upload fails
 
-| Item | Label | Reason |
-|---|---|---|
-| Mobile implementation edits | Implemented rule | User asked not to modify `mobile/` for planning. |
-| Full unrestricted chatbot | Proposed non-goal | Session router must keep learning context and create sub-sessions when needed. |
-| Full LMS/admin product | Proposed non-goal | WICARA is a learning engine, not a school management suite. |
-| Production OAuth launch | Deferred | Google endpoint can validate ID tokens later; MVP can use a controlled stub. |
-| Real Manim rendering in Milestone 1 | Deferred | First ship durable job records and status API. |
+If `MEDIA_STORAGE_BACKEND=supabase`, set:
 
-### Deferred
+```dotenv
+SUPABASE_SERVICE_ROLE_KEY=replace-with-service-role-key
+MEDIA_STORAGE_SUPABASE_BUCKET=media-artifacts
+```
 
-| Item | Label | First Dependency |
-|---|---|---|
-| OCR and symbolic image parser | Proposed | Image evidence and input events exist. |
-| OpenRouter grading and tutor response | Proposed | Assessment attempts and service interfaces exist. |
-| SSE/WebSocket streaming | Proposed | REST endpoints and job status lifecycle exist. |
-| Cross-subject graph unlock | Proposed | Single-subject graph and mastery state work. |
-| Real TTS/FFmpeg media pipeline | Proposed | Media artifact and render job model exists. |
+The bucket must exist in Supabase Storage.
 
-## 4. Proposed Backend Stack
+### Redis connection fails
 
-| Layer | Choice | Reason |
-|---|---|---|
-| Framework | FastAPI | Async-friendly API framework, OpenAPI by default, good Pydantic integration. |
-| API | REST first, optional SSE/WebSocket later | Current mobile contracts are request/response; streaming is only needed for tutor/media progress. |
-| ORM | SQLAlchemy 2.x | Explicit relational model, PostgreSQL support, testable repositories. |
-| Migrations | Alembic | Versioned DB migration workflow for SQLAlchemy. |
-| Schemas | Pydantic v2 | Request/response validation and generated OpenAPI schema. |
-| Database | PostgreSQL | Stores accounts, profiles, assessments, graph, mastery, image/media references, reports. |
-| Auth | JWT access token initially | Matches current mobile `token` field and keeps client swap simple. |
-| Async jobs | Celery + Redis | Durable workers for OCR, AI grading, Manim, TTS, FFmpeg, reports. |
-| Cache/session | Redis | Job status cache, rate limits, LLM/media cache, short-lived session data. |
-| Media storage | object storage abstraction | Local filesystem in dev, S3-compatible store later. |
-| AI integration | OpenRouter Gemma, Google Vision/Tesseract, Google TTS, Manim, FFmpeg | Proposed engines from architecture reference. |
-| Observability | `/health`, structured logs, job status, metrics hooks | Required for debugging async media and AI workflows. |
+For local demos, avoid Redis:
 
-## 5. Planned Backend Directory Structure
+```dotenv
+MEDIA_JOB_QUEUE_BACKEND=noop
+```
 
-The repository already contains the current FastAPI skeleton, account/profile module, curriculum module, migrations, and tests. The structure below is the target shape for future milestones; some modules listed here are still planned.
+For Redis-backed workers, start Redis and set:
+
+```dotenv
+MEDIA_JOB_QUEUE_BACKEND=redis
+REDIS_URL=redis://localhost:6379/0
+```
+
+### FFmpeg or FFprobe not found
+
+Install FFmpeg and confirm:
+
+```powershell
+ffmpeg -version
+ffprobe -version
+```
+
+Or point directly to binaries:
+
+```dotenv
+MEDIA_FFMPEG_BINARY=C:\path\to\ffmpeg.exe
+MEDIA_FFPROBE_BINARY=C:\path\to\ffprobe.exe
+```
+
+### `ModuleNotFoundError: No module named 'pkg_resources'`
+
+Install render extras:
+
+```powershell
+python -m pip install -e ".[render]"
+```
+
+## Project Links
+
+- Mobile repository: https://github.com/brianaltan/wicara-mobile
+- Backend repository: https://github.com/Nadekoooo/WICARA-BE
+- Demo video: https://www.youtube.com/watch?v=7fYYomch5Wk
+- Kaggle writeup: https://www.kaggle.com/competitions/gemma-4-good-hackathon/writeups/wicara-adaptive-ai-tutoring-gemma
+
+## Authors
+
+- Rahardi Salim
+- Anthony Edbert Feriyanto
+- Christian Yudistira Hermawan
+- Vincent Davis Leonard
+- Brian Altan
+
+## License and Citation
+
+The writeup text is released under the Attribution 4.0 International (CC BY 4.0) license.
+
+Citation:
 
 ```text
-backend/
-  pyproject.toml
-  alembic.ini
-  README.md
-  app/
-    main.py
-    api/
-      v1/
-        router.py
-        auth.py
-        onboarding.py
-        learning_goals.py
-        pretests.py
-        home.py
-        workspaces.py
-        media.py
-        reports.py
-    core/
-      config.py
-      security.py
-      celery_app.py
-      errors.py
-      logging.py
-    db/
-      base.py
-      session.py
-      migrations/
-    modules/
-      accounts/
-      curriculum/
-      graph/
-      mastery/
-      sessions/
-      inputs/
-      assessments/
-      explanations/
-      media/
-      reports/
-      observability/
-  tests/
-    api/
-    services/
-    contracts/
+Rahardi Salim, Anthony Edbert Feriyanto, Christian Yudistira Hermawan,
+Brian Altan, Vincent Davis Leonard. Wicara: A Learning System That Finds
+What Students Are Missing.
+https://www.kaggle.com/competitions/gemma-4-good-hackathon/writeups/wicara-adaptive-ai-tutoring-gemma.
+2026. Kaggle.
 ```
-
-| Path | Responsibility | First Files |
-|---|---|---|
-| `backend/app/main.py` | FastAPI application factory and router include. | `main.py` |
-| `backend/app/api/v1/` | HTTP route modules grouped by mobile feature area. | `router.py`, `auth.py`, `onboarding.py`, `pretests.py` |
-| `backend/app/core/` | Settings, security, error envelope, Celery app, logging. | `config.py`, `security.py`, `errors.py`, `celery_app.py` |
-| `backend/app/db/` | SQLAlchemy base/session and Alembic integration. | `base.py`, `session.py` |
-| `backend/app/modules/accounts/` | User accounts, auth service, profile service. | `models.py`, `schemas.py`, `service.py`, `repository.py` |
-| `backend/app/modules/assessments/` | Pretest/daily/quiz sessions and attempts. | `models.py`, `schemas.py`, `service.py` |
-| `backend/app/modules/inputs/` | Unified evidence pipeline for text, answers, and image-backed canvas evidence. | `models.py`, `schemas.py`, `service.py` |
-| `backend/tests/` | API, service, migration, contract tests. | `test_health.py`, `test_auth_api.py` |
-
-## 6. Domain Modules
-
-| Module | Purpose | Owned Tables | Primary Endpoints | Service Responsibilities | Dependencies | TechImple Alignment | First Milestone |
-|---|---|---|---|---|---|---|---|
-| Accounts | Identity and token sessions. | `user_accounts`, optional `auth_sessions` | `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/google`, `GET /api/v1/me` | Validate credentials, create user/session DTO, issue token. | DB, security config. | TechImple had student profile foundation; FastAPI implementation uses JWT and Pydantic. | M1 |
-| Curriculum/Profile | Learner profile and subject selection. | `learner_profiles`, `subjects`, `learner_subjects` | `GET /api/v1/subjects`, `PUT /api/v1/me/profile/onboarding` | Save profile, bind selected subjects, mark onboarding complete. | Accounts. | Aligns with onboarding phase and curriculum binding. | M1-M2 |
-| Learning Sessions and Tracks | Convert goals into tracks/modules and sessions. | `learning_goals`, `learning_tracks`, `track_modules`, `learning_sessions` | `POST /api/v1/learning-goals`, `GET /api/v1/tracks`, `GET /api/v1/tracks/{id}/modules` | Store raw topic, create pretest session, create initial track/module records. | Curriculum, graph, mastery. | Aligns with parent/child sessions and path engine. | M2-M5 |
-| Unified Inputs | Canonical evidence abstraction. | `input_events` | `POST /api/v1/workspaces/{id}/events`, future `POST /api/v1/sessions/{id}/input` | Normalize text, MC, image evidence, and mixed input into event records. | Sessions, assessments, image assets. | Directly implements `InputEvent` contract. | M3-M6 |
-| Canvas image evidence | Treat canvas as a mobile-local drawing surface that exports an image when sent. | optional `image_assets` later | `POST /api/v1/workspaces/{id}/events` with `image_asset_id` or image metadata | Link exported images to workspace/input events; do not persist stroke batches or versioned canvas history. | Inputs, media storage. | Implements image-backed canvas evidence without backend canvas state. | M6 |
-| Assessments/Pretest | Adaptive and formative assessment storage. | `assessment_sessions`, `assessment_questions`, `assessment_options`, `assessment_attempts` | `GET /api/v1/pretests/{goal_id}`, `POST /api/v1/pretests/{session_id}/answers`, `POST /api/v1/pretests/{session_id}/reasoning` | Create sessions/questions, persist answer/reasoning, return KnowledgeState-compatible result. | Accounts, goals, mastery, inputs. | Aligns with KST-inspired assessment and mixed answer modes. | M3-M4 |
-| Knowledge Graph | Subject concepts and prerequisites. | `knowledge_concepts`, `concept_edges` | `GET /api/v1/knowledge-map?subject=math` | Seed graph nodes/edges, expose learner-specific graph DTO. | Curriculum, mastery. | Uses Postgres adjacency list first; Neo4j later only if needed. | M8 |
-| Mastery | Learner-specific concept state. | `learner_concept_states` | Internal first; exposed via home/map/report APIs. | Update mastery, confidence, review dates, readiness status. | Assessments, graph, inputs. | Aligns with mastery formula and graph propagation. | M4-M8 |
-| Explanations | Tutor response generation. | `explanation_requests` optional later, prompt versions | `POST /api/v1/workspaces/{id}/events` response; future stream endpoint | Generate text response, classify intent, decide inline vs sub-session. | Inputs, sessions, AI. | Aligns with session router and localized explanation engine. | Deferred after M6 |
-| Media/Manim Video | Generated video artifacts and render jobs. | `media_artifacts`, `manim_render_jobs` | `POST /api/v1/workspaces/{id}/generate-video`, `GET /api/v1/media-artifacts`, `GET /api/v1/media-artifacts/{id}` | Create artifact/job, track lifecycle, store URLs/transcript/notes/errors. | Sessions, object storage, Celery. | Aligns with Manim/TTS/FFmpeg pipeline. | M7 |
-| Reports/Streaks | Learning reports and activity streaks. | `learning_reports`, `streak_ledgers` | `GET /api/v1/reports/weekly/latest`, `GET /api/v1/daily-evaluations/today` | Aggregate attempts/events, build weekly summaries, calculate streaks. | Assessments, mastery, sessions. | Aligns with forgetting curve and report engine. | M9 |
-| Observability | Runtime and job health. | optional `job_logs`, metrics backend later | `GET /api/v1/health`, `GET /api/v1/health/jobs` | Check FastAPI, DB, Redis, Celery, media, AI provider status. | All infra. | Aligns with explicit health checks. | M1, expanded later |
-
-## 7. Database Model Plan
-
-| Order | Table | Purpose | Depends On | MVP Fields |
-|---|---|---|---|---|
-| 1 | `user_accounts` | Identity, role, provider. | none | `id`, `email`, `phone`, `password_hash`, `auth_provider`, `provider_subject`, `role`, `display_name`, `status`, timestamps |
-| 2 | `learner_profiles` | Onboarding profile. | `user_accounts` | `id`, `user_id`, `full_name`, `country_name`, `grade_level`, `preferred_language`, `study_goal`, `daily_study_time_label`, `onboarding_completed_at` |
-| 3 | `subjects` | Available subject catalog. | none | `id`, `code`, `name`, `is_active` |
-| 4 | `learner_subjects` | Learner selected subjects. | `user_accounts`, `subjects` | `id`, `user_id`, `subject_id`, `created_at` |
-| 5 | `knowledge_concepts` | Graph nodes. | `subjects` | `id`, `subject_id`, `code`, `title`, `description`, `grade_band`, `metadata` |
-| 6 | `concept_edges` | Prerequisite/cross-topic edges. | `knowledge_concepts` | `id`, `from_concept_id`, `to_concept_id`, `edge_type`, `weight` |
-| 7 | `learner_concept_states` | Per-learner mastery state. | `user_accounts`, `knowledge_concepts` | `id`, `user_id`, `concept_id`, `status`, `mastery_score`, `confidence_score`, `last_evaluated_at`, `next_review_at`, `evidence_count` |
-| 8 | `learning_goals` | Raw topic request. | `user_accounts`, `subjects` | `id`, `user_id`, `raw_topic`, `normalized_topic`, `subject_id`, `status`, timestamps |
-| 9 | `learning_tracks` | Personalized path. | `user_accounts`, `learning_goals` | `id`, `user_id`, `learning_goal_id`, `title`, `subtitle`, `status`, `progress_percent`, `current_module_id` |
-| 10 | `track_modules` | Track units. | `learning_tracks`, `knowledge_concepts` | `id`, `track_id`, `concept_id`, `title`, `description`, `estimated_minutes`, `difficulty_label`, `sort_order`, `status` |
-| 11 | `learning_sessions` | Parent/child learning or assessment sessions. | `user_accounts`, `track_modules`, `knowledge_concepts` | `id`, `user_id`, `parent_session_id`, `track_id`, `module_id`, `target_concept_id`, `session_type`, `status`, `current_stage`, `context_json` |
-| 12 | `assessment_sessions` | Pretest/daily/quiz grouping. | `user_accounts`, `learning_tracks`, `track_modules` | `id`, `user_id`, `track_id`, `module_id`, `learning_goal_id`, `session_type`, `status`, `title`, timestamps |
-| 13 | `assessment_questions` | Question definitions. | `assessment_sessions`, `knowledge_concepts` | `id`, `session_id`, `concept_id`, `step_label`, `topic`, `prompt`, `helper_text`, `difficulty_label`, `sort_order`, `metadata` |
-| 14 | `assessment_options` | MC options. | `assessment_questions` | `id`, `question_id`, `option_key`, `label`, `text`, `is_correct`, `sort_order` |
-| 15 | `image_assets` | Exported images from canvas/uploads when evidence needs durable storage. | `user_accounts` | `id`, `user_id`, `source`, `mime_type`, `storage_url`, `width`, `height`, `metadata`, `created_at` |
-| 16 | `input_events` | Canonical evidence. | `learning_sessions`, `assessment_sessions`, `image_assets` | `id`, `user_id`, `learning_session_id`, `assessment_session_id`, `parent_session_id`, `concept_id`, `event_type`, `text_payload`, `selected_option_id`, `image_asset_id`, `raw_payload`, `parsed_problem`, `parsed_work`, `confidence`, `created_at` |
-| 17 | `assessment_attempts` | Learner answer and evaluation. | `assessment_sessions`, `assessment_questions`, `assessment_options`, `image_assets`, `input_events` | `id`, `session_id`, `question_id`, `selected_option_id`, `confidence`, `explanation_text`, `used_canvas`, `image_asset_id`, `input_event_id`, `score`, `evaluated_result`, `submitted_at` |
-| 18 | `workspace_sessions` | Active module workspace. | `user_accounts`, `learning_tracks`, `track_modules` | `id`, `user_id`, `track_id`, `module_id`, `current_topic`, `content_mode`, `status`, timestamps |
-| 19 | `workspace_events` | Chat/canvas-image/quiz/media timeline. | `workspace_sessions`, `image_assets`, `media_artifacts` | `id`, `workspace_session_id`, `event_index`, `event_type`, `actor_type`, `text_payload`, `image_asset_id`, `media_artifact_id`, `metadata`, `created_at` |
-| 20 | `media_artifacts` | Generated media visible in workspace/gallery. | `user_accounts`, `workspace_sessions`, `learning_tracks`, `track_modules`, `knowledge_concepts` | `id`, `user_id`, `workspace_session_id`, `track_id`, `module_id`, `concept_id`, `artifact_type`, `title`, `subtitle`, `duration_seconds`, `status`, `storage_url`, `thumbnail_url`, `transcript_text`, `note_markdown`, `generation_payload`, timestamps |
-| 21 | `manim_render_jobs` | Dedicated video render/debug record. | `media_artifacts` | `id`, `artifact_id`, `source_session_id`, `source_module_id`, `source_concept_id`, `scene_template`, `scene_spec_json`, `render_params_json`, `status`, `language`, `voice`, `script_text`, `transcript_text`, `subtitle_url`, `manim_output_url`, `merged_video_url`, `compressed_video_url`, `thumbnail_url`, `duration_seconds`, `ffmpeg_metadata_json`, `error_detail`, `retry_count`, timestamps |
-| 22 | `learning_reports` | Weekly/periodic aggregation. | `user_accounts` | `id`, `user_id`, `period_start`, `period_end`, `report_type`, `summary_json`, `created_at` |
-| 23 | `streak_ledgers` | Daily activity ledger. | `user_accounts` | `id`, `user_id`, `activity_date`, `activity_type`, `created_at` |
-
-## 8. API Contract Plan
-
-### Auth APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| POST | `/api/v1/auth/sign-in` | Replace `AuthRepository.signIn`. | `email_or_phone`, `password`, `role` | `user_id`, `display_name`, `role`, `token` |
-| POST | `/api/v1/auth/google` | Replace `signInWithGoogle`. | `id_token`, `role` | same session DTO |
-| GET | `/api/v1/me` | Fetch current account/profile. | Bearer token | account + profile summary |
-
-### Onboarding/Profile APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| GET | `/api/v1/subjects` | Populate selectable subjects later. | none | subject list |
-| PUT | `/api/v1/me/profile/onboarding` | Replace `OnboardingRepository.saveProfile`. | `full_name`, `country`, `grade_level`, `preferred_language`, `selected_subjects`, `study_goal`, `daily_study_time` | profile summary, `onboarding_completed=true` |
-
-### Learning Goal APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| POST | `/api/v1/learning-goals` | Replace local generate-pretest delay. | `raw_topic` | `learning_goal_id`, `status`, `subject`, `pretest_session_id` |
-| GET | `/api/v1/learning-goals/{id}` | Poll goal/pretest state. | none | goal status and pretest link |
-
-### Pretest APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| GET | `/api/v1/pretests/{learning_goal_id}` | Return pretest session and questions. | none | `session_id`, question list |
-| POST | `/api/v1/pretests/{session_id}/answers` | Replace `submitAnswer`. | `question_id`, `option_id`, `confidence` | accepted attempt ID |
-| POST | `/api/v1/pretests/{session_id}/reasoning` | Replace `submitReasoning`. | `question_id`, `option_id`, `confidence`, `explanation`, `used_canvas`, `image_asset_id` | `KnowledgeState` DTO: `skill`, `gap_label`, `message`, `path_title`, `path_meta`, `path_description` |
-
-### Home and Queue APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| GET | `/api/v1/home` | Replace hardcoded dashboard. | none | display name, streak, next queue item, daily evaluation summary, active tracks |
-| GET | `/api/v1/tracks` | Replace tracks tab. | filters optional | track list |
-| GET | `/api/v1/tracks/{track_id}/modules` | Replace queue/module cards. | none | ordered modules with status and metadata |
-| GET | `/api/v1/daily-evaluations/today` | Replace daily eval local questions. | none | assessment session and questions |
-| POST | `/api/v1/daily-evaluations/{session_id}/answers` | Submit daily evaluation. | question answer payload | evaluation result and updated review state |
-
-### Workspace, Unified Input, and Canvas Image APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| POST | `/api/v1/workspaces` | Create/resume module workspace. | `track_id`, `module_id` | workspace state and timeline |
-| GET | `/api/v1/workspaces/{workspace_id}` | Load active timeline. | none | topic, events, last sent image, latest media |
-| POST | `/api/v1/workspaces/{workspace_id}/events` | Submit text/quiz/canvas-image/media event. | `event_type`, actor, text/media payload, optional `image_asset_id` | event + optional tutor response |
-| POST | `/api/v1/assets/images` | Optional future upload for exported canvas image evidence. | image file or signed-upload metadata | `image_asset_id`, storage metadata |
-
-### Media/Gallery/Manim APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| POST | `/api/v1/workspaces/{workspace_id}/generate-video` | Queue generated video. | `module_id`, `concept_id`, `mode`, `language` | `artifact_id`, `job_id`, `status=queued` |
-| GET | `/api/v1/media-artifacts` | Replace gallery tab. | filters optional | artifact cards |
-| GET | `/api/v1/media-artifacts/{artifact_id}` | Video detail. | none | playable URLs, transcript, notes, job status |
-| GET | `/api/v1/media-artifacts/{artifact_id}/status` | Poll render status. | none | status, progress, error if failed |
-
-### Report and Knowledge Map APIs
-
-| Method | Path | Purpose | Request | Response |
-|---|---|---|---|---|
-| GET | `/api/v1/reports/weekly/latest` | Replace learning report screen. | none | report metrics, trends, notes |
-| GET | `/api/v1/knowledge-map` | Replace map UI data. | `subject=math` | nodes, edges, learner statuses |
-| GET | `/api/v1/streaks/current` | Optional focused streak endpoint. | none | current streak, ledger summary |
-
-## 9. Service Layer Plan
-
-| Service | Responsibility | Inputs | Outputs | Initial Mock Strategy |
-|---|---|---|---|---|
-| `AuthService` | Authenticate, create account session, issue JWT. | sign-in DTO, Google token DTO | `AuthSession` DTO | Password accepts seeded/test user; Google validates later. |
-| `ProfileService` | Save onboarding profile and subjects. | profile DTO | profile summary | Real DB writes from M1. |
-| `LearningGoalService` | Store topic and bootstrap pretest. | raw topic, user | goal + pretest session | Rule-based subject guess, fixed first question. |
-| `PretestService` | Create pretest, persist answer/reasoning, return KnowledgeState. | answers, reasoning, optional image ref | attempt, KnowledgeState | Deterministic evaluator first, AI later. |
-| `SessionRouterService` | Decide next action for workspace input. | latest `InputEvent`, active session | route decision | Echo/choice-based response first. |
-| `InputEventService` | Normalize evidence into canonical event. | text, MC, image, mixed payload | `input_event_id` | Store raw/parsed payload with no AI parse initially. |
-| `ImageAssetService` | Store or reference exported images from canvas/uploads. | image file or upload metadata | `image_asset_id` | Local/object-storage reference only; no canvas stroke history. |
-| `MasteryService` | Update learner concept state. | attempts, parser output | status/mastery update | Fixed rule mapping for first pretest. |
-| `PathEngineService` | Build next modules/queue. | goal, graph, mastery | track/modules | Seeded Calculus path first. |
-| `ExplanationService` | Generate tutor text and explanation artifacts. | input event, context | response text, prompt metadata | Static templates until OpenRouter integration. |
-| `ManimMediaService` | Create media artifact and render job. | workspace/module/concept/language | artifact/job status | Queue job row; worker can mark mock `READY`. |
-| `ReportService` | Build weekly report and streak summary. | events, attempts, mastery | report DTO | Aggregate deterministic DB data. |
-| `ObservabilityService` | Health checks and job diagnostics. | infra clients | status payload | Real DB/Redis checks when configured. |
-
-## 10. Async Jobs and Media Pipeline
-
-| Job | Trigger | Input | Output | MVP Behavior | Future Behavior |
-|---|---|---|---|---|---|
-| `GeneratePretestJob` | `POST /learning-goals` | user, goal, subject | assessment session/questions | Create deterministic seeded questions synchronously or eager Celery. | Adaptive KST question selection. |
-| `ParseImageEvidenceJob` | canvas image sent | image asset ID | parser output JSON | Mark unparsed and keep image reference only. | OCR/math symbol parsing, partial-work detection from image. |
-| `GradeAssessmentJob` | answer/reasoning submitted | attempt/input event | score + KnowledgeState | Rule-based answer check. | OpenRouter/rubric mixed-input grading. |
-| `GenerateExplanationJob` | workspace text or explanation choice | session context | tutor response | Static response template. | OpenRouter localized explanation and analogy. |
-| `GenerateManimVideoJob` | generate-video endpoint | artifact/job scene spec | raw Manim MP4 URL | Create job and optional fake ready artifact in dev. | Render Manim scene with parameters. |
-| `MergeVoiceoverJob` | Manim render complete | raw video, script, voice | merged video URL | Not run in MVP. | TTS generation and FFmpeg merge. |
-| `CompressVideoJob` | merged video complete | video URL, target profile | compressed URL + metadata | Not run in MVP. | Low-bandwidth profiles and thumbnails. |
-| `BuildReportJob` | weekly schedule or request | events, attempts, mastery | `learning_reports` row | On-demand deterministic aggregation. | Scheduled report generation with recommendations. |
-
-## 11. Mobile Integration Strategy
-
-| Mobile Contract | Current Mock | Backend Replacement | Notes |
-|---|---|---|---|
-| `AuthRepository.signIn` | `MockAuthRepository` | `POST /api/v1/auth/sign-in` | Response must keep `userId`, `displayName`, `role`, `token`. |
-| `AuthRepository.signInWithGoogle` | `MockAuthRepository` | `POST /api/v1/auth/google` | MVP can return same DTO; real token verification later. |
-| `OnboardingRepository.saveProfile` | `MockOnboardingRepository` | `PUT /api/v1/me/profile/onboarding` | Must persist full current `OnboardingProfile`. |
-| `LearningGoalPage._generatePretest` | Local delay | `POST /api/v1/learning-goals` then route to pretest | No repo exists yet; add later only when mobile integration is requested. |
-| `PretestRepository.submitAnswer` | `MockPretestRepository` | `POST /api/v1/pretests/{session_id}/answers` | Current mobile hardcodes question ID; backend should tolerate client IDs or map them. |
-| `PretestRepository.submitReasoning` | `MockPretestRepository` | `POST /api/v1/pretests/{session_id}/reasoning` | Return `KnowledgeState` with exact fields expected by Flutter. |
-| Home/queue/report/map | Local UI state | home/tracks/reports/map APIs | Add API clients later after backend stable. |
-| Workspace chat/canvas/video | Local UI state | workspace/events/image/media APIs | Canvas editing remains local; sent canvas work is exported as an image event. |
-
-DTO strategy: backend JSON uses snake_case; Flutter API repositories can map to Dart camelCase/domain models. Error format should be stable:
-
-```json
-{
-  "error": {
-    "code": "validation_error",
-    "message": "Please complete your profile.",
-    "details": {}
-  }
-}
-```
-
-Session storage expectation: mobile currently has no persisted session layer. Backend should return JWT now; later mobile adds secure storage and attaches `Authorization: Bearer <token>`.
-
-Backward-compatible replacement plan: implement `ApiAuthRepository`, then `ApiOnboardingRepository`, then `ApiPretestRepository`; keep mock repositories selectable during development.
-
-## 12. Implementation Milestones
-
-| Milestone | Deliverables | Acceptance Criteria | Tests | Files Likely Created | Exit Condition |
-|---|---|---|---|---|---|
-| M1: FastAPI skeleton + accounts/profile | FastAPI app, settings, DB session, Alembic baseline, `user_accounts`, `learner_profiles`, auth/profile endpoints. | `/health`, sign-in, onboarding pass tests; no mobile edits. | `pytest tests/api/test_health.py tests/api/test_auth.py tests/api/test_onboarding.py` | `backend/app/main.py`, `core/*`, `db/*`, `modules/accounts/*` | Current auth/onboarding contracts can be served by API. |
-| M2: Subjects/curriculum seed + learning goal | `subjects`, `learner_subjects`, `learning_goals`, seed command/script, goal endpoint. | Goal returns `pretest_ready` or `pretest_pending` with pretest session ID. | API tests plus seed idempotency test. | `modules/curriculum/*`, `modules/sessions/*` | Topic creation can replace local generate delay. |
-| M3: Pretest sessions/questions/answers | Assessment models and pretest read/answer endpoints. | `GET /pretests/{goal_id}` returns current mobile-shaped question; answer submit persists attempt. | Contract tests for `PretestQuestion` and `PretestAnswer`. | `modules/assessments/*` | `submitAnswer` can be API-backed. |
-| M4: Reasoning + KnowledgeState mock | Reasoning endpoint, deterministic evaluator, initial mastery row updates, track bootstrap. | Returns exact `KnowledgeState` fields and creates first track/modules. | API/service tests for correct DTO and DB writes. | `modules/mastery/*`, `modules/graph/*` partial | `submitReasoning` can be API-backed. |
-| M5: Home/tracks summary | Home, tracks, modules APIs from persisted records. | Dashboard/queue data no longer needs hardcoded server assumptions. | API tests for `/home`, `/tracks`, `/tracks/{id}/modules`. | `api/v1/home.py`, sessions services | Home UI has a backend contract. |
-| M6: Workspace events + image-backed canvas evidence | Workspace session, events, input events, optional image assets. | Text, quiz, and sent canvas images create `input_events` and `workspace_events`; no stroke/history persistence. | API + serializer tests for workspace/image event DTO. | `modules/inputs/*`, workspace APIs | Workspace timeline is durable and canvas evidence is image-based. |
-| M7: Media artifacts + Manim job model | `media_artifacts`, `manim_render_jobs`, generate-video/status/gallery APIs. | Request creates artifact/job with inspectable status and error fields. | Job model and API tests. | `modules/media/*`, Celery app config | Video UI can poll artifact status. |
-| M8: Knowledge graph + mastery state | Graph seed, map API, learner states. | Math graph returns nodes/edges/statuses like current UI. | Graph service tests, map API tests. | `modules/graph/*`, `modules/mastery/*` | Knowledge map backed by DB. |
-| M9: Reports/streaks + daily evaluation | Daily eval generation/submission, weekly report, streak ledger. | Daily answer updates attempt/mastery/streak; weekly report returns metrics. | Service/API aggregation tests. | `modules/reports/*` | Progress tab has backend data. |
-
-## 13. Test and Verification Plan
-
-| Layer | Test Type | Command | Acceptance |
-|---|---|---|---|
-| Models | unit/migration | `pytest backend/tests/models` and `alembic upgrade head` | All tables create cleanly; constraints match plan. |
-| APIs | integration | `pytest backend/tests/api` | Every endpoint returns documented status and JSON. |
-| Services | unit | `pytest backend/tests/services` | Deterministic services cover success/error paths. |
-| Serialization | contract | `pytest backend/tests/contracts` | DTOs match Flutter domain models and `techdoc.md`. |
-| Jobs | unit/integration | `pytest backend/tests/jobs` with Celery eager mode | Jobs write expected status transitions. |
-| OpenAPI | schema check | `python -m scripts.export_openapi` later | OpenAPI includes all v1 routes. |
-| Mobile smoke | manual later | run app with API repos later | Auth -> onboarding -> goal -> pretest path works. |
-
-Test data strategy: seed one learner, four subjects, one Math/Calculus concept chain, one learning goal, one pretest session, one workspace, and one media artifact. Keep AI/media tests mocked until provider credentials are explicitly configured.
-
-## 14. Risks and Open Questions
-
-| Risk or Question | Impact | Recommended Decision |
-|---|---|---|
-| Product: exact curriculum source for Indonesia grade mapping is not defined. | Subject/concept seeds may be incomplete. | Start with minimal Calculus sample from current UI, mark curriculum as seed data. |
-| Product: Google sign-in production behavior is undefined. | Auth scope can expand. | Stub compatible endpoint first; add real ID-token verification after credentials are available. |
-| Technical: canvas Flutter classes are private UI internals. | Backend stroke DTOs would drift from mobile implementation. | Do not persist strokes; define an exported image contract, including format, max size, compression, and optional upload flow. |
-| Technical: Manim/TTS/FFmpeg can be operationally heavy. | Media milestone can block core learning flow. | Model artifact/job records first; make rendering a separate worker milestone. |
-| Integration: mobile has no HTTP client or token storage. | Backend cannot be used directly by app yet. | Build backend contracts first; later add API repositories and secure storage. |
-| Timeline: full adaptive AI is larger than hackathon MVP. | Overbuilding risk. | Ship deterministic services first with clear AI extension points. |
-| Data: graph/mastery quality depends on seeded concepts and rubrics. | Recommendations may be shallow. | Seed one high-quality Math path and keep graph API generic. |
-
-## 15. Execution Checklist
-
-- [x] FastAPI stack confirmed.
-- [x] Backend root path confirmed as this repository.
-- [x] PostgreSQL connection strategy configured via `WICARA_DATABASE_URL`.
-- [x] Supabase JWT auth strategy configured for current auth endpoints.
-- [x] Alembic migration workflow configured.
-- [x] Profile onboarding endpoint implemented.
-- [x] Health and profile tests added.
-- [x] Workspace session/event timeline implemented.
-- [x] Unified input event model implemented for workspace evidence.
-- [ ] Canvas image export/upload contract confirmed.
-- [ ] Manim/video artifact model confirmed.
-- [ ] First mobile repository replacement confirmed.
-- [x] Milestone 1 profile/onboarding acceptance criteria accepted.
-- [x] Tests/verification commands known.
-- [ ] No mobile changes required for backend Milestone 1.
-- [ ] No destructive changes required.
-
-## Final Notes
-
-Before production deployment, confirm:
-
-- database URL and local PostgreSQL availability
-- Supabase project URL, JWKS URL, issuer, audience, and anon key
-- whether Celery/Redis is configured immediately or deferred until media/jobs milestones
