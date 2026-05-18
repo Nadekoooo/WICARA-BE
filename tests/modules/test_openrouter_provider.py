@@ -107,7 +107,7 @@ def test_text_request_uses_openrouter_chat_completion_payload():
     assert body["response_format"] == {"type": "json_object"}
     assert body["messages"] == [
         {"role": "system", "content": "Return a short greeting."},
-        {"role": "user", "content": [{"type": "text", "text": "Say hello."}]},
+        {"role": "user", "content": "Say hello."},
     ]
 
 

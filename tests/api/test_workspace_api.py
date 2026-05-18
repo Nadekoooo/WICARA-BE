@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_session
 from app.modules.accounts.dependencies import get_current_account
 from app.modules.accounts.models import UserAccount
+from app.modules.workspaces.models import WorkspaceSession
 
 
 ACCOUNT_ID = UUID("33333333-3333-4333-8333-333333333333")
@@ -159,6 +160,50 @@ def test_workspace_quiz_event_updates_mastery_and_completes_module(client):
     assert payload["mastery_update"]["evidence_count"] >= 8
     assert payload["mastery_update"]["mastery_score"] > 0
     assert payload["mastery_update"]["status"] == "ready"
+
+    modules_response = client.get(f"/api/v1/tracks/{track_id}/modules")
+    modules = modules_response.json()["modules"]
+    completed_module = next(module for module in modules if module["id"] == module_id)
+    next_module = next(
+        module
+        for module in modules
+        if module["sort_order"] == completed_module["sort_order"] + 1
+    )
+    assert completed_module["status"] == "completed"
+    assert next_module["status"] == "ready"
+
+
+def test_workspace_start_posttest_allows_early_request(client, db_session, monkeypatch):
+    monkeypatch.setenv("WICARA_ASSESSMENT_DEV_FALLBACK_QUESTIONS", "1")
+    _override_account(client)
+    track_id, module_id = _create_track_and_concept_module(client)
+
+    workspace_response = client.post(
+        "/api/v1/workspaces",
+        json={
+            "track_id": track_id,
+            "module_id": module_id,
+            "content_mode": "chat",
+        },
+    )
+    assert workspace_response.status_code == 200
+    workspace = workspace_response.json()
+    assert workspace["current_phase"] == "engage"
+    assert workspace["posttest_eligible"] is False
+
+    response = client.post(f"/api/v1/workspaces/{workspace['id']}/start-posttest")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["posttest_eligible"] is False
+    assert payload["posttest_trigger"]["reason"] == "module_completed"
+    assert payload["posttest_trigger"]["status"] == "ready"
+
+    stored_workspace = db_session.get(WorkspaceSession, UUID(payload["id"]))
+    assert stored_workspace is not None
+    metadata = stored_workspace.metadata_json or {}
+    assert metadata["posttest_started_early"] is True
+    assert metadata["posttest_start_phase"] == "engage"
 
     modules_response = client.get(f"/api/v1/tracks/{track_id}/modules")
     modules = modules_response.json()["modules"]

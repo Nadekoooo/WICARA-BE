@@ -4,6 +4,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
@@ -12,6 +13,15 @@ from app.modules.accounts.models import UserAccount
 from app.modules.learning import schemas, service
 
 router = APIRouter()
+
+
+def _retry_after_connection_drop(session: Session, callback):
+    try:
+        return callback()
+    except OperationalError:
+        session.rollback()
+        session.close()
+        return callback()
 
 
 @router.post("/learning-goals", response_model=schemas.LearningGoalCreateResponse)
@@ -218,7 +228,10 @@ def latest_weekly_report(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.WeeklyReportResponse:
-    return service.get_latest_weekly_report(session, user=account)
+    return _retry_after_connection_drop(
+        session,
+        lambda: service.get_latest_weekly_report(session, user=account),
+    )
 
 
 @router.get("/reports/weekly", response_model=schemas.WeeklyReportResponse)
@@ -238,7 +251,10 @@ def weekly_report(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Weekly report range cannot exceed 31 days.",
         )
-    return service.get_weekly_report(session, user=account, start=start, end=end)
+    return _retry_after_connection_drop(
+        session,
+        lambda: service.get_weekly_report(session, user=account, start=start, end=end),
+    )
 
 
 @router.get("/pretests/{learning_goal_id}", response_model=schemas.PretestReadResponse)

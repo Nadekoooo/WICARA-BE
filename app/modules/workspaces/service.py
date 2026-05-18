@@ -275,8 +275,7 @@ def start_posttest(
         dict(workspace.metadata_json or {}),
         created_at=workspace.created_at,
     )
-    if not bool(metadata.get("posttest_eligible", False)):
-        raise ValueError("Posttest is not eligible yet. Reach Evaluate phase first.")
+    was_posttest_eligible = bool(metadata.get("posttest_eligible", False))
 
     _resolve_owned_track_module(
         session,
@@ -289,6 +288,8 @@ def start_posttest(
         dict(workspace.metadata_json or {}),
         created_at=workspace.created_at,
     )
+    refreshed_metadata["posttest_started_early"] = not was_posttest_eligible
+    refreshed_metadata["posttest_start_phase"] = metadata.get("current_phase")
     refreshed_metadata["posttest_eligible"] = False
     refreshed_metadata["phase_transition_pending"] = False
     workspace.metadata_json = refreshed_metadata
@@ -380,6 +381,17 @@ async def append_workspace_event(
         audit_metadata["concept_id"] = str(mastery_result.concept_id)
     if mastery_result.update is not None:
         audit_metadata["mastery_update_reason"] = mastery_result.update.reason
+    module_completed_by_quiz = False
+    if (
+        normalized_event_type == "quiz_answer"
+        and metadata.get("is_correct") is True
+        and mastery_result.update is not None
+        and mastery_result.update.status in {"ready", "mastered"}
+    ):
+        _complete_workspace_module(session, user=user, workspace=workspace)
+        module_completed_by_quiz = True
+        audit_metadata["module_completion_source"] = "correct_workspace_quiz"
+        event_metadata["module_completed_by_quiz"] = True
 
     input_event = create_workspace_input_event(
         session,
@@ -421,6 +433,7 @@ async def append_workspace_event(
                 "next_actions": list(tutor_response.next_actions),
                 "next_phase_ready": tutor_response.next_phase_ready,
                 "phase_reasoning": tutor_response.phase_reasoning,
+                "module_completed_by_quiz": module_completed_by_quiz,
             },
         )
 
