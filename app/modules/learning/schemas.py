@@ -246,7 +246,7 @@ class AnimationQueueRequest(BaseModel):
     concept_id: UUID | None = None
     template_id: str = Field(..., min_length=3, max_length=120)
     spec_json: dict[str, Any] = Field(default_factory=dict)
-    language: str = Field(default="id", min_length=2, max_length=16)
+    language: str = Field(default="en", min_length=2, max_length=16)
     quality_profile: str = Field(default="standard", min_length=2, max_length=32)
 
 

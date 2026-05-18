@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.assessments.metrics import AssessmentEvidenceEvaluator, PASS_PERCENT
 from app.modules.curriculum.models import KnowledgeConcept
@@ -790,6 +791,4 @@ def _concept_code(session: Session, question: AssessmentQuestion) -> str:
 
 
 def _preferred_language(user: UserAccount) -> str:
-    if user.learner_profile and user.learner_profile.preferred_language:
-        return user.learner_profile.preferred_language
-    return "en"
+    return preferred_language_code(user)

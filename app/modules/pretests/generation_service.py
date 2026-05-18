@@ -9,6 +9,8 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import normalize_language_code
+from app.modules.curriculum.kurikulum_merdeka import translate_curriculum_label_to_english
 from app.modules.curriculum.models import KnowledgeConcept
 from app.modules.ai.client import ai_client
 from app.modules.ai.config import get_ai_settings
@@ -39,7 +41,7 @@ class AdaptivePretestGenerationService:
         *,
         assessment: AssessmentSession,
         concept: KnowledgeConcept,
-        language: str = "id",
+        language: str = "en",
     ) -> AssessmentQuestionPack:
         existing = session.scalar(
             select(AssessmentQuestionPack)
@@ -81,6 +83,7 @@ class AdaptivePretestGenerationService:
             )
             or 0
         )
+        concept_title = _concept_prompt_title(concept, language=language)
         for offset, difficulty in enumerate(("easy", "medium", "hard"), start=1):
             payload = generated_pack[difficulty]
             question = AssessmentQuestion(
@@ -88,7 +91,7 @@ class AdaptivePretestGenerationService:
                 pack_id=pack.id,
                 concept_id=concept.id,
                 step_label="Adaptive Pretest",
-                topic=concept.title,
+                topic=concept_title,
                 prompt=payload["prompt"],
                 helper_text=payload.get("helper_text", ""),
                 difficulty_label=difficulty,
@@ -245,7 +248,7 @@ class AdaptivePretestGenerationService:
                 step_label=step_label or (
                     "Adaptive Posttest" if assessment_type == "posttest" else "Adaptive Pretest"
                 ),
-                topic=topic or concept.title,
+                topic=topic or _concept_prompt_title(concept, language=learner_language),
             )
             created.append(question)
         return created
@@ -324,7 +327,7 @@ class AdaptivePretestGenerationService:
         concept: KnowledgeConcept,
         language: str,
     ) -> dict[str, dict[str, Any]]:
-        title = concept.title
+        title = _concept_prompt_title(concept, language=language)
         code = concept.code.lower()
         text = f"{code} {title}".lower()
         if "perkalian" in text or "multiplication" in text or "kali" in text:
@@ -738,6 +741,12 @@ def _pack_prompt(
     language: str,
     previous_errors: list[str] | None = None,
 ) -> str:
+    concept_title = _concept_prompt_title(concept, language=language)
+    concept_description = _concept_prompt_description(
+        concept,
+        language=language,
+        title=concept_title,
+    )
     retry_instruction = ""
     if previous_errors:
         compact_errors = "\n".join(f"- {error}" for error in previous_errors[-6:])
@@ -754,8 +763,8 @@ Generate one adaptive pretest question pack for this existing curriculum concept
 
 Concept:
 - concept_code: {concept.code}
-- title: {concept.title}
-- description: {concept.description or ''}
+- title: {concept_title}
+- description: {concept_description}
 - language: {language}
 
 Return JSON shaped exactly as:
@@ -821,6 +830,12 @@ def _fresh_question_prompt(
     previous_questions: list[str],
     previous_errors: list[str] | None = None,
 ) -> str:
+    concept_title = _concept_prompt_title(concept, language=language)
+    concept_description = _concept_prompt_description(
+        concept,
+        language=language,
+        title=concept_title,
+    )
     previous_question_text = "\n".join(f"- {item}" for item in previous_questions[-12:]) or "- none"
     difficulty_sequence = ", ".join(difficulties)
     retry_instruction = ""
@@ -846,8 +861,8 @@ Posttest-specific rules:
 Assessment type: {assessment_type}
 Learner language: {language}
 Concept code: {concept.code}
-Concept title: {concept.title}
-Concept description: {concept.description or ''}
+Concept title: {concept_title}
+Concept description: {concept_description}
 Node role: {node_role}
 Difficulty sequence, in exact output order: {difficulty_sequence}
 Question count: {len(difficulties)}
@@ -1075,6 +1090,46 @@ def _normalize_generation_language(language: str | None) -> str:
     if lowered in {"id", "ind", "indo", "indonesian", "bahasa indonesia", "bahasa"}:
         return "Indonesian"
     return normalized
+
+
+def _metadata_text(metadata: dict[str, Any], key: str) -> str:
+    value = metadata.get(key)
+    return str(value).strip() if value is not None else ""
+
+
+def _concept_prompt_title(concept: KnowledgeConcept, *, language: str) -> str:
+    metadata = concept.metadata_json or {}
+    if normalize_language_code(language) == "id":
+        return _metadata_text(metadata, "label_id") or concept.title
+
+    explicit = _metadata_text(metadata, "label_en")
+    label_id = _metadata_text(metadata, "label_id") or concept.title
+    if explicit and explicit.casefold() != label_id.casefold():
+        return explicit
+    translated = translate_curriculum_label_to_english(label_id)
+    return translated or explicit or label_id or concept.title
+
+
+def _concept_prompt_description(
+    concept: KnowledgeConcept,
+    *,
+    language: str,
+    title: str,
+) -> str:
+    metadata = concept.metadata_json or {}
+    if normalize_language_code(language) == "id":
+        return (
+            concept.id_desc
+            or _metadata_text(metadata, "description_id")
+            or concept.description
+            or f"Memahami dan menerapkan {title}."
+        )
+    return (
+        concept.en_desc
+        or _metadata_text(metadata, "description_en")
+        or _metadata_text(metadata, "en_desc")
+        or f"Understand and apply {title}."
+    )
 
 
 def _difficulty_occurrence_count(difficulties: list[str], difficulty: str) -> int:

@@ -10,9 +10,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
+from app.core.language import normalize_language_code, preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.assessments.metrics import attempt_answer_score, attempt_evidence_score
-from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
+from app.modules.curriculum.kurikulum_merdeka import (
+    canonical_subject_code,
+    translate_curriculum_label_to_english,
+)
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
 from app.modules.learning.job_queue import build_media_job_queue_adapter
@@ -798,7 +802,7 @@ def queue_animation_job(
         concept_id=concept_id,
         workspace=workspace,
     )
-    normalized_language = _normalize_short_label(language, fallback="id", max_length=16)
+    normalized_language = normalize_language_code(language)[:16]
     normalized_quality = _normalize_short_label(
         quality_profile, fallback="standard", max_length=32
     )
@@ -2143,9 +2147,7 @@ def _answered_question_ids(session: Session, *, assessment_id: UUID) -> set[UUID
 
 
 def _language_for_user(user: UserAccount) -> str:
-    if user.learner_profile and user.learner_profile.preferred_language:
-        return user.learner_profile.preferred_language
-    return "en"
+    return preferred_language_code(user)
 
 
 def _daily_source(assessment: AssessmentSession) -> str:
@@ -2529,12 +2531,22 @@ def _create_track(
     subject: Subject,
     concept: KnowledgeConcept | None,
 ) -> LearningTrack:
-    title = f"{goal.normalized_topic} path"
+    language = _language_for_user(user)
+    topic = _localized_topic(goal.normalized_topic, concept, language=language)
+    title = (
+        f"Jalur {topic}"
+        if language == "id"
+        else f"{topic} path"
+    )
     track = LearningTrack(
         user_id=user.id,
         learning_goal_id=goal.id,
         title=title,
-        subtitle=f"{subject.name} | prerequisite-first adaptive path",
+        subtitle=(
+            f"{subject.name} | jalur adaptif mulai dari prasyarat"
+            if language == "id"
+            else f"{subject.name} | prerequisite-first adaptive path"
+        ),
         status="pretest",
         progress_percent=0,
         metadata_json={"generation": "deterministic_seed"},
@@ -2542,7 +2554,7 @@ def _create_track(
     session.add(track)
     session.flush()
 
-    modules = _module_templates(goal.normalized_topic, concept)
+    modules = _module_templates(goal.normalized_topic, concept, language=language)
     for index, module in enumerate(modules, start=1):
         session.add(
             TrackModule(
@@ -2564,8 +2576,32 @@ def _create_track(
 def _module_templates(
     normalized_topic: str,
     concept: KnowledgeConcept | None,
+    *,
+    language: str,
 ) -> list[dict[str, Any]]:
-    target = concept.title if concept else normalized_topic
+    target = _localized_topic(normalized_topic, concept, language=language)
+    if language == "id":
+        return [
+            {
+                "title": "Cek prasyarat",
+                "description": "Perbaiki fondasi yang terdeteksi dari pretest sebelum masuk ke topik utama.",
+                "minutes": 8,
+                "difficulty": "Mudah",
+            },
+            {
+                "title": target,
+                "description": f"Pelajari {target} lewat chat, bukti kanvas, dan cek singkat.",
+                "minutes": 14,
+                "difficulty": "Sedang",
+            },
+            {
+                "title": "Penerapan dan review",
+                "description": "Terapkan konsepnya, lalu jadwalkan untuk pengulangan berspasi.",
+                "minutes": 10,
+                "difficulty": "Sedang",
+            },
+        ]
+
     return [
         {
             "title": "Prerequisite checkpoint",
@@ -2575,7 +2611,7 @@ def _module_templates(
         },
         {
             "title": target,
-            "description": f"Learn {normalized_topic} with chat, canvas evidence, and short checks.",
+            "description": f"Learn {target} with chat, canvas evidence, and short checks.",
             "minutes": 14,
             "difficulty": "Medium",
         },
@@ -2586,6 +2622,25 @@ def _module_templates(
             "difficulty": "Medium",
         },
     ]
+
+
+def _localized_topic(
+    normalized_topic: str,
+    concept: KnowledgeConcept | None,
+    *,
+    language: str,
+) -> str:
+    if concept is None:
+        return (
+            normalized_topic
+            if language == "id"
+            else translate_curriculum_label_to_english(normalized_topic)
+        )
+    if language == "id":
+        return concept.title
+    metadata = concept.metadata_json or {}
+    english_title = str(metadata.get("en_title") or "").strip()
+    return english_title or translate_curriculum_label_to_english(concept.title)
 
 
 def _resolve_subject(

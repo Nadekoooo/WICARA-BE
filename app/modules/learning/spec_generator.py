@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.core.language import normalize_language_code
 from app.modules.ai import ai_client
 from app.modules.ai.errors import AIConfigurationError, AIError
 from app.modules.ai.schemas import AIGenerationResponse
@@ -90,7 +91,7 @@ def generate_spec_from_workspace_context(
     if not router_candidates and mapped_template_id:
         router_candidates = [mapped_template_id]
     router_used = False
-    requested_language = _normalize_language(language) or "id"
+    requested_language = _normalize_language(language)
     context_snapshot = _build_context_snapshot(
         workspace=workspace,
         metadata=metadata,
@@ -266,22 +267,7 @@ def generate_spec_from_workspace_context(
 
 
 def _normalize_language(language: str) -> str:
-    normalized = str(language or "").strip().lower()
-    if not normalized:
-        return ""
-    aliases = {
-        "indonesian": "id",
-        "bahasa": "id",
-        "english": "en",
-        "en-us": "en",
-        "id-id": "id",
-    }
-    normalized = aliases.get(normalized, normalized)
-    if "-" in normalized:
-        base = normalized.split("-", 1)[0]
-        if base:
-            normalized = base
-    return normalized[:16] or ""
+    return normalize_language_code(language)[:16]
 
 
 def _load_sample_spec(template_id: str) -> dict[str, Any]:
@@ -364,7 +350,7 @@ def _select_template_id_with_gemini(
 
     instruction_payload = {
         "task": "choose_template_id",
-        "requested_language": requested_language or "id",
+        "requested_language": requested_language or "en",
         "active_concept_type": concept_type or "",
         "allowed_template_ids": normalized_candidates,
         "workspace_context": {
@@ -421,7 +407,7 @@ def _build_user_instruction(
     base_payload: dict[str, Any] = {
         "task": "generate_template_spec_json",
         "template_id": template_id,
-        "requested_language": requested_language or "id",
+        "requested_language": requested_language or "en",
         "output_contract": {
             "must_return_json_object": True,
             "must_include_language_field": True,

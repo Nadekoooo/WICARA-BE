@@ -373,7 +373,7 @@ class MediaArtifact(Base):
     )
     template_id: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     spec_json: Mapped[dict[str, Any]] = mapped_column(json_dict_type, nullable=False, default=dict)
-    language: Mapped[str] = mapped_column(String(16), nullable=False, default="id")
+    language: Mapped[str] = mapped_column(String(16), nullable=False, default="en")
     quality_profile: Mapped[str] = mapped_column(String(32), nullable=False, default="standard")
     artifact_type: Mapped[str] = mapped_column(String(32), nullable=False, default="video")
     title: Mapped[str] = mapped_column(String(255), nullable=False)

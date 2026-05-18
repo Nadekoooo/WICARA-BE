@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import normalize_language_code, preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.kurikulum_merdeka import (
     translate_curriculum_label_to_english,
@@ -573,17 +574,11 @@ def _normalize_generation_mode(generation_mode: str) -> str:
 
 
 def _preferred_language(user: UserAccount) -> str:
-    profile = user.learner_profile
-    if profile is not None and profile.preferred_language.strip():
-        return profile.preferred_language.strip()
-    return "en"
+    return preferred_language_code(user)
 
 
 def _normalize_language_code(language: str | None) -> str:
-    normalized = str(language or "").strip().lower()
-    if normalized in {"id", "ind", "indo", "indonesian", "bahasa", "bahasa indonesia"}:
-        return "id"
-    return "en"
+    return normalize_language_code(language)
 
 
 def _metadata_text(metadata: dict[str, Any], key: str) -> str:

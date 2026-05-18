@@ -6,6 +6,7 @@ from typing import Any
 from app.modules.ai import ai_client
 from app.modules.ai.errors import AIError
 from app.modules.ai.schemas import AIGenerationResponse
+from app.core.language import language_display_name, normalize_language_code
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 from app.modules.workspaces.schemas import TutorResponseRead
 
@@ -299,7 +300,5 @@ def _fallback_response(
 
 
 def _normalize_tutor_language(language: str | None) -> tuple[str, str]:
-    normalized = (language or "").strip().lower()
-    if normalized in {"id", "ind", "indo", "indonesian", "bahasa indonesia", "bahasa"}:
-        return "id", "Indonesian"
-    return "en", "English"
+    language_code = normalize_language_code(language)
+    return language_code, language_display_name(language_code)

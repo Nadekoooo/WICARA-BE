@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import is_indonesian_language, normalize_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.ai.client import ai_client
 from app.modules.ai.config import get_ai_settings
@@ -1007,15 +1008,7 @@ def _preferred_response_language(
 
 
 def _normalize_response_language(language: str | None) -> str:
-    normalized = (language or "").strip()
-    if not normalized:
-        return "en"
-    lowered = normalized.lower()
-    if lowered in {"id", "ind", "indo", "indonesian", "bahasa indonesia", "bahasa"}:
-        return "id"
-    if lowered in {"en", "eng", "english"}:
-        return "en"
-    return lowered[:16]
+    return normalize_language_code(language)
 
 
 def _is_english_language(language: str) -> bool:
@@ -1263,8 +1256,7 @@ def _graph_focus(*, selected: ConceptCandidate, alternatives: list[ConceptCandid
 
 
 def _is_indonesian_language(language: str) -> bool:
-    normalized = (language or "").strip().lower()
-    return normalized in {"id", "indonesian", "bahasa indonesia"} or "indo" in normalized
+    return is_indonesian_language(language)
 
 
 def _active_goal_for_target(

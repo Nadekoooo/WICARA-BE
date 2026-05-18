@@ -11,6 +11,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.language import preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 from app.modules.curriculum.models import KnowledgeConcept, Subject
@@ -628,10 +629,7 @@ def _education_level_for_user(user: UserAccount) -> str:
 
 
 def _preferred_language_for_user(user: UserAccount) -> str:
-    profile = user.learner_profile
-    if profile and profile.preferred_language:
-        return profile.preferred_language
-    return "en"
+    return preferred_language_code(user)
 
 
 def _first_concept_id(states: list[LearnerConceptState]) -> UUID | None:
