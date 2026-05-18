@@ -14,3 +14,5 @@ wicara_mvp_10_manim_templates/tmp_render/
 wicara_mvp_10_manim_templates/**/__pycache__/
 bank_soal/scripts/
 app/modules/question_bank/seed.py
+
+**/node_modules/
