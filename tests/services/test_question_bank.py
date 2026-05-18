@@ -9,6 +9,9 @@ from app.modules.curriculum.seed import seed_curriculum
 from app.modules.learning.models import LearnerConceptState
 from app.modules.question_bank.models import QuestionBankImportRun, QuestionBankItem
 from app.modules.question_bank.service import (
+    default_seeds_dir,
+    ensure_question_bank_seeded,
+    import_seed_file,
     import_seed_directory,
     select_daily_questions,
 )
@@ -93,6 +96,43 @@ def test_daily_selector_uses_fallback_slot_when_no_personalized_state_exists(db_
     assert {item.slot for item in selected} == {"fallback"}
 
 
+def test_question_bank_seeded_backfills_missing_preferred_language(db_session):
+    seed_curriculum(db_session)
+    for seed_path in default_seeds_dir().glob("mathematics.*.v1.json"):
+        if ".id." not in seed_path.name:
+            import_seed_file(db_session, path=seed_path, strict=False)
+    db_session.commit()
+
+    id_item_count = db_session.scalar(
+        select(func.count())
+        .select_from(QuestionBankItem)
+        .where(QuestionBankItem.language == "id")
+    )
+    assert id_item_count == 0
+
+    ensure_question_bank_seeded(db_session, preferred_language="id")
+
+    id_item_count = db_session.scalar(
+        select(func.count())
+        .select_from(QuestionBankItem)
+        .where(QuestionBankItem.language == "id")
+    )
+    assert id_item_count > 0
+
+
+def test_daily_selector_uses_indonesian_bank_items_for_indonesian_profile(db_session):
+    seed_curriculum(db_session)
+    import_seed_directory(db_session)
+    user = _create_user_with_profile(db_session, preferred_language="id")
+
+    learner_step, selected = select_daily_questions(db_session, user=user)
+
+    assert learner_step.preferred_language == "id"
+    assert selected
+    assert {choice.item.language for choice in selected} == {"id"}
+    assert not selected[0].item.prompt.startswith(("A quick review", "Which topic"))
+
+
 def test_daily_selector_does_not_import_question_bank_on_read_path(db_session):
     seed_curriculum(db_session)
     user = _create_user_with_profile(db_session)
@@ -104,7 +144,7 @@ def test_daily_selector_does_not_import_question_bank_on_read_path(db_session):
     assert item_count == 0
 
 
-def _create_user_with_profile(db_session) -> UserAccount:
+def _create_user_with_profile(db_session, *, preferred_language: str = "en") -> UserAccount:
     user = UserAccount(
         id=ACCOUNT_ID,
         supabase_user_id="supabase-question-bank",
@@ -120,7 +160,7 @@ def _create_user_with_profile(db_session) -> UserAccount:
             full_name="Question Bank User",
             education_level="SMP",
             grade_level="Kelas 7",
-            preferred_language="en",
+            preferred_language=preferred_language,
             selected_subjects=["mathematics"],
             onboarding_completed=True,
         )

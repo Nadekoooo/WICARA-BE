@@ -11,7 +11,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.language import preferred_language_code
+from app.core.language import normalize_language_code, preferred_language_code
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 from app.modules.curriculum.models import KnowledgeConcept, Subject
@@ -63,12 +63,23 @@ class SelectedQuestion:
     reason: str
 
 
-def ensure_question_bank_seeded(session: Session) -> None:
-    """Import seed files for explicit setup jobs; do not call from request paths."""
+def ensure_question_bank_seeded(
+    session: Session,
+    *,
+    commit: bool = True,
+    preferred_language: str | None = None,
+) -> None:
+    """Import seed JSON when the bank or the requested language is missing."""
     existing = session.scalar(select(QuestionBankItem.id).limit(1))
-    if existing is not None:
+    if existing is None:
+        import_seed_directory(session, strict=False, commit=commit)
         return
-    import_seed_directory(session, strict=False)
+
+    language = normalize_language_code(preferred_language, fallback="")
+    if language and session.scalar(
+        select(QuestionBankItem.id).where(QuestionBankItem.language == language).limit(1)
+    ) is None:
+        import_seed_directory(session, strict=False, commit=commit)
 
 
 def import_seed_directory(

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_session
 from app.modules.accounts.dependencies import get_current_account
-from app.modules.accounts.models import UserAccount
+from app.modules.accounts.models import LearnerProfile, UserAccount
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
 from app.modules.learning.models import (
@@ -138,6 +138,26 @@ def test_daily_evaluation_returns_seeded_review_questions_and_persists_answer(cl
         "action_type": "navigate",
         "target": "/home",
     }
+
+
+def test_daily_evaluation_uses_indonesian_question_bank_after_profile_switch(client):
+    _override_account(client, seed_question_bank=True, preferred_language="en")
+
+    english_response = client.get("/api/v1/daily-evaluations/today")
+    assert english_response.status_code == 200
+    assert english_response.json()["language"] == "en"
+
+    _override_account(client, seed_question_bank=True, preferred_language="id")
+
+    indonesian_response = client.get("/api/v1/daily-evaluations/today")
+
+    assert indonesian_response.status_code == 200
+    payload = indonesian_response.json()
+    assert payload["language"] == "id"
+    assert payload["review_due"]["title"] == "Review yang jatuh tempo"
+    assert payload["progress"]["label"] == "1 dari 3"
+    assert "Which topic" not in payload["question"]["prompt"]
+    assert "A quick review" not in payload["question"]["prompt"]
 
 
 def test_weekly_report_returns_richer_learning_report_payload(client):
@@ -364,7 +384,12 @@ def _session_for_client(client):
         generator.close()
 
 
-def _override_account(client, *, seed_question_bank: bool = False) -> None:
+def _override_account(
+    client,
+    *,
+    seed_question_bank: bool = False,
+    preferred_language: str | None = None,
+) -> None:
     def override_current_account(
         session: Session = Depends(get_session),
     ) -> UserAccount:
@@ -380,6 +405,23 @@ def _override_account(client, *, seed_question_bank: bool = False) -> None:
             session.add(account)
             session.commit()
             session.refresh(account)
+        if preferred_language is not None and account.learner_profile is None:
+            session.add(
+                LearnerProfile(
+                    user_id=account.id,
+                    full_name="Learning User",
+                    education_level="SMP",
+                    grade_level="Kelas 7",
+                    preferred_language=preferred_language,
+                    selected_subjects=["mathematics"],
+                    onboarding_completed=True,
+                )
+            )
+            session.commit()
+            session.refresh(account)
+        elif preferred_language is not None and account.learner_profile is not None:
+            account.learner_profile.preferred_language = preferred_language
+            session.commit()
         if seed_question_bank:
             existing_bank_item = session.scalar(select(QuestionBankItem.id).limit(1))
             if existing_bank_item is None:

@@ -425,6 +425,7 @@ class RecommendedNextActionRead(BaseModel):
     action_type: str
     reason: str
     due_date: str | None = None
+    due_label: str | None = None
     priority: int
 
 
