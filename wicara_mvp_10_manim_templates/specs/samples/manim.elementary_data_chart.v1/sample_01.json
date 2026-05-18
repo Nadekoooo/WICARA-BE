@@ -1,0 +1,37 @@
+{
+  "id": "sample_data_representation_summary_46",
+  "node_id": "phase3_data_representation_summary",
+  "template_id": "manim.elementary_data_chart.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Dari Tabel ke Diagram",
+  "subtitle": "Data sederhana dapat diringkas dalam bentuk tabel, piktogram, dan diagram batang.",
+  "categories": [
+    "Apel",
+    "Jeruk",
+    "Mangga",
+    "Pisang"
+  ],
+  "values": [
+    4,
+    2,
+    5,
+    3
+  ],
+  "steps": [
+    {
+      "title": "Catat data",
+      "body": "Data awal bisa ditulis dalam tabel sederhana."
+    },
+    {
+      "title": "Ubah ke gambar",
+      "body": "Piktogram menampilkan data dengan simbol yang mudah dibaca."
+    },
+    {
+      "title": "Bandingkan",
+      "body": "Diagram batang memudahkan melihat kategori terbanyak dan tersedikit."
+    }
+  ],
+  "summary": "Representasi data membantu membaca dan membandingkan informasi secara lebih cepat."
+}

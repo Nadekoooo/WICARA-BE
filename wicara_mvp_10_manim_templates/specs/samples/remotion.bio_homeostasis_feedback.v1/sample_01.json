@@ -1,0 +1,108 @@
+{
+  "id": "remotion_v2_104_homeostasis_feedback_model",
+  "row_index": 104,
+  "concept_type": "homeostasis_feedback_model",
+  "concept_type_label_id": "Homeostasis dan umpan balik biologis",
+  "template_id": "remotion.bio_homeostasis_feedback.v1",
+  "component": "HomeostasisFeedbackVideo",
+  "archetype": "homeostasis_feedback",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Homeostasis dan umpan balik biologis",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `homeostasis_feedback_model`.",
+  "keyIdea": "Homeostasis menjaga kondisi internal melalui loop umpan balik.",
+  "steps": [
+    {
+      "id": "setpoint",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Tubuh memiliki set point",
+      "narration": "Kondisi internal dijaga di sekitar nilai normal."
+    },
+    {
+      "id": "stimulus",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Perubahan terdeteksi",
+      "narration": "Stimulus membuat kondisi menyimpang dari set point."
+    },
+    {
+      "id": "receptor",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Reseptor membaca perubahan",
+      "narration": "Reseptor mengirim informasi ke pusat kontrol."
+    },
+    {
+      "id": "control",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Pusat kontrol memproses sinyal",
+      "narration": "Pusat kontrol menentukan respons yang diperlukan."
+    },
+    {
+      "id": "effector",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Efektor bekerja",
+      "narration": "Efektor melakukan tindakan untuk mengurangi penyimpangan."
+    },
+    {
+      "id": "feedback",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Umpan balik menstabilkan kondisi",
+      "narration": "Respons mengembalikan kondisi mendekati set point."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Loop menjaga kestabilan",
+      "narration": "Homeostasis terjadi karena deteksi, kontrol, dan respons yang terus berulang."
+    }
+  ],
+  "visual": {
+    "loop": [
+      "Stimulus",
+      "Reseptor",
+      "Pusat kontrol",
+      "Efektor",
+      "Respon"
+    ],
+    "examples": [
+      "Suhu tubuh",
+      "Glukosa darah"
+    ]
+  },
+  "summarySequence": [
+    "Set point",
+    "Stimulus",
+    "Reseptor",
+    "Kontrol",
+    "Efektor",
+    "Stabil"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

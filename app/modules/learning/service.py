@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -7,10 +9,12 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
 from app.modules.accounts.models import UserAccount
 from app.modules.curriculum.kurikulum_merdeka import canonical_subject_code
 from app.modules.curriculum.models import KnowledgeConcept, Subject
 from app.modules.curriculum.seed import seed_curriculum
+from app.modules.learning.job_queue import build_media_job_queue_adapter
 from app.modules.learning.models import (
     AssessmentAttempt,
     AssessmentOption,
@@ -20,9 +24,12 @@ from app.modules.learning.models import (
     LearningGoal,
     LearningTrack,
     MediaArtifact,
+    MediaJob,
     TrackModule,
 )
 from app.modules.learning.schemas import (
+    AnimationJobStatusResponse,
+    AnimationQueueResponse,
     ActionRead,
     AssessmentOptionRead,
     AssessmentQuestionRead,
@@ -62,6 +69,28 @@ from app.modules.learning.schemas import (
     WeeklyReportResponse,
     ProgressRead,
 )
+from app.modules.learning.render_engine import (
+    RenderEngineError,
+    RenderOutput,
+    render_template_scene,
+)
+from app.modules.learning.media_postprocess import (
+    MediaPostprocessError,
+    MediaPostprocessOutput,
+    postprocess_render_output,
+)
+from app.modules.learning.storage import (
+    MediaStorageError,
+    MediaStorageUploadOutput,
+    upload_media_artifact_files,
+)
+from app.modules.learning.template_validation import (
+    TemplateValidationError,
+    validate_template_spec,
+)
+from app.modules.workspaces.models import WorkspaceSession
+
+logger = logging.getLogger(__name__)
 from app.modules.question_bank.service import (
     DAILY_SELECTOR_VERSION,
     LearnerStep,
@@ -155,6 +184,11 @@ DAILY_REVIEW_TEMPLATES: list[dict[str, Any]] = [
             ("D", "Add a short review question before the next module"),
         ],
     },
+]
+
+MEDIA_JOB_PROGRESS_STAGES: list[tuple[int, str]] = [
+    (20, "Validating render payload."),
+    (45, "Preparing template rendering inputs."),
 ]
 
 
@@ -484,6 +518,438 @@ def update_track_module_state(
     return TrackModuleStateUpdateResponse(track=track_to_schema(track))
 
 
+def queue_animation_job(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID | None,
+    concept_id: UUID | None,
+    template_id: str,
+    spec_json: dict[str, Any],
+    language: str,
+    quality_profile: str,
+) -> AnimationQueueResponse:
+    normalized_template_id = template_id.strip().lower()
+    if not normalized_template_id:
+        raise ValueError("template_id must not be empty.")
+
+    workspace = _resolve_owned_workspace(session, user=user, workspace_id=workspace_id)
+    resolved_concept_id = _resolve_concept_id(
+        session,
+        concept_id=concept_id,
+        workspace=workspace,
+    )
+    normalized_language = _normalize_short_label(language, fallback="id", max_length=16)
+    normalized_quality = _normalize_short_label(
+        quality_profile, fallback="standard", max_length=32
+    )
+    validation_result = None
+    validation_error: TemplateValidationError | None = None
+    try:
+        validation_result = validate_template_spec(
+            template_id=normalized_template_id,
+            spec_json=spec_json,
+        )
+    except TemplateValidationError as exc:
+        validation_error = exc
+
+    canonical_template_id = (
+        validation_result.template_id
+        if validation_result is not None
+        else (validation_error.template_id or normalized_template_id)
+    )
+    normalized_spec = (
+        validation_result.normalized_spec
+        if validation_result is not None
+        else dict(spec_json)
+    )
+    job_status = "queued" if validation_error is None else "failed"
+    job_message = (
+        "Job is queued for rendering."
+        if validation_error is None
+        else "Template validation failed."
+    )
+    error_details = validation_error.to_dict() if validation_error is not None else None
+    artifact = MediaArtifact(
+        user_id=user.id,
+        track_id=workspace.track_id if workspace else None,
+        module_id=workspace.module_id if workspace else None,
+        workspace_id=workspace.id if workspace else None,
+        concept_id=resolved_concept_id,
+        template_id=canonical_template_id,
+        spec_json=normalized_spec,
+        language=normalized_language,
+        quality_profile=normalized_quality,
+        artifact_type="video",
+        title=_queued_artifact_title(normalized_spec, canonical_template_id),
+        subtitle=_queued_artifact_subtitle(normalized_spec),
+        status=job_status,
+        duration_seconds=0,
+        thumbnail_url="",
+        playback_url="",
+        video_url="",
+        transcript="",
+        notes_json=[],
+        metadata_json={
+            "source": "animation_queue_api",
+            "progress": 0,
+            "job_state": job_status,
+        },
+        render_meta_json=_initial_render_meta(
+            validation_result=validation_result,
+            validation_error=error_details,
+        ),
+    )
+    session.add(artifact)
+    session.flush()
+
+    job = MediaJob(
+        artifact_id=artifact.id,
+        status=job_status,
+        progress=0,
+        message=job_message,
+        attempt=0,
+        error=validation_error.message if validation_error is not None else None,
+    )
+    session.add(job)
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=validation_error.message if validation_error is not None else None,
+        error_details=error_details,
+        error_code=validation_error.code if validation_error is not None else None,
+    )
+    session.commit()
+    session.refresh(job)
+    if validation_error is None:
+        published = _publish_media_job_to_queue(job_id=job.id)
+        if not published:
+            job.message = "Job queued in database. Waiting for worker polling fallback."
+            session.commit()
+    return AnimationQueueResponse(
+        job_id=job.id,
+        artifact_id=artifact.id,
+        status=job.status,
+        error_details=error_details,
+    )
+
+
+def get_animation_job_status(
+    session: Session,
+    *,
+    user: UserAccount,
+    job_id: UUID,
+) -> AnimationJobStatusResponse | None:
+    row = session.execute(
+        select(MediaJob, MediaArtifact)
+        .join(MediaArtifact, MediaArtifact.id == MediaJob.artifact_id)
+        .where(
+            MediaJob.id == job_id,
+            MediaArtifact.user_id == user.id,
+        )
+    ).first()
+    if row is None:
+        return None
+
+    job, artifact = row
+    video_url = _coalesce_video_url(artifact)
+    thumbnail_url = _optional_text(artifact.thumbnail_url)
+    render_meta = artifact.render_meta_json if isinstance(artifact.render_meta_json, dict) else {}
+    error_details = render_meta.get("error_details")
+    return AnimationJobStatusResponse(
+        job_id=job.id,
+        status=job.status,
+        progress=max(0, min(100, int(job.progress or 0))),
+        message=job.message or "",
+        artifact_id=artifact.id,
+        video_url=video_url,
+        thumbnail_url=thumbnail_url,
+        error=job.error,
+        error_details=error_details if isinstance(error_details, dict) else None,
+    )
+
+
+def pick_next_queued_animation_job_id(session: Session) -> UUID | None:
+    return session.scalar(
+        select(MediaJob.id).where(MediaJob.status == "queued").order_by(MediaJob.created_at).limit(1)
+    )
+
+
+def process_animation_job_for_worker(
+    session: Session,
+    *,
+    job_id: UUID,
+) -> bool:
+    row = _load_job_with_artifact(session, job_id=job_id)
+    if row is None:
+        logger.warning("Media worker received unknown job id %s.", job_id)
+        return False
+    job, artifact = row
+    if job.status in {"ready", "failed"}:
+        return True
+
+    worker_started = time.perf_counter()
+    timing_meta: dict[str, float] = {}
+    context = {
+        "job_id": str(job.id),
+        "artifact_id": str(artifact.id),
+        "template_id": artifact.template_id,
+    }
+
+    try:
+        settings = get_settings()
+        _log_job_event(
+            level="info",
+            stage="worker_start",
+            message="Worker started processing media job.",
+            context=context,
+        )
+        _mark_job_processing(session, job=job, artifact=artifact)
+        _validate_job_payload(session=session, job=job, artifact=artifact)
+        _log_job_event(
+            level="info",
+            stage="validation_ok",
+            message="Template payload validation succeeded.",
+            context=context,
+        )
+        for progress, message in MEDIA_JOB_PROGRESS_STAGES:
+            _update_job_progress(
+                session,
+                job=job,
+                artifact=artifact,
+                progress=progress,
+                message=message,
+            )
+
+        render_started = time.perf_counter()
+        render_output, attempts_used = _render_artifact_with_retry(
+            session,
+            job=job,
+            artifact=artifact,
+            max_attempts=settings.media_render_max_attempts,
+            timeout_seconds=settings.media_render_timeout_seconds,
+            settings=settings,
+        )
+        timing_meta["render_seconds"] = round(time.perf_counter() - render_started, 3)
+        _attach_render_output_to_artifact(
+            session,
+            artifact=artifact,
+            render_output=render_output,
+            attempts_used=attempts_used,
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=88,
+            message="Render output stored in local artifact path.",
+        )
+        _log_job_event(
+            level="info",
+            stage="render_ok",
+            message="Template rendering completed.",
+            context={
+                **context,
+                "attempts_used": attempts_used,
+                "render_engine": (
+                    str((artifact.render_meta_json or {}).get("render_engine", "")).strip().lower()
+                    or ("remotion" if artifact.template_id.startswith("remotion.") else "manim")
+                ),
+                **timing_meta,
+            },
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=92,
+            message=(
+                "Finalizing rendered video, probing audio stream, extracting thumbnail, "
+                "and evaluating duration gate."
+            ),
+        )
+        postprocess_started = time.perf_counter()
+        postprocess_output, postprocess_attempts = _postprocess_output_with_retry(
+            session=session,
+            job=job,
+            artifact=artifact,
+            render_output=render_output,
+            settings=settings,
+        )
+        timing_meta["postprocess_seconds"] = round(time.perf_counter() - postprocess_started, 3)
+        _attach_postprocess_output_to_artifact(
+            session,
+            artifact=artifact,
+            output=postprocess_output,
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=97,
+            message="Media post-process finished.",
+        )
+        _log_job_event(
+            level="info",
+            stage="postprocess_ok",
+            message="Media post-process completed.",
+            context={**context, "attempts_used": postprocess_attempts, **timing_meta},
+        )
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=99,
+            message="Uploading final media artifact to storage.",
+        )
+        upload_started = time.perf_counter()
+        storage_output, upload_attempts = _upload_media_files_with_retry(
+            session=session,
+            job=job,
+            artifact=artifact,
+            postprocess_output=postprocess_output,
+            settings=settings,
+        )
+        timing_meta["upload_seconds"] = round(time.perf_counter() - upload_started, 3)
+        _attach_storage_output_to_artifact(
+            session=session,
+            artifact=artifact,
+            storage_output=storage_output,
+        )
+        _log_job_event(
+            level="info",
+            stage="upload_ok",
+            message="Media artifact uploaded to storage backend.",
+            context={
+                **context,
+                "attempts_used": upload_attempts,
+                "storage_backend": storage_output.storage_backend,
+                **timing_meta,
+            },
+        )
+        timing_meta["total_seconds"] = round(time.perf_counter() - worker_started, 3)
+        _attach_worker_metrics_to_artifact(
+            session=session,
+            artifact=artifact,
+            metrics=timing_meta,
+        )
+        _mark_job_ready(
+            session,
+            job=job,
+            artifact=artifact,
+            final_message="Render lifecycle finished. Artifact is ready for playback.",
+        )
+        _log_job_event(
+            level="info",
+            stage="worker_done",
+            message="Media job completed successfully.",
+            context={**context, **timing_meta},
+        )
+        return True
+    except TemplateValidationError as exc:
+        _rollback_session_quietly(session)
+        _log_job_event(
+            level="error",
+            stage="validation_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except ValueError as exc:
+        _rollback_session_quietly(session)
+        _log_job_event(
+            level="error",
+            stage="validation_failed",
+            message=str(exc),
+            context={**context, "error_code": "validation_error"},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=str(exc),
+            error_code="validation_error",
+            error_details={"code": "validation_error", "message": str(exc)},
+        )
+        return False
+    except RenderEngineError as exc:
+        _rollback_session_quietly(session)
+        _log_job_event(
+            level="error",
+            stage="render_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except MediaPostprocessError as exc:
+        _rollback_session_quietly(session)
+        _log_job_event(
+            level="error",
+            stage="postprocess_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except MediaStorageError as exc:
+        _rollback_session_quietly(session)
+        _log_job_event(
+            level="error",
+            stage="upload_failed",
+            message=exc.message,
+            context={**context, "error_code": exc.code},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=exc.message,
+            error_code=exc.code,
+            error_details=exc.to_dict(),
+        )
+        return False
+    except Exception as exc:
+        _rollback_session_quietly(session)
+        _log_job_event(
+            level="exception",
+            stage="worker_failed",
+            message=str(exc),
+            context={**context, "error_code": "unknown_error"},
+        )
+        _mark_job_failed(
+            session,
+            job=job,
+            artifact=artifact,
+            error_message=str(exc),
+            error_code="unknown_error",
+            error_details={"code": "unknown_error", "message": str(exc)},
+        )
+        return False
+
+
 def list_media_artifacts(session: Session, *, user: UserAccount) -> MediaArtifactListResponse:
     _ensure_sample_media_artifacts(session, user=user)
     artifacts = list(
@@ -528,11 +994,19 @@ def get_media_artifact_status(
     if artifact is None:
         return None
     progress = artifact.metadata_json.get("progress")
+    render_meta = artifact.render_meta_json if isinstance(artifact.render_meta_json, dict) else {}
+    error_details = render_meta.get("error_details")
     return MediaArtifactStatusResponse(
         artifact_id=artifact.id,
         status=artifact.status,
         progress=int(progress) if isinstance(progress, int) else (100 if artifact.status == "ready" else 0),
         error=str(artifact.metadata_json.get("error")) if artifact.metadata_json.get("error") else None,
+        error_code=(
+            str(artifact.metadata_json.get("error_code"))
+            if artifact.metadata_json.get("error_code")
+            else None
+        ),
+        error_details=error_details if isinstance(error_details, dict) else None,
     )
 
 
@@ -913,6 +1387,7 @@ def track_to_schema(track: LearningTrack) -> TrackRead:
 
 
 def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
+    video_url = _coalesce_video_url(artifact)
     return MediaArtifactRead(
         id=artifact.id,
         title=artifact.title,
@@ -921,8 +1396,9 @@ def media_artifact_to_schema(artifact: MediaArtifact) -> MediaArtifactRead:
         status=artifact.status,
         duration_seconds=artifact.duration_seconds,
         duration_label=_duration_label(artifact.duration_seconds),
-        thumbnail_url=artifact.thumbnail_url,
-        playback_url=artifact.playback_url,
+        thumbnail_url=_optional_text(artifact.thumbnail_url),
+        video_url=video_url,
+        playback_url=video_url,
         transcript=artifact.transcript,
         notes=artifact.notes_json,
         track_id=artifact.track_id,
@@ -1834,6 +2310,619 @@ def _find_concept_by_hints(
         if concept is not None:
             return concept
     return session.scalar(select(KnowledgeConcept).order_by(KnowledgeConcept.display_order))
+
+
+def _publish_media_job_to_queue(*, job_id: UUID) -> bool:
+    try:
+        adapter = build_media_job_queue_adapter()
+        adapter.enqueue(job_id=job_id)
+        return True
+    except Exception:
+        logger.exception("Failed to enqueue media job %s to queue backend.", job_id)
+        return False
+
+
+def _load_job_with_artifact(
+    session: Session,
+    *,
+    job_id: UUID,
+) -> tuple[MediaJob, MediaArtifact] | None:
+    return session.execute(
+        select(MediaJob, MediaArtifact)
+        .join(MediaArtifact, MediaArtifact.id == MediaJob.artifact_id)
+        .where(MediaJob.id == job_id)
+    ).first()
+
+
+def _initial_render_meta(
+    *,
+    validation_result: Any | None,
+    validation_error: dict[str, Any] | None,
+) -> dict[str, Any]:
+    render_meta: dict[str, Any] = {}
+    if validation_result is not None:
+        render_meta.update(
+            {
+                "template_path": validation_result.template_path,
+                "scene_class": validation_result.scene_class,
+                "schema_id": validation_result.schema_id,
+                "render_engine": validation_result.render_engine,
+                "engine_family": validation_result.engine_family,
+                "runtime": validation_result.runtime,
+                "resolved_from": validation_result.resolved_from,
+                "used_alias": validation_result.used_alias,
+            }
+        )
+    if validation_error is not None:
+        render_meta["error_details"] = validation_error
+        render_meta["error_code"] = validation_error.get("code")
+    return render_meta
+
+
+def _mark_job_processing(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+) -> None:
+    if job.status == "processing":
+        return
+    if job.status != "queued":
+        raise ValueError(f"Job {job.id} is not claimable from status '{job.status}'.")
+    job.status = "processing"
+    job.progress = max(5, int(job.progress or 0))
+    job.message = "Worker claimed job and started processing."
+    job.error = None
+    job.attempt = int(job.attempt or 0) + 1
+    if job.started_at is None:
+        job.started_at = datetime.now(UTC)
+    artifact.status = "processing"
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=None,
+        error_details=None,
+        error_code=None,
+    )
+    session.commit()
+
+
+def _update_job_progress(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    progress: int,
+    message: str,
+) -> None:
+    job.status = "processing"
+    job.progress = max(0, min(100, int(progress)))
+    job.message = message
+    artifact.status = "processing"
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=None,
+        error_details=None,
+        error_code=None,
+    )
+    session.commit()
+
+
+def _mark_job_ready(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    final_message: str | None = None,
+) -> None:
+    job.status = "ready"
+    job.progress = 100
+    job.message = final_message or "Render lifecycle finished. Artifact is ready."
+    job.error = None
+    job.finished_at = datetime.now(UTC)
+    artifact.status = "ready"
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=None,
+        error_details=None,
+        error_code=None,
+    )
+    session.commit()
+
+
+def _mark_job_failed(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    error_message: str,
+    error_code: str | None = None,
+    error_details: dict[str, Any] | None = None,
+) -> None:
+    cleaned_error = (error_message or "Unknown media worker error.").strip()[:2000]
+    job.status = "failed"
+    job.message = "Render lifecycle failed."
+    job.error = cleaned_error
+    job.finished_at = datetime.now(UTC)
+    artifact.status = "failed"
+    _sync_artifact_job_state(
+        artifact=artifact,
+        job=job,
+        error_message=cleaned_error,
+        error_details=error_details,
+        error_code=error_code,
+    )
+    session.commit()
+
+
+def _validate_job_payload(
+    *,
+    session: Session,
+    job: MediaJob,
+    artifact: MediaArtifact,
+) -> None:
+    if not artifact.template_id.strip():
+        raise ValueError(f"Job {job.id} has empty template_id.")
+    if not isinstance(artifact.spec_json, dict):
+        raise ValueError(f"Job {job.id} has invalid spec_json payload.")
+    validation_result = validate_template_spec(
+        template_id=artifact.template_id,
+        spec_json=artifact.spec_json,
+    )
+    artifact.template_id = validation_result.template_id
+    artifact.spec_json = validation_result.normalized_spec
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "template_path": validation_result.template_path,
+            "scene_class": validation_result.scene_class,
+            "schema_id": validation_result.schema_id,
+            "render_engine": validation_result.render_engine,
+            "engine_family": validation_result.engine_family,
+            "runtime": validation_result.runtime,
+            "resolved_from": validation_result.resolved_from,
+            "used_alias": validation_result.used_alias,
+            "language": artifact.language,
+        }
+    )
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _render_artifact_with_retry(
+    session: Session,
+    *,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    max_attempts: int,
+    timeout_seconds: int,
+    settings: Any,
+) -> tuple[RenderOutput, int]:
+    attempts_limit = max(1, int(max_attempts))
+    render_meta = dict(artifact.render_meta_json or {})
+    template_path = str(render_meta.get("template_path", "")).strip()
+    scene_class = str(render_meta.get("scene_class", "GeneratedTemplate")).strip()
+    render_engine = str(render_meta.get("render_engine", "")).strip().lower() or (
+        "remotion" if artifact.template_id.startswith("remotion.") else "manim"
+    )
+    runtime = render_meta.get("runtime")
+    if not isinstance(runtime, dict):
+        runtime = {}
+    if not template_path:
+        raise RenderEngineError(
+            code="render_error",
+            message="Render metadata does not contain template_path.",
+            details={"job_id": str(job.id), "template_id": artifact.template_id},
+        )
+
+    last_error: RenderEngineError | None = None
+    for attempt in range(1, attempts_limit + 1):
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=60,
+            message=(
+                f"Running {render_engine} render attempt "
+                f"{attempt}/{attempts_limit}."
+            ),
+        )
+        try:
+            output = render_template_scene(
+                job_id=job.id,
+                template_path=template_path,
+                scene_class=scene_class,
+                spec_json=artifact.spec_json,
+                language=artifact.language,
+                quality_profile=artifact.quality_profile,
+                timeout_seconds=timeout_seconds,
+                settings=settings,
+                template_id=artifact.template_id,
+                render_engine=render_engine,
+                runtime=runtime,
+            )
+            return output, attempt
+        except RenderEngineError as exc:
+            last_error = exc
+            if attempt < attempts_limit:
+                _update_job_progress(
+                    session,
+                    job=job,
+                    artifact=artifact,
+                    progress=68,
+                    message=f"Render attempt {attempt} failed. Retrying attempt {attempt + 1}/{attempts_limit}.",
+                )
+                continue
+            break
+
+    assert last_error is not None
+    raise last_error
+
+
+def _postprocess_output_with_retry(
+    *,
+    session: Session,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    render_output: RenderOutput,
+    settings: Any,
+) -> tuple[MediaPostprocessOutput, int]:
+    attempts_limit = max(1, int(settings.media_postprocess_max_attempts))
+    last_error: MediaPostprocessError | None = None
+
+    for attempt in range(1, attempts_limit + 1):
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=92,
+            message=f"Running media post-process attempt {attempt}/{attempts_limit}.",
+        )
+        try:
+            output = postprocess_render_output(
+                job_id=job.id,
+                artifact=artifact,
+                render_output=render_output,
+                settings=settings,
+            )
+            return output, attempt
+        except MediaPostprocessError as exc:
+            last_error = exc
+            if not _should_retry_postprocess_error(exc.code):
+                break
+            if attempt < attempts_limit:
+                _update_job_progress(
+                    session,
+                    job=job,
+                    artifact=artifact,
+                    progress=94,
+                    message=(
+                        f"Post-process attempt {attempt} failed ({exc.code}). "
+                        f"Retrying attempt {attempt + 1}/{attempts_limit}."
+                    ),
+                )
+                continue
+            break
+
+    assert last_error is not None
+    raise last_error
+
+
+def _upload_media_files_with_retry(
+    *,
+    session: Session,
+    job: MediaJob,
+    artifact: MediaArtifact,
+    postprocess_output: MediaPostprocessOutput,
+    settings: Any,
+) -> tuple[MediaStorageUploadOutput, int]:
+    attempts_limit = max(1, int(settings.media_upload_max_attempts))
+    last_error: MediaStorageError | None = None
+
+    for attempt in range(1, attempts_limit + 1):
+        _update_job_progress(
+            session,
+            job=job,
+            artifact=artifact,
+            progress=99,
+            message=f"Uploading media files attempt {attempt}/{attempts_limit}.",
+        )
+        try:
+            output = upload_media_artifact_files(
+                job_id=job.id,
+                artifact_id=artifact.id,
+                local_video_path=postprocess_output.video_path,
+                local_thumbnail_path=postprocess_output.thumbnail_path,
+                settings=settings,
+            )
+            return output, attempt
+        except MediaStorageError as exc:
+            last_error = exc
+            if attempt < attempts_limit:
+                _update_job_progress(
+                    session,
+                    job=job,
+                    artifact=artifact,
+                    progress=99,
+                    message=(
+                        f"Upload attempt {attempt} failed ({exc.code}). "
+                        f"Retrying attempt {attempt + 1}/{attempts_limit}."
+                    ),
+                )
+                continue
+            break
+
+    assert last_error is not None
+    raise last_error
+
+
+def _should_retry_postprocess_error(error_code: str) -> bool:
+    normalized = str(error_code or "").strip().lower()
+    return normalized in {"ffmpeg_error", "tts_error"}
+
+
+def _attach_render_output_to_artifact(
+    session: Session,
+    *,
+    artifact: MediaArtifact,
+    render_output: RenderOutput,
+    attempts_used: int,
+) -> None:
+    render_meta = dict(artifact.render_meta_json or {})
+    render_engine = str(render_meta.get("render_engine", "")).strip().lower() or (
+        "remotion" if artifact.template_id.startswith("remotion.") else "manim"
+    )
+    render_meta.update(
+        {
+            "local_render_video_path": render_output.video_path,
+            "relative_render_video_path": render_output.relative_video_path,
+            "render_attempts_used": attempts_used,
+            "render_completed_at": datetime.now(UTC).isoformat(),
+            "render_engine": render_engine,
+            "render_stdout_tail": render_output.stdout,
+            "render_stderr_tail": render_output.stderr,
+            "manim_stdout_tail": render_output.stdout if render_engine == "manim" else "",
+            "manim_stderr_tail": render_output.stderr if render_engine == "manim" else "",
+            "remotion_stdout_tail": render_output.stdout if render_engine == "remotion" else "",
+            "remotion_stderr_tail": render_output.stderr if render_engine == "remotion" else "",
+        }
+    )
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _attach_postprocess_output_to_artifact(
+    session: Session,
+    *,
+    artifact: MediaArtifact,
+    output: MediaPostprocessOutput,
+) -> None:
+    artifact.duration_seconds = int(output.duration_seconds)
+    artifact.transcript = output.transcript
+
+    notes = list(artifact.notes_json or [])
+    quality_message = str(output.quality_gate.get("message", "")).strip()
+    quality_result = str(output.quality_gate.get("result", "")).strip().lower()
+    if quality_result == "warning" and quality_message and quality_message not in notes:
+        notes.append(quality_message)
+    artifact.notes_json = notes
+
+    metadata = dict(artifact.metadata_json or {})
+    metadata["quality_gate"] = output.quality_gate
+    artifact.metadata_json = metadata
+
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "local_video_path": output.video_path,
+            "relative_video_path": output.relative_video_path,
+            "local_thumbnail_path": output.thumbnail_path,
+            "relative_thumbnail_path": output.relative_thumbnail_path,
+            "quality_gate": output.quality_gate,
+            "tts": output.tts_meta,
+            "ffmpeg": output.ffmpeg_meta,
+        }
+    )
+    if output.audio_path:
+        render_meta["voiceover_audio_path"] = output.audio_path
+    else:
+        render_meta.pop("voiceover_audio_path", None)
+    if output.relative_audio_path:
+        render_meta["relative_voiceover_audio_path"] = output.relative_audio_path
+    else:
+        render_meta.pop("relative_voiceover_audio_path", None)
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _attach_storage_output_to_artifact(
+    *,
+    session: Session,
+    artifact: MediaArtifact,
+    storage_output: MediaStorageUploadOutput,
+) -> None:
+    artifact.video_url = storage_output.video_url
+    artifact.playback_url = storage_output.video_url
+    artifact.thumbnail_url = storage_output.thumbnail_url
+
+    metadata = dict(artifact.metadata_json or {})
+    metadata["storage"] = {
+        "backend": storage_output.storage_backend,
+        "object_video_path": storage_output.object_video_path,
+        "object_thumbnail_path": storage_output.object_thumbnail_path,
+        "meta": storage_output.meta,
+    }
+    artifact.metadata_json = metadata
+
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta["storage_backend"] = storage_output.storage_backend
+    render_meta["video_object_path"] = storage_output.object_video_path
+    render_meta["thumbnail_object_path"] = storage_output.object_thumbnail_path
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _attach_worker_metrics_to_artifact(
+    *,
+    session: Session,
+    artifact: MediaArtifact,
+    metrics: dict[str, float],
+) -> None:
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta["worker_metrics"] = {
+        "render_seconds": metrics.get("render_seconds", 0.0),
+        "postprocess_seconds": metrics.get("postprocess_seconds", 0.0),
+        "upload_seconds": metrics.get("upload_seconds", 0.0),
+        "total_seconds": metrics.get("total_seconds", 0.0),
+    }
+    artifact.render_meta_json = render_meta
+    session.flush()
+
+
+def _log_job_event(
+    *,
+    level: str,
+    stage: str,
+    message: str,
+    context: dict[str, Any],
+) -> None:
+    payload = {"stage": stage, **context}
+    if level == "error":
+        logger.error("%s | context=%s", message, payload)
+        return
+    if level == "exception":
+        logger.exception("%s | context=%s", message, payload)
+        return
+    logger.info("%s | context=%s", message, payload)
+
+
+def _rollback_session_quietly(session: Session) -> None:
+    try:
+        session.rollback()
+    except Exception:
+        logger.exception("Failed to rollback session after worker error.")
+
+
+def _sync_artifact_job_state(
+    *,
+    artifact: MediaArtifact,
+    job: MediaJob,
+    error_message: str | None,
+    error_details: dict[str, Any] | None,
+    error_code: str | None,
+) -> None:
+    metadata = dict(artifact.metadata_json or {})
+    metadata.update(
+        {
+            "progress": max(0, min(100, int(job.progress or 0))),
+            "job_state": job.status,
+            "job_id": str(job.id),
+        }
+    )
+    if error_message:
+        metadata["error"] = error_message
+        if error_code:
+            metadata["error_code"] = error_code
+    else:
+        metadata.pop("error", None)
+        metadata.pop("error_code", None)
+    artifact.metadata_json = metadata
+
+    render_meta = dict(artifact.render_meta_json or {})
+    render_meta.update(
+        {
+            "last_job_message": job.message,
+            "attempt": int(job.attempt or 0),
+            "worker_status": job.status,
+        }
+    )
+    if error_message:
+        render_meta["error"] = error_message
+        if error_code:
+            render_meta["error_code"] = error_code
+    else:
+        render_meta.pop("error", None)
+        render_meta.pop("error_code", None)
+    if error_details:
+        render_meta["error_details"] = error_details
+    else:
+        render_meta.pop("error_details", None)
+    artifact.render_meta_json = render_meta
+
+
+def _resolve_owned_workspace(
+    session: Session,
+    *,
+    user: UserAccount,
+    workspace_id: UUID | None,
+) -> WorkspaceSession | None:
+    if workspace_id is None:
+        return None
+    workspace = session.scalar(
+        select(WorkspaceSession).where(
+            WorkspaceSession.id == workspace_id,
+            WorkspaceSession.user_id == user.id,
+        )
+    )
+    if workspace is None:
+        raise LookupError("Workspace session was not found.")
+    return workspace
+
+
+def _resolve_concept_id(
+    session: Session,
+    *,
+    concept_id: UUID | None,
+    workspace: WorkspaceSession | None,
+) -> UUID | None:
+    if concept_id is not None:
+        concept = session.get(KnowledgeConcept, concept_id)
+        if concept is None:
+            raise LookupError("Concept was not found.")
+        return concept.id
+    if workspace is None:
+        return None
+    module = session.get(TrackModule, workspace.module_id)
+    if module is None:
+        return None
+    return module.concept_id
+
+
+def _queued_artifact_title(spec_json: dict[str, Any], template_id: str) -> str:
+    raw_title = spec_json.get("title")
+    if isinstance(raw_title, str) and raw_title.strip():
+        return raw_title.strip()[:255]
+    return f"Generated video ({template_id})"
+
+
+def _queued_artifact_subtitle(spec_json: dict[str, Any]) -> str:
+    raw_subtitle = spec_json.get("subtitle")
+    if isinstance(raw_subtitle, str) and raw_subtitle.strip():
+        return raw_subtitle.strip()[:255]
+    return "Queued for Manim rendering"
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _coalesce_video_url(artifact: MediaArtifact) -> str | None:
+    primary = _optional_text(artifact.video_url)
+    if primary:
+        return primary
+    return _optional_text(artifact.playback_url)
+
+
+def _normalize_short_label(value: str, *, fallback: str, max_length: int) -> str:
+    normalized = value.strip().lower()
+    if not normalized:
+        return fallback
+    return normalized[:max_length]
 
 
 def _resolve_submission_targets(

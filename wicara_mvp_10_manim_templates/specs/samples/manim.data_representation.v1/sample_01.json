@@ -1,0 +1,45 @@
+{
+  "id": "ct_003_data_representation_model",
+  "node_id": "data_representation_model",
+  "template_id": "manim.data_representation.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Representasi dan Penyajian Data",
+  "subtitle": "Data kategori lebih mudah dibandingkan jika diubah menjadi diagram batang.",
+  "categories": [
+    {
+      "label": "Jalan kaki",
+      "value": 8
+    },
+    {
+      "label": "Sepeda",
+      "value": 12
+    },
+    {
+      "label": "Motor",
+      "value": 20
+    },
+    {
+      "label": "Angkot",
+      "value": 10
+    }
+  ],
+  "unit": "siswa",
+  "highlight_category": "Motor",
+  "steps": [
+    {
+      "title": "Susun data mentah",
+      "body": "Kategori dan jumlah disiapkan terlebih dahulu agar siap divisualisasikan."
+    },
+    {
+      "title": "Ubah jadi diagram",
+      "body": "Tiap kategori diberi batang dengan tinggi sesuai nilainya."
+    },
+    {
+      "title": "Baca informasi utama",
+      "body": "Dari diagram, kita bisa cepat melihat kategori paling besar, paling kecil, dan perbandingannya."
+    }
+  ],
+  "summary": "Representasi data yang baik membantu pembaca melihat pola tanpa harus membaca seluruh tabel satu per satu."
+}

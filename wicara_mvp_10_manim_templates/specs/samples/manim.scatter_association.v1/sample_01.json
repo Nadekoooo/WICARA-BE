@@ -1,0 +1,70 @@
+{
+  "id": "sample_bivariable_association_33",
+  "node_id": "phase4_bivariable_association",
+  "template_id": "manim.scatter_association.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Asosiasi Dua Variabel",
+  "subtitle": "Diagram pencar membantu membaca kecenderungan hubungan antara waktu belajar dan nilai tes.",
+  "points": [
+    [
+      1,
+      55
+    ],
+    [
+      2,
+      60
+    ],
+    [
+      3,
+      63
+    ],
+    [
+      4,
+      70
+    ],
+    [
+      5,
+      74
+    ],
+    [
+      6,
+      81
+    ],
+    [
+      7,
+      84
+    ]
+  ],
+  "trend_line": {
+    "m": 4.8,
+    "b": 50
+  },
+  "x_range": [
+    0,
+    8,
+    1
+  ],
+  "y_range": [
+    45,
+    90,
+    5
+  ],
+  "association": "positif",
+  "steps": [
+    {
+      "title": "Plot data",
+      "body": "Setiap titik mewakili satu pasangan data waktu belajar dan nilai."
+    },
+    {
+      "title": "Baca kecenderungan",
+      "body": "Titik yang naik ke kanan menunjukkan asosiasi positif."
+    },
+    {
+      "title": "Tafsir hati-hati",
+      "body": "Asosiasi tidak otomatis berarti sebab-akibat."
+    }
+  ],
+  "summary": "Hubungan dua variabel dapat diringkas melalui pola sebaran dan garis kecenderungan."
+}

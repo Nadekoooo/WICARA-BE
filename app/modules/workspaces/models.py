@@ -17,12 +17,6 @@ json_dict_type = JSON().with_variant(JSONB, "postgresql")
 class WorkspaceSession(Base):
     __tablename__ = "workspace_sessions"
     __table_args__ = (
-        UniqueConstraint(
-            "user_id",
-            "track_id",
-            "module_id",
-            name="uq_workspace_sessions_user_track_module",
-        ),
         Index("ix_workspace_sessions_user_status", "user_id", "status"),
     )
 

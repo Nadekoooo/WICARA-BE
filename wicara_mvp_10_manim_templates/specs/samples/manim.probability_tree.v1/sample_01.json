@@ -1,0 +1,59 @@
+{
+  "id": "ct_000_probability_model",
+  "node_id": "probability_model",
+  "template_id": "manim.probability_tree.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Peluang dan Kejadian Bertahap",
+  "subtitle": "Pohon peluang membantu melacak semua hasil yang mungkin pada kejadian bertahap.",
+  "root_label": "Mulai",
+  "levels": [
+    {
+      "name": "Kotak 1",
+      "branches": [
+        {
+          "label": "Merah",
+          "probability": 0.4
+        },
+        {
+          "label": "Biru",
+          "probability": 0.6
+        }
+      ]
+    },
+    {
+      "name": "Kotak 2",
+      "branches": [
+        {
+          "label": "Merah",
+          "probability": 0.4
+        },
+        {
+          "label": "Biru",
+          "probability": 0.6
+        }
+      ]
+    }
+  ],
+  "highlight_path": [
+    "Merah",
+    "Biru"
+  ],
+  "final_probability": 0.24,
+  "steps": [
+    {
+      "title": "Tentukan tahap",
+      "body": "Setiap tahap kejadian dibuat sebagai level berbeda pada pohon peluang."
+    },
+    {
+      "title": "Ikuti cabang",
+      "body": "Setiap cabang mewakili hasil yang mungkin beserta peluangnya."
+    },
+    {
+      "title": "Kalikan sepanjang jalur",
+      "body": "Peluang kejadian gabungan diperoleh dengan mengalikan peluang pada cabang yang dilalui."
+    }
+  ],
+  "summary": "Pohon peluang cocok untuk kejadian majemuk karena semua kemungkinan ditampilkan secara sistematis."
+}

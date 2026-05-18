@@ -1,0 +1,37 @@
+{
+  "id": "sample_motion_kinematics_57",
+  "node_id": "phase4_motion_kinematics",
+  "template_id": "manim.motion_kinematics.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Kinematika Gerak",
+  "subtitle": "Gerak dapat dijelaskan melalui posisi, kecepatan, dan grafik perubahan terhadap waktu.",
+  "positions": [
+    0,
+    2,
+    5,
+    9
+  ],
+  "times": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "steps": [
+    {
+      "title": "Posisi terhadap waktu",
+      "body": "Gerak diamati dengan membandingkan perubahan posisi pada selang waktu tertentu."
+    },
+    {
+      "title": "Makna kecepatan",
+      "body": "Kecepatan menyatakan seberapa cepat posisi berubah."
+    },
+    {
+      "title": "Baca grafik",
+      "body": "Kemiringan grafik posisi-waktu memberi petunjuk tentang kecepatan gerak."
+    }
+  ],
+  "summary": "Representasi tabel, lintasan, dan grafik saling melengkapi untuk menjelaskan gerak."
+}

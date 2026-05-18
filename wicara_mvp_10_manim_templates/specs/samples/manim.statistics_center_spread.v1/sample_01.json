@@ -1,0 +1,43 @@
+{
+  "id": "ct_004_center_spread_statistics",
+  "node_id": "center_spread_statistics",
+  "template_id": "manim.statistics_center_spread.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Ukuran Pemusatan dan Penyebaran",
+  "subtitle": "Data perlu dibaca tidak hanya dari nilai tengahnya, tetapi juga dari sebarannya.",
+  "data_values": [
+    60,
+    65,
+    65,
+    70,
+    72,
+    75,
+    80
+  ],
+  "center_metrics": {
+    "mean": 69.6,
+    "median": 70
+  },
+  "spread_metrics": {
+    "range": 20,
+    "min": 60,
+    "max": 80
+  },
+  "steps": [
+    {
+      "title": "Susun data pada garis nilai",
+      "body": "Dot plot memudahkan kita melihat posisi setiap data."
+    },
+    {
+      "title": "Cari nilai pusat",
+      "body": "Mean dan median memberikan gambaran pusat data dari dua sudut pandang berbeda."
+    },
+    {
+      "title": "Periksa penyebaran",
+      "body": "Range menunjukkan lebar variasi data dari nilai terkecil hingga terbesar."
+    }
+  ],
+  "summary": "Pemusatan menjelaskan nilai representatif, sedangkan penyebaran menunjukkan seberapa bervariasi data itu."
+}

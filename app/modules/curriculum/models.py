@@ -75,6 +75,8 @@ class KnowledgeConcept(Base):
     code: Mapped[str] = mapped_column(String(128), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    id_desc: Mapped[str | None] = mapped_column(Text)
+    en_desc: Mapped[str | None] = mapped_column(Text)
     grade_band: Mapped[str | None] = mapped_column(String(64))
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     layout_x: Mapped[float | None] = mapped_column(Float)

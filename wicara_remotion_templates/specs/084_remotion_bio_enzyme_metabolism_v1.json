@@ -1,0 +1,107 @@
+{
+  "id": "remotion_v2_084_enzyme_metabolism_process",
+  "row_index": 84,
+  "concept_type": "enzyme_metabolism_process",
+  "concept_type_label_id": "Enzim dan metabolisme sel",
+  "template_id": "remotion.bio_enzyme_metabolism.v1",
+  "component": "EnzymeMetabolismVideo",
+  "archetype": "enzyme_metabolism",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Enzim dan metabolisme sel",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `enzyme_metabolism_process`.",
+  "keyIdea": "Enzim mempercepat reaksi dengan mengikat substrat secara spesifik.",
+  "steps": [
+    {
+      "id": "enzyme",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Enzim adalah biokatalis",
+      "narration": "Enzim mempercepat reaksi metabolisme tanpa habis digunakan."
+    },
+    {
+      "id": "substrate",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Substrat mendekati sisi aktif",
+      "narration": "Substrat harus sesuai dengan bentuk sisi aktif enzim."
+    },
+    {
+      "id": "complex",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Kompleks enzim-substrat terbentuk",
+      "narration": "Enzim dan substrat berikatan sementara."
+    },
+    {
+      "id": "reaction",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Reaksi berlangsung lebih mudah",
+      "narration": "Enzim menurunkan energi aktivasi sehingga reaksi lebih cepat."
+    },
+    {
+      "id": "product",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Produk dilepaskan",
+      "narration": "Setelah reaksi selesai, produk keluar dari sisi aktif."
+    },
+    {
+      "id": "factor",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Faktor lingkungan memengaruhi enzim",
+      "narration": "Suhu, pH, dan konsentrasi dapat mengubah aktivitas enzim."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Spesifisitas menentukan kerja enzim",
+      "narration": "Enzim bekerja efektif jika kondisi dan substratnya sesuai."
+    }
+  ],
+  "visual": {
+    "stages": [
+      "Substrat",
+      "Kompleks enzim-substrat",
+      "Produk"
+    ],
+    "factors": [
+      "Suhu",
+      "pH",
+      "Konsentrasi"
+    ]
+  },
+  "summarySequence": [
+    "Enzim",
+    "Substrat",
+    "Kompleks",
+    "Reaksi",
+    "Produk",
+    "Faktor"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

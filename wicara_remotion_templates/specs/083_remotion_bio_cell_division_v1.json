@@ -1,0 +1,107 @@
+{
+  "id": "remotion_v2_083_cell_division_cycle",
+  "row_index": 83,
+  "concept_type": "cell_division_cycle",
+  "concept_type_label_id": "Pembelahan sel mitosis dan meiosis",
+  "template_id": "remotion.bio_cell_division.v1",
+  "component": "CellDivisionVideo",
+  "archetype": "cell_division",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Pembelahan sel mitosis dan meiosis",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `cell_division_cycle`.",
+  "keyIdea": "Pembelahan sel menggandakan dan membagi materi genetik secara teratur.",
+  "steps": [
+    {
+      "id": "parent",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Mulai dari sel induk",
+      "narration": "Pembelahan dimulai dari satu sel induk."
+    },
+    {
+      "id": "duplicate",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Kromosom digandakan",
+      "narration": "Materi genetik disalin agar dapat dibagi ke sel baru."
+    },
+    {
+      "id": "align",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Kromosom berjajar",
+      "narration": "Kromosom tersusun di tengah sel sebelum dipisahkan."
+    },
+    {
+      "id": "separate",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Kromosom dipisahkan",
+      "narration": "Salinan kromosom bergerak ke sisi berlawanan."
+    },
+    {
+      "id": "divide",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Sel membelah",
+      "narration": "Membran sel membagi sitoplasma menjadi dua bagian."
+    },
+    {
+      "id": "compare",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Mitosis dan meiosis dibandingkan",
+      "narration": "Mitosis menghasilkan sel identik, meiosis menghasilkan sel reproduksi."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Pembelahan mendukung kehidupan",
+      "narration": "Pembelahan sel penting untuk pertumbuhan, perbaikan, dan reproduksi."
+    }
+  ],
+  "visual": {
+    "mitosis": [
+      "Profase",
+      "Metafase",
+      "Anafase",
+      "Telofase"
+    ],
+    "meiosis": [
+      "Meiosis I",
+      "Meiosis II"
+    ]
+  },
+  "summarySequence": [
+    "Sel induk",
+    "Duplikasi",
+    "Berjajar",
+    "Berpisah",
+    "Sel anak",
+    "Fungsi"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

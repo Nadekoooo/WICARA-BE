@@ -1,0 +1,57 @@
+{
+  "id": "sample_factor_multiple_divisibility_92",
+  "node_id": "phase3_factor_multiple_divisibility",
+  "template_id": "manim.factor_tree_multiple_grid.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Faktor, Kelipatan, FPB, KPK, dan Keterbagian",
+  "subtitle": "Faktor membagi habis suatu bilangan, sedangkan kelipatan muncul dari perkalian berulang.",
+  "numbers": [
+    12,
+    18
+  ],
+  "factor_tree": {
+    "root": 12,
+    "children": [
+      3,
+      4
+    ],
+    "leafs": [
+      3,
+      2,
+      2
+    ]
+  },
+  "multiples_a": [
+    12,
+    24,
+    36,
+    48
+  ],
+  "multiples_b": [
+    18,
+    36,
+    54,
+    72
+  ],
+  "highlight": {
+    "fpb": 6,
+    "kpk": 36
+  },
+  "steps": [
+    {
+      "title": "Cari faktor",
+      "body": "Faktor adalah bilangan yang membagi habis bilangan lain."
+    },
+    {
+      "title": "Cari kelipatan",
+      "body": "Kelipatan diperoleh dari perkalian bilangan dengan 1, 2, 3, dan seterusnya."
+    },
+    {
+      "title": "Temukan FPB dan KPK",
+      "body": "FPB berasal dari faktor bersama terbesar, KPK dari kelipatan bersama terkecil."
+    }
+  ],
+  "summary": "Faktor dan kelipatan adalah dasar untuk memahami FPB, KPK, dan aturan keterbagian."
+}

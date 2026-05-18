@@ -1,0 +1,59 @@
+{
+  "id": "sample_graph_function_98",
+  "node_id": "phase4_graph_function_model",
+  "template_id": "manim.graph_explanation.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Grafik Fungsi dan Interpretasi Kurva",
+  "subtitle": "Grafik fungsi menghubungkan input dan output sehingga perubahan dapat dibaca secara visual.",
+  "function": {
+    "type": "linear",
+    "params": {
+      "m": 2,
+      "b": 1
+    }
+  },
+  "x_range": [
+    -2,
+    4,
+    1
+  ],
+  "y_range": [
+    -3,
+    10,
+    1
+  ],
+  "formula_latex": "f(x)=2x+1",
+  "moving_points": [
+    -1,
+    0,
+    2,
+    3
+  ],
+  "x_path": [
+    -1,
+    0,
+    2,
+    3
+  ],
+  "graph_label": "garis fungsi",
+  "moving_label": "titik input-output",
+  "show_slope": true,
+  "highlight_x": 2,
+  "steps": [
+    {
+      "title": "Input dan output",
+      "body": "Setiap nilai x menghasilkan satu nilai y pada grafik fungsi."
+    },
+    {
+      "title": "Baca kemiringan",
+      "body": "Kemiringan garis menunjukkan laju perubahan output terhadap input."
+    },
+    {
+      "title": "Interpretasi konteks",
+      "body": "Grafik dapat dipakai untuk menjelaskan tren dalam situasi nyata."
+    }
+  ],
+  "summary": "Grafik fungsi membuat hubungan antar variabel lebih mudah diamati dan ditafsirkan."
+}

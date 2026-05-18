@@ -1,0 +1,55 @@
+{
+  "id": "ct_008_sequence_pattern_generalization",
+  "node_id": "sequence_pattern_generalization",
+  "template_id": "manim.sequence_pattern.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pola, Barisan, dan Generalisasi",
+  "subtitle": "Dari beberapa suku awal, kita bisa menemukan aturan lalu memprediksi suku berikutnya.",
+  "terms": [
+    3,
+    6,
+    9,
+    12
+  ],
+  "visual_pattern_type": "growing_dots",
+  "rule": "Tambah 3 setiap langkah",
+  "table_values": [
+    {
+      "n": 1,
+      "value": 3
+    },
+    {
+      "n": 2,
+      "value": 6
+    },
+    {
+      "n": 3,
+      "value": 9
+    },
+    {
+      "n": 4,
+      "value": 12
+    }
+  ],
+  "target_term": {
+    "n": 5,
+    "value": 15
+  },
+  "steps": [
+    {
+      "title": "Amati suku-suku awal",
+      "body": "Perhatikan bagaimana nilai berubah dari satu suku ke suku berikutnya."
+    },
+    {
+      "title": "Temukan aturan",
+      "body": "Perubahan tetap memungkinkan kita membuat aturan umum pola."
+    },
+    {
+      "title": "Generalisasi",
+      "body": "Setelah aturan ditemukan, suku berikutnya dapat diprediksi tanpa menebak."
+    }
+  ],
+  "summary": "Generalisasi pola mengubah pengamatan beberapa contoh menjadi aturan yang bisa dipakai lebih luas."
+}

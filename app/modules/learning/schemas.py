@@ -158,8 +158,12 @@ class MediaArtifactRead(BaseModel):
     status: str
     duration_seconds: int
     duration_label: str
-    thumbnail_url: str
-    playback_url: str
+    thumbnail_url: str | None = None
+    video_url: str | None = None
+    playback_url: str | None = Field(
+        default=None,
+        description="Deprecated alias for video_url. Use video_url as source of truth.",
+    )
     transcript: str
     notes: list[str]
     track_id: UUID | None = None
@@ -176,6 +180,36 @@ class MediaArtifactStatusResponse(BaseModel):
     status: str
     progress: int
     error: str | None = None
+    error_code: str | None = None
+    error_details: dict[str, Any] | None = None
+
+
+class AnimationQueueRequest(BaseModel):
+    workspace_id: UUID | None = None
+    concept_id: UUID | None = None
+    template_id: str = Field(..., min_length=3, max_length=120)
+    spec_json: dict[str, Any] = Field(default_factory=dict)
+    language: str = Field(default="id", min_length=2, max_length=16)
+    quality_profile: str = Field(default="standard", min_length=2, max_length=32)
+
+
+class AnimationQueueResponse(BaseModel):
+    job_id: UUID
+    artifact_id: UUID
+    status: str
+    error_details: dict[str, Any] | None = None
+
+
+class AnimationJobStatusResponse(BaseModel):
+    job_id: UUID
+    status: str
+    progress: int
+    message: str
+    artifact_id: UUID
+    video_url: str | None = None
+    thumbnail_url: str | None = None
+    error: str | None = None
+    error_details: dict[str, Any] | None = None
 
 
 class ActionRead(BaseModel):

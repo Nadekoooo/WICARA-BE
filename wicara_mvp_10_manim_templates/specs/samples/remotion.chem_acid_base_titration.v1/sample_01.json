@@ -1,0 +1,101 @@
+{
+  "id": "remotion_v2_028_acid_base_ph_titration",
+  "row_index": 28,
+  "concept_type": "acid_base_ph_titration",
+  "concept_type_label_id": "Asam-basa, pH, buffer, hidrolisis, dan titrasi",
+  "template_id": "remotion.chem_acid_base_titration.v1",
+  "component": "AcidBaseTitrationVideo",
+  "archetype": "acid_base_titration",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Asam-basa, pH, buffer, hidrolisis, dan titrasi",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `acid_base_ph_titration`.",
+  "keyIdea": "Titrasi menghubungkan penambahan larutan, perubahan pH, dan titik ekuivalen.",
+  "steps": [
+    {
+      "id": "setup",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Siapkan larutan asam dan basa",
+      "narration": "Titrasi dimulai dari larutan yang konsentrasinya ingin dianalisis."
+    },
+    {
+      "id": "drop",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Titran ditambahkan perlahan",
+      "narration": "Larutan dalam buret diteteskan sedikit demi sedikit ke erlenmeyer."
+    },
+    {
+      "id": "neutralize",
+      "start": 430,
+      "duration": 170,
+      "title": "3. H+ dan OH- bereaksi",
+      "narration": "Ion hidrogen dan hidroksida membentuk air ketika jumlahnya setara."
+    },
+    {
+      "id": "indicator",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Indikator berubah warna",
+      "narration": "Indikator memberi tanda visual saat mendekati titik akhir titrasi."
+    },
+    {
+      "id": "curve",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Kurva pH berubah tajam",
+      "narration": "Di sekitar titik ekuivalen, pH dapat berubah sangat cepat."
+    },
+    {
+      "id": "equivalence",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Titik ekuivalen dianalisis",
+      "narration": "Titik ekuivalen menunjukkan perbandingan stoikiometri asam dan basa."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Hubungkan lab dan data",
+      "narration": "Titrasi menggabungkan eksperimen, reaksi ion, dan interpretasi grafik."
+    }
+  ],
+  "visual": {
+    "acid": "HCl",
+    "base": "NaOH",
+    "indicator": "Fenolftalein",
+    "equivalencePH": 7
+  },
+  "summarySequence": [
+    "Setup",
+    "Tetes titran",
+    "Netralisasi",
+    "Indikator",
+    "Kurva pH",
+    "Titik ekuivalen"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

@@ -86,6 +86,8 @@ def seed_curriculum(
 
         concept.title = concept_data.title
         concept.description = concept_data.description
+        concept.id_desc = concept_data.id_desc
+        concept.en_desc = concept_data.en_desc
         concept.grade_band = concept_data.grade_band
         concept.display_order = concept_data.display_order
         concept.layout_x = concept_data.layout_x

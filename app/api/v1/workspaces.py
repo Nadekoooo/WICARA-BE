@@ -13,6 +13,24 @@ from app.modules.workspaces import schemas, service
 router = APIRouter(prefix="/workspaces")
 
 
+@router.get("", response_model=schemas.WorkspaceSessionHistoryRead)
+def list_workspaces(
+    track_id: UUID,
+    module_id: UUID,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WorkspaceSessionHistoryRead:
+    try:
+        return service.list_workspace_sessions(
+            session,
+            user=account,
+            track_id=track_id,
+            module_id=module_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
 @router.post("", response_model=schemas.WorkspaceRead)
 def create_workspace(
     payload: schemas.WorkspaceCreateRequest,
@@ -26,6 +44,8 @@ def create_workspace(
             track_id=payload.track_id,
             module_id=payload.module_id,
             content_mode=payload.content_mode,
+            workspace_session_id=payload.workspace_session_id,
+            start_new_session=payload.start_new_session,
         )
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -66,6 +86,40 @@ async def append_workspace_event(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    if response is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace was not found.")
+    return response
+
+
+@router.post(
+    "/{workspace_id}/generate-video",
+    response_model=schemas.WorkspaceGenerateVideoResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def generate_workspace_video(
+    workspace_id: UUID,
+    payload: schemas.WorkspaceGenerateVideoRequest,
+    account: UserAccount = Depends(get_current_account),
+    session: Session = Depends(get_session),
+) -> schemas.WorkspaceGenerateVideoResponse:
+    try:
+        response = service.queue_workspace_video_generation(
+            session,
+            user=account,
+            workspace_id=workspace_id,
+            generation_mode=payload.generation_mode,
+            template_id=payload.template_id,
+            spec_json=payload.spec_json,
+            language=payload.language,
+            quality_profile=payload.quality_profile,
+            concept_id=payload.concept_id,
+            metadata=payload.metadata,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
     if response is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace was not found.")

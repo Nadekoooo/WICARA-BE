@@ -1,0 +1,108 @@
+{
+  "id": "remotion_v2_060_chemistry_inquiry_safety_context",
+  "row_index": 60,
+  "concept_type": "chemistry_inquiry_safety_context",
+  "concept_type_label_id": "Hakikat kimia, laboratorium, dan keselamatan",
+  "template_id": "remotion.chem_lab_safety.v1",
+  "component": "LabSafetyVideo",
+  "archetype": "lab_safety",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Hakikat kimia, laboratorium, dan keselamatan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `chemistry_inquiry_safety_context`.",
+  "keyIdea": "Eksperimen kimia harus mengikuti prosedur ilmiah dan keselamatan.",
+  "steps": [
+    {
+      "id": "scope",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Kimia mempelajari zat",
+      "narration": "Kimia mempelajari sifat, komposisi, dan perubahan zat."
+    },
+    {
+      "id": "observe",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Mulai dengan pengamatan",
+      "narration": "Eksperimen dimulai dari observasi yang jelas."
+    },
+    {
+      "id": "tool",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Gunakan alat sesuai fungsi",
+      "narration": "Alat laboratorium dipakai sesuai prosedur agar hasil aman dan akurat."
+    },
+    {
+      "id": "record",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Catat data",
+      "narration": "Pengamatan perlu dicatat agar bisa dianalisis."
+    },
+    {
+      "id": "hazard",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Kenali simbol bahaya",
+      "narration": "Simbol bahaya memberi peringatan tentang risiko bahan atau alat."
+    },
+    {
+      "id": "safety",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Patuhi keselamatan",
+      "narration": "Kacamata, sarung tangan, dan aturan lab melindungi pengguna."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Kerja ilmiah dan aman berjalan bersama",
+      "narration": "Laboratorium yang baik menggabungkan rasa ingin tahu dan budaya keselamatan."
+    }
+  ],
+  "visual": {
+    "icons": [
+      "Gelas kimia",
+      "Api",
+      "Kacamata",
+      "Label bahaya"
+    ],
+    "workflow": [
+      "Amati",
+      "Catat",
+      "Simpulkan"
+    ]
+  },
+  "summarySequence": [
+    "Zat",
+    "Observasi",
+    "Alat",
+    "Data",
+    "Bahaya",
+    "Keselamatan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

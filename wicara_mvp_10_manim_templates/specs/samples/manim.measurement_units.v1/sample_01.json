@@ -1,0 +1,33 @@
+{
+  "id": "sample_measurement_unit_conversion_90",
+  "node_id": "phase3_measurement_unit_conversion",
+  "template_id": "manim.measurement_units.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Pengukuran, Satuan, dan Konversi Sederhana",
+  "subtitle": "Satuan dapat dikonversi dengan memahami tangga satuan dan faktor pengali.",
+  "quantity": "panjang",
+  "conversion_chain": [
+    "m",
+    "dm",
+    "cm",
+    "mm"
+  ],
+  "example": "2 m = 200 cm",
+  "steps": [
+    {
+      "title": "Kenali besaran",
+      "body": "Panjang, massa, dan waktu diukur dengan satuan yang berbeda."
+    },
+    {
+      "title": "Gunakan tangga satuan",
+      "body": "Berpindah satu langkah pada satuan panjang berarti mengalikan atau membagi 10."
+    },
+    {
+      "title": "Terapkan pada contoh",
+      "body": "Konversi dilakukan dengan menghitung jumlah langkah antar satuan."
+    }
+  ],
+  "summary": "Konversi satuan menjadi mudah jika arah perpindahan dan faktor pengalinya jelas."
+}

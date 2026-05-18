@@ -1,0 +1,60 @@
+{
+  "id": "ct_009_congruence_similarity_transform",
+  "node_id": "congruence_similarity_transform",
+  "template_id": "manim.geometry_transform.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Kongruensi, Kesebangunan, dan Transformasi",
+  "subtitle": "Transformasi geometri membantu menjelaskan perpindahan bangun dan sifat bentuk yang tetap.",
+  "shape_points": [
+    [
+      -1.0,
+      -0.7
+    ],
+    [
+      1.0,
+      -0.7
+    ],
+    [
+      0.2,
+      0.9
+    ]
+  ],
+  "transformations": [
+    {
+      "type": "translate",
+      "vector": [
+        2.2,
+        0.5
+      ],
+      "label": "Translasi"
+    },
+    {
+      "type": "rotate",
+      "angle_degrees": 90,
+      "label": "Rotasi 90°"
+    },
+    {
+      "type": "reflect",
+      "axis": "y",
+      "label": "Refleksi sumbu-y"
+    }
+  ],
+  "invariant_text": "Pada transformasi kaku, bentuk dan ukuran tetap sehingga bangun hasilnya kongruen dengan bangun awal.",
+  "steps": [
+    {
+      "title": "Amati bangun awal",
+      "body": "Mulailah dari satu bangun dengan titik-titik yang jelas."
+    },
+    {
+      "title": "Terapkan transformasi",
+      "body": "Setiap translasi, rotasi, atau refleksi mengubah posisi atau orientasi bangun."
+    },
+    {
+      "title": "Bandingkan sifat tetap",
+      "body": "Pada transformasi kaku, ukuran dan bentuk tetap, sehingga konsep kongruensi menjadi lebih mudah dipahami."
+    }
+  ],
+  "summary": "Transformasi geometri memberi cara visual untuk memahami perpindahan bangun dan sifat-sifat yang dipertahankan."
+}

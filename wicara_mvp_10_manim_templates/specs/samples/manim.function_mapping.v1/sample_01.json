@@ -1,0 +1,76 @@
+{
+  "id": "sample_function_mapping_distinct",
+  "node_id": "phase4_function_mapping_rule",
+  "template_id": "manim.function_mapping.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Fungsi sebagai Mesin Pemetaan",
+  "subtitle": "Setiap input diproses oleh aturan dan menghasilkan tepat satu output.",
+  "rule_text": "kalikan 2 lalu tambah 1",
+  "formula_latex": "f(x)=2x+1",
+  "pairs": [
+    {
+      "input": -1,
+      "output": -1
+    },
+    {
+      "input": 0,
+      "output": 1
+    },
+    {
+      "input": 1,
+      "output": 3
+    },
+    {
+      "input": 2,
+      "output": 5
+    }
+  ],
+  "steps": [
+    {
+      "title": "Masukkan input",
+      "body": "Nilai x masuk ke mesin fungsi satu per satu.",
+      "narration": "Masukkan input. Nilai x masuk ke mesin fungsi satu per satu."
+    },
+    {
+      "title": "Gunakan aturan",
+      "body": "Aturan yang sama diterapkan pada semua input.",
+      "narration": "Gunakan aturan. Aturan yang sama diterapkan pada semua input."
+    },
+    {
+      "title": "Hasil unik",
+      "body": "Untuk setiap input, fungsi memberi tepat satu output.",
+      "narration": "Hasil unik. Untuk setiap input, fungsi memberi tepat satu output."
+    }
+  ],
+  "summary": "Fungsi adalah aturan yang memasangkan setiap input dengan tepat satu output.",
+  "intro_narration": "Setiap input diproses oleh aturan dan menghasilkan tepat satu output.",
+  "summary_narration": "Fungsi adalah aturan yang memasangkan setiap input dengan tepat satu output.",
+  "voiceover_script": "Setiap input diproses oleh aturan dan menghasilkan tepat satu output.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Setiap input diproses oleh aturan dan menghasilkan tepat satu output."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Masukkan input. Nilai x masuk ke mesin fungsi satu per satu."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Gunakan aturan. Aturan yang sama diterapkan pada semua input."
+    },
+    {
+      "slot": "step",
+      "step_index": 3,
+      "text": "Hasil unik. Untuk setiap input, fungsi memberi tepat satu output."
+    },
+    {
+      "slot": "summary",
+      "text": "Fungsi adalah aturan yang memasangkan setiap input dengan tepat satu output."
+    }
+  ]
+}

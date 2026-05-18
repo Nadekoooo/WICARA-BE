@@ -1,0 +1,36 @@
+{
+  "id": "ct_010_exponential_growth_model",
+  "node_id": "exponential_growth_model",
+  "template_id": "manim.exponential_growth.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Model Pertumbuhan Eksponensial",
+  "subtitle": "Jika nilai dikalikan faktor tetap berulang kali, pertumbuhannya menjadi eksponensial.",
+  "initial": 2,
+  "growth_factor": 3,
+  "periods": 5,
+  "values": [
+    2,
+    6,
+    18,
+    54,
+    162
+  ],
+  "formula_latex": "a_n = a_0 \\cdot r^n",
+  "steps": [
+    {
+      "title": "Tentukan nilai awal",
+      "body": "Model dimulai dari suatu nilai dasar pada periode pertama."
+    },
+    {
+      "title": "Kalikan dengan faktor tetap",
+      "body": "Setiap periode, nilai dikalikan faktor yang sama, misalnya 3 kali lipat."
+    },
+    {
+      "title": "Amati percepatan pertumbuhan",
+      "body": "Nilai meningkat sangat cepat karena faktor pengalinya diterapkan berulang kali."
+    }
+  ],
+  "summary": "Pertumbuhan eksponensial cocok untuk situasi yang berkembang melalui penggandaan atau pelipatan berulang."
+}

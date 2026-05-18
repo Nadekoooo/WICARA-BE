@@ -1,0 +1,107 @@
+{
+  "id": "remotion_v2_105_disease_disorder_context",
+  "row_index": 105,
+  "concept_type": "disease_disorder_context",
+  "concept_type_label_id": "Gangguan sistem organ dan konteks kesehatan",
+  "template_id": "remotion.bio_health_disorder.v1",
+  "component": "HealthDisorderVideo",
+  "archetype": "health_disorder",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Gangguan sistem organ dan konteks kesehatan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `disease_disorder_context`.",
+  "keyIdea": "Gangguan sistem organ dipahami melalui sistem yang terkena, gejala, dan pencegahan.",
+  "steps": [
+    {
+      "id": "system",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Setiap gangguan terkait sistem organ",
+      "narration": "Gangguan kesehatan biasanya memengaruhi sistem tubuh tertentu."
+    },
+    {
+      "id": "case1",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Contoh gangguan dikenali",
+      "narration": "Kasus seperti asma, anemia, atau diabetes punya ciri berbeda."
+    },
+    {
+      "id": "symptom",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Gejala menjadi petunjuk",
+      "narration": "Gejala membantu mengenali kemungkinan masalah pada tubuh."
+    },
+    {
+      "id": "cause",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Penyebab dianalisis",
+      "narration": "Penyebab dapat berasal dari infeksi, gaya hidup, genetik, atau lingkungan."
+    },
+    {
+      "id": "prevention",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Pencegahan ditekankan",
+      "narration": "Kebiasaan sehat dapat menurunkan risiko beberapa gangguan."
+    },
+    {
+      "id": "care",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Penanganan harus tepat",
+      "narration": "Masalah kesehatan perlu ditangani sesuai penyebab dan kondisinya."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Konteks kesehatan perlu utuh",
+      "narration": "Belajar gangguan tubuh harus menghubungkan sistem, gejala, sebab, dan pencegahan."
+    }
+  ],
+  "visual": {
+    "cases": [
+      "Asma",
+      "Anemia",
+      "Diabetes"
+    ],
+    "columns": [
+      "Sistem",
+      "Gejala",
+      "Pencegahan"
+    ]
+  },
+  "summarySequence": [
+    "Sistem",
+    "Kasus",
+    "Gejala",
+    "Sebab",
+    "Pencegahan",
+    "Penanganan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

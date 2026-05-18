@@ -1,0 +1,103 @@
+{
+  "id": "remotion_v2_039_mutation_evolution_selection",
+  "row_index": 39,
+  "concept_type": "mutation_evolution_selection",
+  "concept_type_label_id": "Mutasi, evolusi, seleksi alam, dan biodiversitas",
+  "template_id": "remotion.bio_evolution_selection.v1",
+  "component": "EvolutionSelectionVideo",
+  "archetype": "evolution_selection",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Mutasi, evolusi, seleksi alam, dan biodiversitas",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `mutation_evolution_selection`.",
+  "keyIdea": "Seleksi alam mengubah frekuensi sifat dalam populasi dari generasi ke generasi.",
+  "steps": [
+    {
+      "id": "variation",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Populasi memiliki variasi",
+      "narration": "Individu dalam populasi tidak semuanya sama."
+    },
+    {
+      "id": "mutation",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Variasi dapat muncul dari mutasi",
+      "narration": "Mutasi dan rekombinasi menghasilkan sifat baru."
+    },
+    {
+      "id": "environment",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Lingkungan memberi tekanan seleksi",
+      "narration": "Lingkungan tertentu membuat sebagian sifat lebih menguntungkan."
+    },
+    {
+      "id": "survive",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Individu adaptif lebih bertahan",
+      "narration": "Individu yang cocok lebih mungkin bertahan dan bereproduksi."
+    },
+    {
+      "id": "frequency",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Frekuensi sifat berubah",
+      "narration": "Sifat yang menguntungkan dapat menjadi lebih umum pada generasi berikutnya."
+    },
+    {
+      "id": "biodiversity",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Perubahan jangka panjang membentuk biodiversitas",
+      "narration": "Akumulasi perubahan dapat menghasilkan keragaman hayati."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Evolusi adalah perubahan populasi",
+      "narration": "Fokus evolusi adalah perubahan sifat dalam populasi, bukan perubahan satu individu."
+    }
+  ],
+  "visual": {
+    "traits": [
+      "Sifat A",
+      "Sifat B",
+      "Sifat C"
+    ],
+    "environment": "Lingkungan kering"
+  },
+  "summarySequence": [
+    "Variasi",
+    "Mutasi",
+    "Seleksi",
+    "Bertahan",
+    "Frekuensi",
+    "Evolusi"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

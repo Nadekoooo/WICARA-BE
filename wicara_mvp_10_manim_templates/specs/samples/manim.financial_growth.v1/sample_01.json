@@ -1,0 +1,37 @@
+{
+  "id": "ct_002_financial_growth_model",
+  "node_id": "financial_growth_model",
+  "template_id": "manim.financial_growth.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Model Keuangan dan Pertumbuhan Nilai",
+  "subtitle": "Nilai tabungan bertumbuh dari periode ke periode melalui kenaikan persentase tetap.",
+  "initial_amount": 500,
+  "rate_percent": 10,
+  "periods": 5,
+  "values": [
+    500,
+    550,
+    605,
+    665.5,
+    732.05
+  ],
+  "currency": "ribu rupiah",
+  "formula_latex": "A_n = A_0(1+r)^n",
+  "steps": [
+    {
+      "title": "Mulai dari nilai awal",
+      "body": "Model keuangan selalu berangkat dari modal atau saldo pada periode pertama."
+    },
+    {
+      "title": "Terapkan pertumbuhan",
+      "body": "Setiap periode, nilai baru dihitung dari nilai sebelumnya, bukan hanya dari nilai awal."
+    },
+    {
+      "title": "Amati efek majemuk",
+      "body": "Kenaikan absolut membesar karena basis perhitungan ikut bertambah."
+    }
+  ],
+  "summary": "Pertumbuhan nilai majemuk menjelaskan mengapa tabungan atau investasi dapat meningkat semakin cepat seiring waktu."
+}

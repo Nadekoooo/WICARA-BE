@@ -1,0 +1,29 @@
+{
+  "id": "sample_function_composition_inverse_53",
+  "node_id": "phase5_function_composition_inverse",
+  "template_id": "manim.function_composition_transform.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Komposisi dan Invers Fungsi",
+  "subtitle": "Fungsi dapat dipandang sebagai mesin yang mengubah input menjadi output, lalu dibalik dengan fungsi invers.",
+  "input_value": 2,
+  "f_label": "f(x)=2x+1",
+  "g_label": "g(x)=x^2",
+  "inverse_label": "f^{-1}(x)=(x-1)/2",
+  "steps": [
+    {
+      "title": "Komposisi",
+      "body": "Pada komposisi, output dari fungsi pertama menjadi input fungsi berikutnya."
+    },
+    {
+      "title": "Urutan penting",
+      "body": "f∘g dan g∘f belum tentu menghasilkan nilai yang sama."
+    },
+    {
+      "title": "Invers",
+      "body": "Fungsi invers membalik perubahan sehingga output dapat dikembalikan menjadi input semula."
+    }
+  ],
+  "summary": "Model mesin fungsi membantu memvisualkan komposisi, transformasi, dan gagasan fungsi invers."
+}

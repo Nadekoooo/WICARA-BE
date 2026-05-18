@@ -1,0 +1,44 @@
+{
+  "id": "sample_chance_probability_informal_94",
+  "node_id": "phase3_chance_probability_informal",
+  "template_id": "manim.elementary_probability.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Peluang Informal dan Peluang Sederhana",
+  "subtitle": "Peluang dapat dikenalkan melalui kata mungkin, mustahil, pasti, dan percobaan sederhana.",
+  "events": [
+    {
+      "label": "Matahari terbit",
+      "chance": "pasti"
+    },
+    {
+      "label": "Koin muncul gambar",
+      "chance": "mungkin"
+    },
+    {
+      "label": "Dadu muncul 7",
+      "chance": "mustahil"
+    }
+  ],
+  "experiment": {
+    "success": 3,
+    "total": 6,
+    "label": "angka genap pada dadu"
+  },
+  "steps": [
+    {
+      "title": "Gunakan bahasa peluang",
+      "body": "Peristiwa dapat disebut pasti, mungkin, kecil peluangnya, atau mustahil."
+    },
+    {
+      "title": "Coba percobaan",
+      "body": "Koin dan dadu memberi contoh hasil yang tidak selalu sama."
+    },
+    {
+      "title": "Hitung peluang sederhana",
+      "body": "Peluang dapat dihitung sebagai hasil yang diinginkan dibanding semua kemungkinan."
+    }
+  ],
+  "summary": "Peluang informal membangun intuisi sebelum siswa memakai pecahan dan rumus peluang formal."
+}

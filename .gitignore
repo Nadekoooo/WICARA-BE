@@ -4,5 +4,13 @@ __pycache__/
 .venv/
 *.egg-info/
 .env
+tmp/
+media/
+manim-tts-gemma.ipynb
+derivative_as_slope_quadratic_final_voice_padded - Copy.mp4
+wicara_mvp_10_manim_templates/media/
+wicara_mvp_10_manim_templates/renders/
+wicara_mvp_10_manim_templates/tmp_render/
+wicara_mvp_10_manim_templates/**/__pycache__/
 bank_soal/scripts/
 app/modules/question_bank/seed.py

@@ -1,0 +1,31 @@
+{
+  "id": "sample_reaction_rate_collision_41",
+  "node_id": "phase5_reaction_rate_collision",
+  "template_id": "manim.chem_particle_reaction_rate.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Laju Reaksi dan Tumbukan",
+  "subtitle": "Reaksi kimia berlangsung lebih cepat jika tumbukan efektif antar partikel lebih sering terjadi.",
+  "factors": [
+    "Suhu",
+    "Konsentrasi",
+    "Luas permukaan",
+    "Katalis"
+  ],
+  "steps": [
+    {
+      "title": "Partikel bergerak",
+      "body": "Partikel pereaksi selalu bergerak dan saling bertumbukan."
+    },
+    {
+      "title": "Tumbukan efektif",
+      "body": "Tidak semua tumbukan menghasilkan reaksi; orientasi dan energi harus sesuai."
+    },
+    {
+      "title": "Faktor laju",
+      "body": "Suhu, konsentrasi, luas permukaan, dan katalis memengaruhi jumlah tumbukan efektif."
+    }
+  ],
+  "summary": "Teori tumbukan menjelaskan mengapa kondisi tertentu dapat mempercepat atau memperlambat reaksi."
+}

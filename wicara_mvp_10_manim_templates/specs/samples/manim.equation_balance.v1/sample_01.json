@@ -1,0 +1,34 @@
+{
+  "id": "sample_equation_balance_unknown_45",
+  "node_id": "phase3_equation_unknown_balance",
+  "template_id": "manim.equation_balance.v1",
+  "phase": "C",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Nilai Tak Diketahui sebagai Keseimbangan",
+  "subtitle": "Kotak kosong dapat dicari dengan menjaga agar kedua sisi tetap seimbang.",
+  "equation_latex": "x + 4 = 9",
+  "left_terms": [
+    "x",
+    "4"
+  ],
+  "right_terms": [
+    "9"
+  ],
+  "unknown_value": 5,
+  "steps": [
+    {
+      "title": "Lihat keseimbangan",
+      "body": "Persamaan berarti nilai kiri dan kanan harus sama."
+    },
+    {
+      "title": "Balik operasi",
+      "body": "Untuk mencari x, kurangi kedua sisi dengan 4."
+    },
+    {
+      "title": "Temukan nilai",
+      "body": "Setelah disederhanakan, diperoleh x sama dengan 5."
+    }
+  ],
+  "summary": "Model keseimbangan memudahkan pemahaman tentang makna persamaan dan nilai yang belum diketahui."
+}

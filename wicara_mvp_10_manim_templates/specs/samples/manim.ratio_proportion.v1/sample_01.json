@@ -1,0 +1,52 @@
+{
+  "id": "ct_007_fraction_ratio_proportion_scaling",
+  "node_id": "fraction_ratio_proportion_scaling",
+  "template_id": "manim.ratio_proportion.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Pecahan, Rasio, Proporsi, dan Skala",
+  "subtitle": "Rasio dan proporsi menjelaskan perbandingan yang tetap saat semua bagian diskalakan bersama.",
+  "context": "Resep minuman",
+  "quantities": [
+    {
+      "label": "Sirup",
+      "value": 3,
+      "unit": "bagian"
+    },
+    {
+      "label": "Air",
+      "value": 7,
+      "unit": "bagian"
+    }
+  ],
+  "ratio_pairs": [
+    [
+      "Sirup",
+      "Air"
+    ]
+  ],
+  "scale_factor": 2,
+  "scaling_steps": [
+    {
+      "from": "3:7",
+      "to": "6:14",
+      "label": "Dikali 2"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Tentukan rasio awal",
+      "body": "Rasio 3 banding 7 menunjukkan perbandingan tetap antara sirup dan air."
+    },
+    {
+      "title": "Skalakan bersama",
+      "body": "Jika satu kuantitas dikali faktor tertentu, kuantitas pasangannya juga harus dikali faktor yang sama."
+    },
+    {
+      "title": "Pertahankan proporsi",
+      "body": "Dengan begitu, rasa campuran tetap karena perbandingan tidak berubah."
+    }
+  ],
+  "summary": "Proporsi tetap saat semua bagian diperbesar atau diperkecil dengan faktor yang sama."
+}

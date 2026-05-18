@@ -1,0 +1,50 @@
+{
+  "id": "sample_inheritance_probability_87",
+  "node_id": "phase5_inheritance_probability_model",
+  "template_id": "manim.bio_genetics_probability.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Pewarisan Sifat dan Peluang Genetika",
+  "subtitle": "Punnett square menunjukkan kemungkinan kombinasi alel dari kedua induk.",
+  "parents": [
+    "Aa",
+    "Aa"
+  ],
+  "gametes": [
+    [
+      "A",
+      "a"
+    ],
+    [
+      "A",
+      "a"
+    ]
+  ],
+  "offspring": [
+    [
+      "AA",
+      "Aa"
+    ],
+    [
+      "Aa",
+      "aa"
+    ]
+  ],
+  "ratio": "3 dominan : 1 resesif",
+  "steps": [
+    {
+      "title": "Tentukan gamet",
+      "body": "Setiap induk menyumbangkan satu alel melalui gamet."
+    },
+    {
+      "title": "Isi kotak Punnett",
+      "body": "Kombinasi alel dibaca dari pertemuan baris dan kolom."
+    },
+    {
+      "title": "Hitung peluang",
+      "body": "Perbandingan genotipe atau fenotipe dihitung dari jumlah kotak yang sesuai."
+    }
+  ],
+  "summary": "Peluang genetika membantu memprediksi variasi sifat keturunan secara sederhana."
+}

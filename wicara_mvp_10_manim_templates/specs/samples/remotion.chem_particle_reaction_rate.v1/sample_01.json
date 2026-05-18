@@ -1,0 +1,108 @@
+{
+  "id": "remotion_v2_041_reaction_rate_collision_model",
+  "row_index": 41,
+  "concept_type": "reaction_rate_collision_model",
+  "concept_type_label_id": "Laju reaksi dan teori tumbukan",
+  "template_id": "remotion.chem_particle_reaction_rate.v1",
+  "component": "ReactionCollisionEnergyVideo",
+  "archetype": "reaction_collision",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Laju reaksi dan teori tumbukan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `reaction_rate_collision_model`.",
+  "keyIdea": "Laju reaksi naik jika tumbukan efektif terjadi lebih sering.",
+  "steps": [
+    {
+      "id": "particles",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Partikel bergerak acak",
+      "narration": "Partikel pereaksi terus bergerak dan saling bertumbukan."
+    },
+    {
+      "id": "collision",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Partikel bertumbukan",
+      "narration": "Tumbukan menjadi awal kemungkinan terjadinya reaksi."
+    },
+    {
+      "id": "activation",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Energi aktivasi dibutuhkan",
+      "narration": "Partikel harus memiliki energi cukup untuk melewati penghalang reaksi."
+    },
+    {
+      "id": "orientation",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Orientasi harus sesuai",
+      "narration": "Selain energi, arah tumbukan juga perlu tepat."
+    },
+    {
+      "id": "product",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Produk terbentuk",
+      "narration": "Jika tumbukan efektif, ikatan berubah dan produk terbentuk."
+    },
+    {
+      "id": "factors",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Faktor laju memengaruhi tumbukan",
+      "narration": "Suhu, konsentrasi, luas permukaan, dan katalis mengubah frekuensi tumbukan efektif."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Teori tumbukan menjelaskan laju",
+      "narration": "Laju reaksi dipahami dari jumlah tumbukan efektif per waktu."
+    }
+  ],
+  "visual": {
+    "reactants": [
+      "A",
+      "B"
+    ],
+    "product": "AB",
+    "factors": [
+      "Suhu",
+      "Konsentrasi",
+      "Katalis",
+      "Luas permukaan"
+    ]
+  },
+  "summarySequence": [
+    "Gerak partikel",
+    "Tumbukan",
+    "Energi aktivasi",
+    "Orientasi",
+    "Produk",
+    "Faktor laju"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

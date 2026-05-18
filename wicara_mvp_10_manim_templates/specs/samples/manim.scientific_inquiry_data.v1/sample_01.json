@@ -1,0 +1,61 @@
+{
+  "id": "ct_001_scientific_inquiry_process",
+  "node_id": "scientific_inquiry_process",
+  "template_id": "manim.scientific_inquiry_data.v1",
+  "phase": "D",
+  "audience_level": "smp",
+  "language": "id",
+  "title": "Keterampilan Proses Sains",
+  "subtitle": "Pertanyaan, variabel, observasi, dan kesimpulan membentuk alur berpikir ilmiah.",
+  "research_question": "Apakah jumlah pupuk memengaruhi tinggi tanaman kacang hijau?",
+  "hypothesis": "Semakin tepat jumlah pupuk yang diberikan, tanaman akan tumbuh lebih tinggi.",
+  "variables": {
+    "independent": "Jumlah pupuk",
+    "dependent": "Tinggi tanaman",
+    "controlled": [
+      "Jenis tanaman",
+      "Jumlah air",
+      "Lama penyinaran"
+    ]
+  },
+  "observations": [
+    {
+      "x": 1,
+      "y": 6.0,
+      "label": "1 gram"
+    },
+    {
+      "x": 2,
+      "y": 7.2,
+      "label": "2 gram"
+    },
+    {
+      "x": 3,
+      "y": 8.0,
+      "label": "3 gram"
+    },
+    {
+      "x": 4,
+      "y": 8.5,
+      "label": "4 gram"
+    }
+  ],
+  "x_label": "pupuk",
+  "y_label": "tinggi",
+  "conclusion": "Data menunjukkan tinggi tanaman cenderung meningkat saat jumlah pupuk ditambah dalam rentang percobaan ini.",
+  "steps": [
+    {
+      "title": "Mulai dari pertanyaan",
+      "body": "Pertanyaan penelitian menentukan arah pengamatan dan data yang dibutuhkan."
+    },
+    {
+      "title": "Pisahkan variabel",
+      "body": "Variabel bebas diubah, variabel terikat diukur, dan variabel kontrol dijaga tetap."
+    },
+    {
+      "title": "Hubungkan data dan kesimpulan",
+      "body": "Kesimpulan harus berasal dari pola data yang benar-benar terlihat."
+    }
+  ],
+  "summary": "Keterampilan proses sains menekankan hubungan yang runtut antara pertanyaan, rancangan, data, dan kesimpulan."
+}

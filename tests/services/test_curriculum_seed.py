@@ -150,3 +150,45 @@ def test_curriculum_seed_marks_removed_concepts_as_stale(db_session, tmp_path):
         legacy_concept.metadata_json["stale_reason"]
         == "not_present_in_current_curriculum_seed"
     )
+
+
+def test_curriculum_seed_persists_bilingual_node_descriptions(db_session, tmp_path):
+    graph_path = tmp_path / "bilingual_graph.json"
+    graph_path.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "curriculum": "kurikulum_merdeka",
+                    "version": "bilingual-test",
+                },
+                "nodes": [
+                    {
+                        "id": "km_d_ipa_bilingual_node",
+                        "subject": "ipa",
+                        "subject_label": "IPA",
+                        "phase": "D",
+                        "school_level": "SMP/MTs",
+                        "grade_range": "7-9",
+                        "domain": "Sains",
+                        "difficulty_order": 1,
+                        "label_id": "Node bilingual",
+                        "label_en": "Bilingual node",
+                        "description_id": "Deskripsi Indonesia untuk node.",
+                        "description_en": "English description for the node.",
+                    }
+                ],
+                "edges": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    seed_curriculum(db_session, graph_path=graph_path)
+
+    concept = db_session.scalar(
+        select(KnowledgeConcept).where(KnowledgeConcept.code == "km_d_ipa_bilingual_node")
+    )
+    assert concept is not None
+    assert concept.description == "Deskripsi Indonesia untuk node."
+    assert concept.id_desc == "Deskripsi Indonesia untuk node."
+    assert concept.en_desc == "English description for the node."

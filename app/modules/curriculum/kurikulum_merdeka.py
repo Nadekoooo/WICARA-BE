@@ -781,6 +781,8 @@ class ConceptSeed:
     code: str
     title: str
     description: str | None
+    id_desc: str | None
+    en_desc: str | None
     grade_band: str | None
     display_order: int
     layout_x: float
@@ -1145,6 +1147,8 @@ def _concept_seed(
     local_group_order: int,
 ) -> ConceptSeed:
     title = _localized_seed_value(node, "label", "id")
+    id_desc = _optional_string(node, "description_id")
+    en_desc = _english_description(node, fallback_title=title)
     metadata = _normalized_node_metadata(node, subject_code=subject_code)
     metadata.update(
         {
@@ -1163,7 +1167,9 @@ def _concept_seed(
         subject_code=subject_code,
         code=_string(node, "id"),
         title=title,
-        description=_optional_string(node, "description_id"),
+        description=id_desc,
+        id_desc=id_desc,
+        en_desc=en_desc,
         grade_band=_grade_band(node),
         display_order=display_order,
         layout_x=layout_x,
@@ -1254,7 +1260,7 @@ def _english_description(node: dict[str, Any], *, fallback_title: str) -> str | 
     phase = _string(node, "phase")
     school_level = _string(node, "school_level")
     grade_range = _string(node, "grade_range")
-    domain = DOMAIN_LABEL_EN.get(_string(node, "domain"), _string(node, "domain"))
+    domain = translate_curriculum_domain_to_english(_string(node, "domain"))
     context_parts = [
         part
         for part in (

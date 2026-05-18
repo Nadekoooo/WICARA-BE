@@ -1,0 +1,51 @@
+{
+  "id": "sample_reaction_equation_conservation_40",
+  "node_id": "phase5_reaction_equation_conservation",
+  "template_id": "manim.chem_reaction_equation.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Persamaan Reaksi dan Kekekalan",
+  "subtitle": "Jumlah atom harus tetap sama di ruas kiri dan kanan persamaan reaksi.",
+  "unbalanced_equation": "H2 + O2 -> H2O",
+  "balanced_equation": "2H2 + O2 -> 2H2O",
+  "reactant_counts": [
+    {
+      "label": "H",
+      "left": 2,
+      "right": 2
+    },
+    {
+      "label": "O",
+      "left": 2,
+      "right": 1
+    }
+  ],
+  "balanced_counts": [
+    {
+      "label": "H",
+      "left": 4,
+      "right": 4
+    },
+    {
+      "label": "O",
+      "left": 2,
+      "right": 2
+    }
+  ],
+  "steps": [
+    {
+      "title": "Hitung atom",
+      "body": "Setiap unsur dihitung pada pereaksi dan hasil reaksi."
+    },
+    {
+      "title": "Setarakan koefisien",
+      "body": "Koefisien diubah tanpa mengubah rumus kimia zat."
+    },
+    {
+      "title": "Cek kekekalan",
+      "body": "Jumlah atom akhir harus sama pada kedua ruas."
+    }
+  ],
+  "summary": "Penyetaraan persamaan reaksi menegaskan hukum kekekalan massa pada tingkat partikel."
+}

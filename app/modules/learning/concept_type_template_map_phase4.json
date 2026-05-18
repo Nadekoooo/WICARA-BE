@@ -1,0 +1,1052 @@
+{
+  "version": "phase7_mixed_engine_priority_v1",
+  "source": "concept_type_priority_plus_manim_expansion",
+  "notes": [
+    "Top30-style routing map for manim concept types.",
+    "Each concept type provides primary_template_id and fallback candidates.",
+    "Phase6 manim-only bundle (rows 61-107) integrated into routing map.",
+    "Phase7 remotion concept routes imported from concept_type_priority.csv (43 concept types)."
+  ],
+  "routes": [
+    {
+      "concept_type": "acid_base_ph_titration",
+      "primary_template_id": "remotion.chem_acid_base_titration.v1",
+      "template_candidates": [
+        "remotion.chem_acid_base_titration.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Asam-basa, pH, buffer, hidrolisis, dan titrasi",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "acid_base_safety_context",
+      "primary_template_id": "remotion.chem_acid_base_safety.v1",
+      "template_candidates": [
+        "remotion.chem_acid_base_safety.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Asam-basa, zat aditif/adiktif, dan keselamatan bahan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "angle_relationship_geometry",
+      "primary_template_id": "manim.geometry_theorem.v1",
+      "template_candidates": [
+        "manim.geometry_theorem.v1",
+        "manim.geometry_transform.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "angle_symmetry_transformation",
+      "primary_template_id": "manim.elementary_geometry_transform.v1",
+      "template_candidates": [
+        "manim.elementary_geometry_transform.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "area_perimeter_volume_model",
+      "primary_template_id": "manim.geometry_measurement.v1",
+      "template_candidates": [
+        "manim.geometry_measurement.v1",
+        "manim.geometry_area_volume.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "atomic_structure_periodic_model",
+      "primary_template_id": "remotion.chem_atomic_periodic.v1",
+      "template_candidates": [
+        "remotion.chem_atomic_periodic.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Atom, elektron, isotop, dan sistem periodik",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "biodiversity_classification_conservation",
+      "primary_template_id": "remotion.bio_taxonomy_biodiversity.v1",
+      "template_candidates": [
+        "remotion.bio_taxonomy_biodiversity.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Keanekaragaman, klasifikasi, dan konservasi",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "biotechnology_process_ethics",
+      "primary_template_id": "remotion.bio_biotech_process.v1",
+      "template_candidates": [
+        "remotion.bio_biotech_process.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Bioteknologi, inovasi, dan etika",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "bivariable_association_regression",
+      "primary_template_id": "manim.scatter_association.v1",
+      "template_candidates": [
+        "manim.scatter_association.v1",
+        "manim.data_representation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "body_senses_health",
+      "primary_template_id": "remotion.sd_body_senses_health.v1",
+      "template_candidates": [
+        "remotion.sd_body_senses_health.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Tubuh, pancaindra, kesehatan, dan sistem tubuh awal",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "cell_division_cycle",
+      "primary_template_id": "remotion.bio_cell_division.v1",
+      "template_candidates": [
+        "remotion.bio_cell_division.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Pembelahan sel mitosis dan meiosis",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "cell_structure_organelle",
+      "primary_template_id": "remotion.bio_cell_structure.v1",
+      "template_candidates": [
+        "remotion.bio_cell_structure.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Struktur sel dan organel",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "center_spread_statistics",
+      "primary_template_id": "manim.statistics_center_spread.v1",
+      "template_candidates": [
+        "manim.statistics_center_spread.v1",
+        "manim.scatter_association.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "chance_probability_informal",
+      "primary_template_id": "manim.elementary_probability.v1",
+      "template_candidates": [
+        "manim.elementary_probability.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "chemical_bonding_molecular_structure",
+      "primary_template_id": "remotion.chem_bonding_molecule.v1",
+      "template_candidates": [
+        "remotion.chem_bonding_molecule.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Ikatan kimia, bentuk molekul, dan gaya antarmolekul",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "chemistry_inquiry_safety_context",
+      "primary_template_id": "remotion.chem_lab_safety.v1",
+      "template_candidates": [
+        "remotion.chem_lab_safety.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Hakikat kimia, laboratorium, dan keselamatan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "congruence_similarity_transform",
+      "primary_template_id": "manim.geometry_transform.v1",
+      "template_candidates": [
+        "manim.geometry_transform.v1",
+        "manim.geometry_theorem.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "coordinate_spatial_model",
+      "primary_template_id": "manim.coordinate_grid_elementary.v1",
+      "template_candidates": [
+        "manim.coordinate_grid_elementary.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "counting_place_value_number_line",
+      "primary_template_id": "manim.elementary_number_line_place_value.v1",
+      "template_candidates": [
+        "manim.elementary_number_line_place_value.v1",
+        "manim.number_line_quantity.v1"
+      ],
+      "family": "number_line_family"
+    },
+    {
+      "concept_type": "data_representation_model",
+      "primary_template_id": "manim.data_representation.v1",
+      "template_candidates": [
+        "manim.data_representation.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "disease_disorder_context",
+      "primary_template_id": "remotion.bio_health_disorder.v1",
+      "template_candidates": [
+        "remotion.bio_health_disorder.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "long_tail",
+      "status": "uncovered",
+      "concept_type_label_id": "Gangguan sistem organ dan konteks kesehatan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "earth_space_system_model",
+      "primary_template_id": "remotion.earth_space_system.v1",
+      "template_candidates": [
+        "remotion.earth_space_system.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Bumi, tata surya, gerak langit, dan kebencanaan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "earth_surface_resources_environment",
+      "primary_template_id": "remotion.sd_earth_resources_environment.v1",
+      "template_candidates": [
+        "remotion.sd_earth_resources_environment.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Permukaan bumi, sumber daya alam, dan perubahan lingkungan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "earth_weather_water_cycle",
+      "primary_template_id": "remotion.sd_weather_water_cycle.v1",
+      "template_candidates": [
+        "remotion.sd_weather_water_cycle.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "long_tail",
+      "status": "uncovered",
+      "concept_type_label_id": "Cuaca, musim, daur air, dan peristiwa alam",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "ecosystem_environment_system",
+      "primary_template_id": "remotion.bio_ecosystem_network.v1",
+      "template_candidates": [
+        "remotion.bio_ecosystem_network.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Ekosistem, interaksi, pencemaran, dan iklim",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "ecosystem_interaction_energy_matter",
+      "primary_template_id": "remotion.bio_ecosystem_network.v1",
+      "template_candidates": [
+        "remotion.bio_ecosystem_network.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Ekosistem, interaksi, aliran energi, dan daur materi",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "ecosystem_interdependence",
+      "primary_template_id": "remotion.sd_ecosystem_food_chain.v1",
+      "template_candidates": [
+        "remotion.sd_ecosystem_food_chain.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Habitat, adaptasi, rantai makanan, ekosistem",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "electric_circuit_model",
+      "primary_template_id": "manim.electricity_magnetism.v1",
+      "template_candidates": [
+        "manim.electricity_magnetism.v1",
+        "manim.force_diagram.v1"
+      ],
+      "family": "force_family"
+    },
+    {
+      "concept_type": "electricity_magnetism_circuit_model",
+      "primary_template_id": "manim.electricity_magnetism.v1",
+      "template_candidates": [
+        "manim.electricity_magnetism.v1",
+        "manim.force_diagram.v1"
+      ],
+      "family": "force_family"
+    },
+    {
+      "concept_type": "electromagnetism_field_model",
+      "primary_template_id": "manim.electromagnetism_field.v1",
+      "template_candidates": [
+        "manim.electromagnetism_field.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "energy_light_sound_heat_electricity",
+      "primary_template_id": "remotion.sd_energy_forms.v1",
+      "template_candidates": [
+        "remotion.sd_energy_forms.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_manim",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Energi panas, cahaya, bunyi, listrik, magnet, dan perubahannya",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "environment_energy_system_model",
+      "primary_template_id": "manim.energy_environment_system.v1",
+      "template_candidates": [
+        "manim.energy_environment_system.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "enzyme_metabolism_process",
+      "primary_template_id": "remotion.bio_enzyme_metabolism.v1",
+      "template_candidates": [
+        "remotion.bio_enzyme_metabolism.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Enzim dan metabolisme sel",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "equation_balance_model",
+      "primary_template_id": "manim.equation_balance.v1",
+      "template_candidates": [
+        "manim.equation_balance.v1",
+        "manim.chem_reaction_equation.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "equation_balance_unknown",
+      "primary_template_id": "manim.equation_balance.v1",
+      "template_candidates": [
+        "manim.equation_balance.v1",
+        "manim.stoichiometry_board.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "equilibrium_shift_model",
+      "primary_template_id": "manim.chem_equilibrium_shift.v1",
+      "template_candidates": [
+        "manim.chem_equilibrium_shift.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "exponential_growth_model",
+      "primary_template_id": "manim.exponential_growth.v1",
+      "template_candidates": [
+        "manim.exponential_growth.v1",
+        "manim.financial_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "factor_multiple_divisibility",
+      "primary_template_id": "manim.factor_tree_multiple_grid.v1",
+      "template_candidates": [
+        "manim.factor_tree_multiple_grid.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "factorization_divisibility_model",
+      "primary_template_id": "manim.factor_tree.v1",
+      "template_candidates": [
+        "manim.factor_tree.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "financial_growth_model",
+      "primary_template_id": "manim.financial_growth.v1",
+      "template_candidates": [
+        "manim.financial_growth.v1",
+        "manim.exponential_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "financial_quantity_model",
+      "primary_template_id": "manim.elementary_finance_timeline.v1",
+      "template_candidates": [
+        "manim.elementary_finance_timeline.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "fluid_pressure_model",
+      "primary_template_id": "manim.fluid_pressure.v1",
+      "template_candidates": [
+        "manim.fluid_pressure.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "force_newton_diagram",
+      "primary_template_id": "manim.force_diagram.v1",
+      "template_candidates": [
+        "manim.force_diagram.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "fraction_decimal_percent_model",
+      "primary_template_id": "manim.fraction_bar_partition.v1",
+      "template_candidates": [
+        "manim.fraction_bar_partition.v1",
+        "manim.ratio_proportion.v1"
+      ],
+      "family": "fraction_ratio_family"
+    },
+    {
+      "concept_type": "fraction_ratio_proportion_scaling",
+      "primary_template_id": "manim.ratio_proportion.v1",
+      "template_candidates": [
+        "manim.ratio_proportion.v1",
+        "manim.fraction_bar_partition.v1"
+      ],
+      "family": "fraction_ratio_family"
+    },
+    {
+      "concept_type": "function_mapping_representation",
+      "primary_template_id": "manim.function_mapping.v1",
+      "template_candidates": [
+        "manim.function_mapping.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "genetic_information_expression",
+      "primary_template_id": "remotion.bio_genetic_expression.v1",
+      "template_candidates": [
+        "remotion.bio_genetic_expression.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "DNA, gen, kromosom, dan sintesis protein",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "geodesic_coordinate_model",
+      "primary_template_id": "manim.geodesic_coordinate.v1",
+      "template_candidates": [
+        "manim.geodesic_coordinate.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "geometry_measurement_area_volume",
+      "primary_template_id": "manim.geometry_measurement.v1",
+      "template_candidates": [
+        "manim.geometry_measurement.v1",
+        "manim.geometry_area_volume.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "graph_function_model",
+      "primary_template_id": "manim.graph_explanation.v1",
+      "template_candidates": [
+        "manim.graph_explanation.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "growth_development_timeline",
+      "primary_template_id": "remotion.bio_growth_timeline.v1",
+      "template_candidates": [
+        "remotion.bio_growth_timeline.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Pertumbuhan dan perkembangan organisme",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "heat_energy_transfer_model",
+      "primary_template_id": "manim.heat_energy_machine.v1",
+      "template_candidates": [
+        "manim.heat_energy_machine.v1",
+        "manim.motion_kinematics.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "heat_temperature_transfer_model",
+      "primary_template_id": "manim.heat_energy_machine.v1",
+      "template_candidates": [
+        "manim.heat_energy_machine.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "homeostasis_feedback_model",
+      "primary_template_id": "remotion.bio_homeostasis_feedback.v1",
+      "template_candidates": [
+        "remotion.bio_homeostasis_feedback.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "long_tail",
+      "status": "uncovered",
+      "concept_type_label_id": "Homeostasis dan umpan balik biologis",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "human_body_system_flow",
+      "primary_template_id": "remotion.bio_flow_system.v1",
+      "template_candidates": [
+        "remotion.bio_flow_system.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Sistem organ manusia",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "immune_response_interaction",
+      "primary_template_id": "remotion.bio_immune_response.v1",
+      "template_candidates": [
+        "remotion.bio_immune_response.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "long_tail",
+      "status": "uncovered",
+      "concept_type_label_id": "Sistem imun dan interaksi pertahanan tubuh",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "inheritance_probability_model",
+      "primary_template_id": "manim.bio_genetics_probability.v1",
+      "template_candidates": [
+        "manim.bio_genetics_probability.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "life_structure_classification",
+      "primary_template_id": "remotion.bio_structure_labeling.v1",
+      "template_candidates": [
+        "remotion.bio_structure_labeling.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Makhluk hidup, klasifikasi, dan struktur organisme",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "living_things_classification_lifecycle",
+      "primary_template_id": "remotion.sd_life_cycle_classification.v1",
+      "template_candidates": [
+        "remotion.sd_life_cycle_classification.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Ciri makhluk hidup, klasifikasi, dan siklus hidup",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "materials_nanotech_environment",
+      "primary_template_id": "remotion.chem_material_environment.v1",
+      "template_candidates": [
+        "remotion.chem_material_environment.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Material, nanoteknologi, dan kimia lingkungan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "matrix_operation_model",
+      "primary_template_id": "manim.matrix_operations.v1",
+      "template_candidates": [
+        "manim.matrix_operations.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "matter_particle_property_model",
+      "primary_template_id": "remotion.chem_particle_matter.v1",
+      "template_candidates": [
+        "remotion.chem_particle_matter.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Zat, partikel, sifat, dan perubahan materi",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "matter_properties_states",
+      "primary_template_id": "remotion.sd_matter_states.v1",
+      "template_candidates": [
+        "remotion.sd_matter_states.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Benda, sifat bahan, wujud zat, dan perubahan wujud",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "matter_property_change_model",
+      "primary_template_id": "remotion.chem_particle_matter.v1",
+      "template_candidates": [
+        "remotion.chem_particle_matter.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Materi, sifat, klasifikasi, dan perubahan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "measurement_data_process",
+      "primary_template_id": "manim.measurement_data.v1",
+      "template_candidates": [
+        "manim.measurement_data.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "measurement_unit_conversion",
+      "primary_template_id": "manim.measurement_units.v1",
+      "template_candidates": [
+        "manim.measurement_units.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "membrane_transport_model",
+      "primary_template_id": "remotion.bio_membrane_transport.v1",
+      "template_candidates": [
+        "remotion.bio_membrane_transport.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Transpor membran, osmosis, dan difusi",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "mixture_separation_change",
+      "primary_template_id": "remotion.sd_mixture_separation.v1",
+      "template_candidates": [
+        "remotion.sd_mixture_separation.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Campuran, pemisahan, larutan, dan perubahan fisika/kimia awal",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "mixture_separation_lab_model",
+      "primary_template_id": "remotion.chem_lab_separation.v1",
+      "template_candidates": [
+        "remotion.chem_lab_separation.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "long_tail",
+      "status": "uncovered",
+      "concept_type_label_id": "Campuran dan pemisahan sederhana",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "modern_atomic_nuclear_model",
+      "primary_template_id": "manim.modern_atomic_nuclear.v1",
+      "template_candidates": [
+        "manim.modern_atomic_nuclear.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "momentum_impulse_collision_model",
+      "primary_template_id": "manim.momentum_collision.v1",
+      "template_candidates": [
+        "manim.momentum_collision.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "motion_force_pressure_model",
+      "primary_template_id": "manim.force_motion_pressure.v1",
+      "template_candidates": [
+        "manim.force_motion_pressure.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "mutation_evolution_selection",
+      "primary_template_id": "remotion.bio_evolution_selection.v1",
+      "template_candidates": [
+        "remotion.bio_evolution_selection.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Mutasi, evolusi, seleksi alam, dan biodiversitas",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "number_line_quantity_model",
+      "primary_template_id": "manim.number_line_quantity.v1",
+      "template_candidates": [
+        "manim.number_line_quantity.v1",
+        "manim.elementary_number_line_place_value.v1"
+      ],
+      "family": "number_line_family"
+    },
+    {
+      "concept_type": "observation_inquiry_skills",
+      "primary_template_id": "remotion.sd_inquiry_observation.v1",
+      "template_candidates": [
+        "remotion.sd_inquiry_observation.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Observasi, bertanya, mengelompokkan, dan mencatat data",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "organ_system_flow_regulation",
+      "primary_template_id": "remotion.bio_organ_system_flow.v1",
+      "template_candidates": [
+        "remotion.bio_organ_system_flow.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top10_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Sistem organ, aliran, dan regulasi tubuh",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "organic_structure_functional_group",
+      "primary_template_id": "remotion.chem_organic_structure.v1",
+      "template_candidates": [
+        "remotion.chem_organic_structure.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Kimia karbon, hidrokarbon, gugus fungsi, dan polimer",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "pattern_sequence_generalization",
+      "primary_template_id": "manim.sequence_pattern.v1",
+      "template_candidates": [
+        "manim.sequence_pattern.v1",
+        "manim.financial_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "photosynthesis_respiration_process",
+      "primary_template_id": "remotion.bio_energy_process.v1",
+      "template_candidates": [
+        "remotion.bio_energy_process.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Fotosintesis dan respirasi sel",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "plant_animal_structure_function",
+      "primary_template_id": "remotion.sd_structure_function.v1",
+      "template_candidates": [
+        "remotion.sd_structure_function.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_rive",
+      "priority": "long_tail",
+      "status": "uncovered",
+      "concept_type_label_id": "Struktur dan fungsi bagian tubuh tumbuhan/hewan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "probability_model",
+      "primary_template_id": "manim.probability_tree.v1",
+      "template_candidates": [
+        "manim.probability_tree.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "quadratic_model",
+      "primary_template_id": "manim.quadratic_model.v1",
+      "template_candidates": [
+        "manim.quadratic_model.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "ratio_scale_proportion_model",
+      "primary_template_id": "manim.ratio_proportion.v1",
+      "template_candidates": [
+        "manim.ratio_proportion.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "reaction_equation_conservation",
+      "primary_template_id": "manim.chem_reaction_equation.v1",
+      "template_candidates": [
+        "manim.chem_reaction_equation.v1",
+        "manim.stoichiometry_board.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "reaction_rate_collision_model",
+      "primary_template_id": "remotion.chem_particle_reaction_rate.v1",
+      "template_candidates": [
+        "remotion.chem_particle_reaction_rate.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Laju reaksi dan teori tumbukan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "redox_electrochemistry_model",
+      "primary_template_id": "remotion.chem_redox_electrochemistry.v1",
+      "template_candidates": [
+        "remotion.chem_redox_electrochemistry.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Redoks, sel volta, elektrolisis, dan korosi",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "scalar_vector_model",
+      "primary_template_id": "manim.vector_diagram.v1",
+      "template_candidates": [
+        "manim.vector_diagram.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "scientific_inquiry_data_model",
+      "primary_template_id": "manim.scientific_inquiry_data.v1",
+      "template_candidates": [
+        "manim.scientific_inquiry_data.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "scientific_inquiry_process",
+      "primary_template_id": "manim.scientific_inquiry_data.v1",
+      "template_candidates": [
+        "manim.scientific_inquiry_data.v1",
+        "manim.data_representation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "sequence_pattern_generalization",
+      "primary_template_id": "manim.sequence_pattern.v1",
+      "template_candidates": [
+        "manim.sequence_pattern.v1",
+        "manim.exponential_growth.v1"
+      ],
+      "family": "sequence_family"
+    },
+    {
+      "concept_type": "shape_identification_geometry",
+      "primary_template_id": "manim.geometry_area_volume.v1",
+      "template_candidates": [
+        "manim.geometry_area_volume.v1",
+        "manim.geometry_measurement.v1"
+      ],
+      "family": "geometry_family"
+    },
+    {
+      "concept_type": "solar_system_day_night",
+      "primary_template_id": "remotion.sd_solar_system_day_night.v1",
+      "template_candidates": [
+        "remotion.sd_solar_system_day_night.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_or_manim",
+      "priority": "top60_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Siang-malam, Bulan-Matahari, dan tata surya awal",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "spatial_net_model",
+      "primary_template_id": "manim.spatial_net.v1",
+      "template_candidates": [
+        "manim.spatial_net.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "stoichiometry_mole_calculation",
+      "primary_template_id": "manim.stoichiometry_board.v1",
+      "template_candidates": [
+        "manim.stoichiometry_board.v1",
+        "manim.chem_reaction_equation.v1"
+      ],
+      "family": "equation_family"
+    },
+    {
+      "concept_type": "thermochemistry_energy_profile",
+      "primary_template_id": "manim.chem_energy_profile.v1",
+      "template_candidates": [
+        "manim.chem_energy_profile.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    },
+    {
+      "concept_type": "virus_structure_lifecycle_health",
+      "primary_template_id": "remotion.bio_virus_lifecycle.v1",
+      "template_candidates": [
+        "remotion.bio_virus_lifecycle.v1"
+      ],
+      "family": "remotion_priority_bundle",
+      "preferred_engine_family": "remotion_svg",
+      "priority": "top30_uncovered",
+      "status": "uncovered",
+      "concept_type_label_id": "Virus, siklus replikasi, dan kesehatan",
+      "source": "concept_type_priority_csv"
+    },
+    {
+      "concept_type": "wave_oscillation_model",
+      "primary_template_id": "manim.wave_optics.v1",
+      "template_candidates": [
+        "manim.wave_optics.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "wave_sound_light_model",
+      "primary_template_id": "manim.wave_optics.v1",
+      "template_candidates": [
+        "manim.wave_optics.v1",
+        "manim.graph_explanation.v1"
+      ],
+      "family": "graph_family"
+    },
+    {
+      "concept_type": "work_energy_power_model",
+      "primary_template_id": "manim.energy_transfer.v1",
+      "template_candidates": [
+        "manim.energy_transfer.v1"
+      ],
+      "family": "phase6_manim_only_bundle"
+    }
+  ]
+}

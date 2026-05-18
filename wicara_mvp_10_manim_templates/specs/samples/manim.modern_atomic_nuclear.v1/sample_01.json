@@ -1,0 +1,37 @@
+{
+  "id": "sample_modern_atomic_nuclear_37",
+  "node_id": "phase5_modern_atomic_nuclear",
+  "template_id": "manim.modern_atomic_nuclear.v1",
+  "phase": "E",
+  "audience_level": "sma",
+  "language": "id",
+  "title": "Atom dan Inti Atom",
+  "subtitle": "Model atom modern membantu menjelaskan inti, elektron, dan peluruhan radioaktif sederhana.",
+  "isotope": {
+    "label": "C-14",
+    "proton": 6,
+    "neutron": 8,
+    "electron": 6
+  },
+  "half_life_bars": [
+    100,
+    50,
+    25,
+    12.5
+  ],
+  "steps": [
+    {
+      "title": "Bagian atom",
+      "body": "Atom memiliki inti berisi proton dan neutron, serta elektron di sekitarnya."
+    },
+    {
+      "title": "Isotop",
+      "body": "Isotop memiliki jumlah proton sama tetapi neutron berbeda."
+    },
+    {
+      "title": "Peluruhan",
+      "body": "Jumlah inti radioaktif berkurang secara bertahap menurut waktu paruh."
+    }
+  ],
+  "summary": "Konsep atom modern menggabungkan struktur atom dan sifat inti yang dapat berubah."
+}

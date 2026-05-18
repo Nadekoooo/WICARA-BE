@@ -1,0 +1,66 @@
+{
+  "id": "sample_area_rectangle",
+  "node_id": "km_b_matematika_keliling_dan_luas_persegi_persegi_panjang",
+  "template_id": "manim.geometry_area_volume.v1",
+  "phase": "B",
+  "audience_level": "sd",
+  "language": "id",
+  "title": "Luas Persegi Panjang",
+  "subtitle": "Luas dapat dihitung dari panjang dan lebar.",
+  "shape_type": "rectangle",
+  "dimensions": {
+    "length": 6,
+    "width": 4,
+    "unit": "cm"
+  },
+  "transformations": [
+    {
+      "type": "fill_unit_squares",
+      "label": "Isi dengan persegi satuan"
+    }
+  ],
+  "formula_latex": "L = p \\times l",
+  "highlight_features": [
+    "length",
+    "width",
+    "area"
+  ],
+  "steps": [
+    {
+      "title": "Ukur dua sisi",
+      "body": "Persegi panjang punya panjang 6 cm dan lebar 4 cm.",
+      "narration": "Pertama tandai dua sisi penting: panjang enam sentimeter dan lebar empat sentimeter, supaya ukuran bangunnya jelas sebelum dihitung."
+    },
+    {
+      "title": "Kalikan",
+      "body": "Luas diperoleh dari panjang dikali lebar, yaitu 6 x 4.",
+      "narration": "Lalu kalikan enam dengan empat. Perkalian ini menunjukkan banyak persegi satuan yang menutupi seluruh bidang persegi panjang."
+    }
+  ],
+  "summary": "Luas persegi panjang adalah panjang dikali lebar.",
+  "voiceover_script": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya.",
+  "intro_narration": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya.",
+  "summary_narration": "Luas persegi panjang adalah panjang dikali lebar.",
+  "narration_segments": [
+    {
+      "slot": "intro",
+      "text": "Untuk mencari luas persegi panjang, kita melihat panjang dan lebarnya."
+    },
+    {
+      "slot": "step",
+      "step_index": 1,
+      "text": "Pertama tandai dua sisi penting: panjang enam sentimeter dan lebar empat sentimeter, supaya ukuran bangunnya jelas sebelum dihitung."
+    },
+    {
+      "slot": "step",
+      "step_index": 2,
+      "text": "Lalu kalikan enam dengan empat. Perkalian ini menunjukkan banyak persegi satuan yang menutupi seluruh bidang persegi panjang."
+    },
+    {
+      "slot": "summary",
+      "text": "Luas persegi panjang adalah panjang dikali lebar."
+    }
+  ]
+}
+
+

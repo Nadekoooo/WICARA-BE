@@ -1,0 +1,109 @@
+{
+  "id": "remotion_v2_088_growth_development_timeline",
+  "row_index": 88,
+  "concept_type": "growth_development_timeline",
+  "concept_type_label_id": "Pertumbuhan dan perkembangan organisme",
+  "template_id": "remotion.bio_growth_timeline.v1",
+  "component": "GrowthTimelineVideo",
+  "archetype": "growth_timeline",
+  "domain": "biology",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Pertumbuhan dan perkembangan organisme",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `growth_development_timeline`.",
+  "keyIdea": "Pertumbuhan dan perkembangan berlangsung bertahap dan dipengaruhi banyak faktor.",
+  "steps": [
+    {
+      "id": "start",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Organisme memulai tahap hidup",
+      "narration": "Setiap organisme memiliki tahap awal perkembangan."
+    },
+    {
+      "id": "growth",
+      "start": 260,
+      "duration": 170,
+      "title": "2. Ukuran bertambah",
+      "narration": "Pertumbuhan berkaitan dengan peningkatan ukuran atau massa."
+    },
+    {
+      "id": "development",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Fungsi menjadi matang",
+      "narration": "Perkembangan berkaitan dengan perubahan bentuk dan fungsi."
+    },
+    {
+      "id": "timeline",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Tahap disusun dalam urutan waktu",
+      "narration": "Timeline membantu melihat perubahan dari satu tahap ke tahap berikutnya."
+    },
+    {
+      "id": "factors",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Faktor memengaruhi proses",
+      "narration": "Genetik, nutrisi, hormon, dan lingkungan memengaruhi pertumbuhan."
+    },
+    {
+      "id": "compare",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Kecepatan bisa berbeda",
+      "narration": "Setiap organisme dapat memiliki pola pertumbuhan yang berbeda."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Pertumbuhan tidak hanya soal besar",
+      "narration": "Perkembangan fungsi sama pentingnya dengan pertambahan ukuran."
+    }
+  ],
+  "visual": {
+    "timeline": [
+      "Bayi",
+      "Anak",
+      "Remaja",
+      "Dewasa"
+    ],
+    "factors": [
+      "Genetik",
+      "Nutrisi",
+      "Hormon",
+      "Lingkungan"
+    ]
+  },
+  "summarySequence": [
+    "Tahap awal",
+    "Bertambah besar",
+    "Matang fungsi",
+    "Timeline",
+    "Faktor",
+    "Perbedaan"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "id": "remotion_v2_054_acid_base_safety_context",
+  "row_index": 54,
+  "concept_type": "acid_base_safety_context",
+  "concept_type_label_id": "Asam-basa, zat aditif/adiktif, dan keselamatan bahan",
+  "template_id": "remotion.chem_acid_base_safety.v1",
+  "component": "AcidBaseSafetyVideo",
+  "archetype": "acid_base_safety",
+  "domain": "chemistry",
+  "media_engine_family": "remotion_svg",
+  "language": "id",
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "durationInFrames": 1350,
+  "title": "Asam-basa, zat aditif/adiktif, dan keselamatan bahan",
+  "subtitle": "Video penjelasan berbasis mekanisme untuk concept type `acid_base_safety_context`.",
+  "keyIdea": "Asam dan basa harus dikenali sifatnya serta digunakan dengan aman.",
+  "steps": [
+    {
+      "id": "examples",
+      "start": 90,
+      "duration": 170,
+      "title": "1. Bahan sehari-hari punya sifat kimia",
+      "narration": "Beberapa bahan rumah tangga bersifat asam, beberapa lainnya bersifat basa."
+    },
+    {
+      "id": "ph",
+      "start": 260,
+      "duration": 170,
+      "title": "2. pH membantu mengelompokkan",
+      "narration": "Skala pH menunjukkan tingkat asam atau basa suatu larutan."
+    },
+    {
+      "id": "indicator",
+      "start": 430,
+      "duration": 170,
+      "title": "3. Indikator memberi tanda warna",
+      "narration": "Indikator dapat membantu melihat sifat larutan secara visual."
+    },
+    {
+      "id": "risk",
+      "start": 600,
+      "duration": 170,
+      "title": "4. Risiko bahan perlu dipahami",
+      "narration": "Beberapa bahan dapat mengiritasi atau berbahaya jika dipakai sembarangan."
+    },
+    {
+      "id": "label",
+      "start": 770,
+      "duration": 170,
+      "title": "5. Label bahan harus dibaca",
+      "narration": "Label memberi petunjuk penggunaan dan peringatan bahaya."
+    },
+    {
+      "id": "safe",
+      "start": 940,
+      "duration": 170,
+      "title": "6. Keselamatan adalah kebiasaan",
+      "narration": "Alat pelindung dan aturan dasar harus diikuti."
+    },
+    {
+      "id": "summary",
+      "start": 1110,
+      "duration": 170,
+      "title": "7. Konsep kimia dekat dengan kehidupan",
+      "narration": "Belajar asam-basa perlu selalu disertai konteks penggunaan yang aman."
+    }
+  ],
+  "visual": {
+    "items": [
+      "Cuka",
+      "Jeruk",
+      "Sabun",
+      "Pembersih"
+    ],
+    "safety": [
+      "Label",
+      "Sarung tangan",
+      "Jangan campur sembarang"
+    ]
+  },
+  "summarySequence": [
+    "Contoh",
+    "pH",
+    "Indikator",
+    "Risiko",
+    "Label",
+    "Aman"
+  ],
+  "qualityIntent": {
+    "mode": "video_explainer",
+    "minimumEvents": [
+      "title_card",
+      "context_objects",
+      "main_motion",
+      "interaction",
+      "state_change",
+      "active_narration",
+      "final_summary"
+    ],
+    "layoutSafeZones": {
+      "mainVisual": "x=40..900,y=120..520",
+      "stepPanel": "x=56..820,y=535..680",
+      "keyIdea": "x=920..1230,y=44..190"
+    }
+  }
+}
