@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,16 @@ _VALIDATION_FEEDBACK_LIMIT = 24
 _VALIDATION_FEEDBACK_ITEM_LIMIT = 280
 _ROOT_DIR = Path(__file__).resolve().parents[3]
 _SAMPLE_SPECS_DIR = _ROOT_DIR / "wicara_mvp_10_manim_templates" / "specs" / "samples"
+_EQUATION_SCHEMA_ID = "manim.equation_balance.v1"
+_SCHEMA_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
+    _EQUATION_SCHEMA_ID: (
+        "equation",
+        "left_expression",
+        "right_expression",
+        "solution_steps",
+        "final_solution",
+    ),
+}
 
 _SYSTEM_INSTRUCTION = """
 You are a backend spec generator for educational video templates (Manim or Remotion).
@@ -154,7 +165,13 @@ def generate_spec_from_workspace_context(
 
     template_id = resolved.entry.template_id
     node_id = str(metadata.get("active_node_id") or "").strip()
-    sample_spec = _load_sample_spec(template_id)
+    schema_id = resolved.entry.schema_id
+    sample_spec = _normalize_legacy_schema_fields(
+        template_id=template_id,
+        schema_id=schema_id,
+        payload=_load_sample_spec(template_id),
+    )
+    required_fields = _required_fields_for_schema(schema_id)
 
     last_error: str | None = None
     last_response: str | None = None
@@ -169,6 +186,7 @@ def generate_spec_from_workspace_context(
             workspace_id=str(workspace.id),
             context_snapshot=context_snapshot,
             sample_spec=sample_spec,
+            required_fields=required_fields,
             attempt_number=attempt,
             max_attempts=_MAX_ATTEMPTS,
             previous_error=last_error,
@@ -202,6 +220,11 @@ def generate_spec_from_workspace_context(
             if attempt >= _MAX_ATTEMPTS:
                 raise
             continue
+        candidate_payload = _normalize_legacy_schema_fields(
+            template_id=template_id,
+            schema_id=schema_id,
+            payload=candidate_payload,
+        )
         candidate_payload["template_id"] = template_id
         candidate_payload["language"] = requested_language
         candidate_payload.setdefault("id", f"context_auto_{workspace.id}")
@@ -438,6 +461,7 @@ def _build_user_instruction(
     workspace_id: str,
     context_snapshot: dict[str, Any],
     sample_spec: dict[str, Any],
+    required_fields: list[str],
     attempt_number: int,
     max_attempts: int,
     previous_error: str | None,
@@ -459,6 +483,7 @@ def _build_user_instruction(
             "must_include_language_field": True,
             "must_match_text_language_with_language_field": True,
             "must_use_requested_language_exactly": True,
+            "required_fields": required_fields,
         },
         "workspace_id": workspace_id,
         "instructions": [
@@ -486,6 +511,215 @@ def _build_user_instruction(
             "recent_retry_history": retry_history[-2:],
         }
     return json.dumps(base_payload, ensure_ascii=True, indent=2)
+
+
+def _required_fields_for_schema(schema_id: str) -> list[str]:
+    normalized = str(schema_id or "").strip().lower()
+    fields = _SCHEMA_REQUIRED_FIELDS.get(normalized)
+    if not fields:
+        return []
+    return list(fields)
+
+
+def _normalize_legacy_schema_fields(
+    *,
+    template_id: str,
+    schema_id: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    normalized = dict(payload or {})
+    normalized_schema_id = str(schema_id or "").strip().lower()
+    if normalized_schema_id == _EQUATION_SCHEMA_ID:
+        return _normalize_equation_balance_payload(normalized)
+    return normalized
+
+
+def _normalize_equation_balance_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+
+    equation = _first_nonempty_text(
+        normalized.get("equation"),
+        normalized.get("equation_latex"),
+        normalized.get("unbalanced_equation"),
+        normalized.get("balanced_equation"),
+    )
+    if equation and not _first_nonempty_text(normalized.get("equation")):
+        normalized["equation"] = equation
+
+    left_expression = _first_nonempty_text(normalized.get("left_expression"))
+    right_expression = _first_nonempty_text(normalized.get("right_expression"))
+    if not left_expression:
+        left_expression = _coerce_expression_terms(normalized.get("left_terms"))
+    if not right_expression:
+        right_expression = _coerce_expression_terms(normalized.get("right_terms"))
+    if (not left_expression or not right_expression) and equation:
+        split_left, split_right = _split_equation_sides(equation)
+        left_expression = left_expression or split_left
+        right_expression = right_expression or split_right
+    if left_expression and not _first_nonempty_text(normalized.get("left_expression")):
+        normalized["left_expression"] = left_expression
+    if right_expression and not _first_nonempty_text(normalized.get("right_expression")):
+        normalized["right_expression"] = right_expression
+
+    solution_steps = normalized.get("solution_steps")
+    if not isinstance(solution_steps, list) or not solution_steps:
+        solution_steps = _coerce_legacy_solution_steps(
+            payload=normalized,
+            fallback_left=left_expression or "",
+            fallback_right=right_expression or "",
+        )
+    else:
+        solution_steps = _coerce_solution_steps(
+            source_steps=solution_steps,
+            fallback_left=left_expression or "",
+            fallback_right=right_expression or "",
+        )
+    if solution_steps:
+        normalized["solution_steps"] = solution_steps
+
+    if not _first_nonempty_text(normalized.get("final_solution")):
+        unknown_value = normalized.get("unknown_value")
+        if isinstance(unknown_value, (int, float)):
+            variable = _infer_variable_symbol(left_expression or equation or "") or "x"
+            normalized["final_solution"] = f"{variable} = {unknown_value}"
+        else:
+            fallback_final = _first_nonempty_text(
+                normalized.get("balanced_equation"),
+                normalized.get("right_expression"),
+            )
+            if fallback_final:
+                normalized["final_solution"] = fallback_final
+
+    return normalized
+
+
+def _coerce_expression_terms(raw_terms: Any) -> str:
+    if not isinstance(raw_terms, list):
+        return ""
+    parts: list[str] = []
+    for item in raw_terms:
+        text = _first_nonempty_text(item)
+        if text:
+            parts.append(text)
+    return " + ".join(parts)
+
+
+def _coerce_legacy_solution_steps(
+    *,
+    payload: dict[str, Any],
+    fallback_left: str,
+    fallback_right: str,
+) -> list[dict[str, Any]]:
+    candidate_lists: list[list[Any]] = []
+    for key in ("balancing_steps", "steps"):
+        raw = payload.get(key)
+        if isinstance(raw, list) and raw:
+            candidate_lists.append(raw)
+    for source_steps in candidate_lists:
+        coerced = _coerce_solution_steps(
+            source_steps=source_steps,
+            fallback_left=fallback_left,
+            fallback_right=fallback_right,
+        )
+        if coerced:
+            return coerced
+    return []
+
+
+def _coerce_solution_steps(
+    *,
+    source_steps: list[Any],
+    fallback_left: str,
+    fallback_right: str,
+) -> list[dict[str, Any]]:
+    normalized_steps: list[dict[str, Any]] = []
+    for idx, item in enumerate(source_steps[:12]):
+        if not isinstance(item, dict):
+            continue
+        operation = _first_nonempty_text(
+            item.get("operation"),
+            item.get("title"),
+            item.get("label"),
+            f"Langkah {idx + 1}",
+        )
+        left_result = _first_nonempty_text(
+            item.get("left_result"),
+            item.get("equation"),
+            fallback_left,
+        )
+        right_result = _first_nonempty_text(
+            item.get("right_result"),
+            fallback_right,
+        )
+        explanation = _first_nonempty_text(
+            item.get("explanation"),
+            item.get("body"),
+            item.get("label"),
+            "",
+        )
+        narration = _first_nonempty_text(
+            item.get("narration"),
+            item.get("voiceover"),
+            explanation,
+        )
+        value = _coerce_float(item.get("value"), default=0.0)
+        normalized_steps.append(
+            {
+                "operation": operation,
+                "value": value,
+                "left_result": left_result,
+                "right_result": right_result,
+                "explanation": explanation,
+                "narration": narration,
+            }
+        )
+    return normalized_steps
+
+
+def _coerce_float(value: Any, *, default: float) -> float:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = _first_nonempty_text(value)
+    if not text:
+        return default
+    try:
+        return float(text)
+    except ValueError:
+        return default
+
+
+def _split_equation_sides(equation: str) -> tuple[str, str]:
+    text = _first_nonempty_text(equation)
+    if not text:
+        return "", ""
+    for separator in ("=", "->", "→", "=>"):
+        if separator not in text:
+            continue
+        left, right = text.split(separator, 1)
+        return left.strip(), right.strip()
+    return "", ""
+
+
+def _infer_variable_symbol(text: str) -> str:
+    value = _first_nonempty_text(text)
+    if not value:
+        return ""
+    match = re.search(r"[a-zA-Z]", value)
+    if not match:
+        return ""
+    return match.group(0)
+
+
+def _first_nonempty_text(*values: Any) -> str:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
 
 
 def _generate_with_gemini(*, user_instruction: str) -> AIGenerationResponse:
