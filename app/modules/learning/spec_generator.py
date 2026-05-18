@@ -9,6 +9,7 @@ from typing import Any
 
 from app.core.language import normalize_language_code
 from app.modules.ai import ai_client
+from app.modules.ai.config import DEFAULT_AI_MODEL
 from app.modules.ai.errors import AIConfigurationError, AIError
 from app.modules.ai.schemas import AIGenerationResponse
 from app.modules.learning.concept_template_router import (
@@ -27,9 +28,9 @@ from app.modules.learning.template_validation import (
 )
 from app.modules.workspaces.models import WorkspaceEvent, WorkspaceSession
 
-_PROMPT_VERSION = "workspace_context_spec_gemini_v1"
-_ROUTER_PROMPT_VERSION = "workspace_context_template_router_gemini_v1"
-_DEFAULT_MODEL = "gemini-2.5-flash"
+_PROMPT_VERSION = "workspace_context_spec_openrouter_v1"
+_ROUTER_PROMPT_VERSION = "workspace_context_template_router_openrouter_v1"
+_DEFAULT_MODEL = DEFAULT_AI_MODEL
 _MAX_ATTEMPTS = 3
 _SPEC_MAX_OUTPUT_TOKENS = 8192
 _PREVIOUS_RESPONSE_FEEDBACK_LIMIT = 1800
@@ -123,7 +124,7 @@ def generate_spec_from_workspace_context(
 
     if not raw_template_id:
         if router_candidates:
-            planned = _select_template_id_with_gemini(
+            planned = _select_template_id_with_ai(
                 concept_type=active_concept_type,
                 requested_language=requested_language,
                 context_snapshot=context_snapshot,
@@ -131,7 +132,7 @@ def generate_spec_from_workspace_context(
             )
             if planned:
                 raw_template_id = planned
-                template_resolution_source = "gemini_router_candidates"
+                template_resolution_source = "openrouter_router_candidates"
                 router_used = True
             else:
                 raw_template_id = router_candidates[0]
@@ -142,7 +143,7 @@ def generate_spec_from_workspace_context(
         else:
             global_candidates = _global_router_candidates()
             router_candidates = global_candidates
-            planned = _select_template_id_with_gemini(
+            planned = _select_template_id_with_ai(
                 concept_type=active_concept_type,
                 requested_language=requested_language,
                 context_snapshot=context_snapshot,
@@ -150,7 +151,7 @@ def generate_spec_from_workspace_context(
             )
             if planned:
                 raw_template_id = planned
-                template_resolution_source = "gemini_router_global"
+                template_resolution_source = "openrouter_router_global"
                 router_used = True
 
     if not raw_template_id:
@@ -194,7 +195,7 @@ def generate_spec_from_workspace_context(
             previous_response=last_response,
             retry_history=retry_history,
         )
-        ai_response = _generate_with_gemini(user_instruction=user_instruction)
+        ai_response = _generate_with_ai(user_instruction=user_instruction)
         final_ai_response = ai_response
         try:
             candidate_payload = _parse_candidate_spec(ai_response.text)
@@ -253,7 +254,7 @@ def generate_spec_from_workspace_context(
                 detail_summary = _validation_details_summary(compact_details)
                 raise WorkspaceContextSpecGenerationError(
                     (
-                        f"Gemini generated an invalid spec for {template_id} after "
+                        f"AI generated an invalid spec for {template_id} after "
                         f"{_MAX_ATTEMPTS} attempts: {exc.message}. "
                         f"Failed fields: {detail_summary}"
                     )
@@ -281,12 +282,12 @@ def generate_spec_from_workspace_context(
             if attempt >= _MAX_ATTEMPTS:
                 error_text = "; ".join(quality_errors) if quality_errors else "Unknown quality issue."
                 raise WorkspaceContextSpecGenerationError(
-                    f"Gemini generated low-quality pacing for {template_id}: {error_text}"
+                    f"AI generated low-quality pacing for {template_id}: {error_text}"
                 )
             continue
 
         debug_meta: dict[str, Any] = {
-            "spec_source": "context_auto_backend_gemini",
+            "spec_source": "context_auto_backend_openrouter",
             "prompt_version": _PROMPT_VERSION,
             "resolved_template_id": template_id,
             "template_resolution_source": template_resolution_source,
@@ -323,7 +324,7 @@ def generate_spec_from_workspace_context(
         )
 
     raise WorkspaceContextSpecGenerationError(
-        "Gemini spec generation failed unexpectedly."
+        "AI spec generation failed unexpectedly."
     )
 
 
@@ -397,7 +398,7 @@ def _global_router_candidates() -> list[str]:
     return sorted(set(rows))
 
 
-def _select_template_id_with_gemini(
+def _select_template_id_with_ai(
     *,
     concept_type: str,
     requested_language: str,
@@ -429,8 +430,8 @@ def _select_template_id_with_gemini(
     user_instruction = json.dumps(instruction_payload, ensure_ascii=True, indent=2)
     params = {
         "temperature": 0.1,
-        "maxOutputTokens": 512,
-        "responseMimeType": "application/json",
+        "max_tokens": 512,
+        "response_format": {"type": "json_object"},
     }
 
     try:
@@ -722,11 +723,11 @@ def _first_nonempty_text(*values: Any) -> str:
     return ""
 
 
-def _generate_with_gemini(*, user_instruction: str) -> AIGenerationResponse:
+def _generate_with_ai(*, user_instruction: str) -> AIGenerationResponse:
     params = {
         "temperature": 0.3,
-        "maxOutputTokens": _SPEC_MAX_OUTPUT_TOKENS,
-        "responseMimeType": "application/json",
+        "max_tokens": _SPEC_MAX_OUTPUT_TOKENS,
+        "response_format": {"type": "json_object"},
     }
     try:
         return _run_async_generate(
@@ -738,7 +739,7 @@ def _generate_with_gemini(*, user_instruction: str) -> AIGenerationResponse:
         raise WorkspaceContextSpecGenerationError(str(exc)) from exc
     except AIError as exc:
         raise WorkspaceContextSpecGenerationError(
-            f"Gemini spec generation failed: {exc}"
+            f"AI spec generation failed: {exc}"
         ) from exc
 
 
@@ -750,7 +751,7 @@ def _run_async_generate(
 ) -> AIGenerationResponse:
     async def _call() -> AIGenerationResponse:
         return await ai_client.generate(
-            provider="gemini",
+            provider="openrouter",
             model=_DEFAULT_MODEL,
             system_instruction=system_instruction,
             user_instruction=user_instruction,
@@ -772,7 +773,7 @@ def _parse_candidate_spec(raw_text: str) -> dict[str, Any]:
     payload = _try_parse_json_object_response(raw_text)
     if payload is None:
         raise WorkspaceContextSpecGenerationError(
-            "Gemini response is not a valid JSON object for spec generation."
+            "AI response is not a valid JSON object for spec generation."
         )
     return payload
 

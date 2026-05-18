@@ -860,7 +860,7 @@ class GoalResolverService:
         search_scope: str,
     ) -> dict[str, Any]:
         settings = get_ai_settings()
-        if not settings.gemini_api_key.strip():
+        if not settings.openrouter_api_key.strip():
             return {
                 "status": "no_match",
                 "selected_concept_code": None,
@@ -868,7 +868,7 @@ class GoalResolverService:
                 "alternatives": [
                     candidate.concept.code for candidate in candidates[:4]
                 ],
-                "reason": "LLM resolution unavailable because Gemini is not configured.",
+                "reason": "LLM resolution unavailable because OpenRouter is not configured.",
                 "should_expand_scope": True,
                 "clarification_question": _localized_message(
                     language,
@@ -888,7 +888,7 @@ class GoalResolverService:
             response = await ai_client.generate(
                 system_instruction="Return valid JSON only.",
                 user_instruction=prompt,
-                params={"temperature": 0.0, "response_mime_type": "application/json"},
+                params={"temperature": 0.0, "response_format": {"type": "json_object"}},
             )
             payload = json.loads(response.text)
             payload["provider"] = response.provider

@@ -207,9 +207,9 @@ async def generate_tutor_response(
     learner_language: str | None = None,
 ) -> tuple[TutorResponseRead | None, dict[str, Any]]:
     """
-    Call Gemini to generate a tutor response.
+    Call the configured AI provider to generate a tutor response.
     Returns (TutorResponseRead | None, audit_metadata).
-    Falls back to deterministic response if Gemini fails.
+    Falls back to deterministic response if AI generation fails.
     Only returns a response for event types that warrant one.
     """
     if event_type not in {"text", "quiz_answer", "canvas_sent"}:
@@ -274,13 +274,12 @@ async def generate_tutor_response(
             system_instruction=_SYSTEM_INSTRUCTION,
             user_instruction=user_instruction,
             params={
-                "response_mime_type": "application/json",
-                "response_schema": _TUTOR_OUTPUT_SCHEMA,
+                "response_format": {"type": "json_object"},
             },
         )
         audit.update(
             {
-                "ai_source": "gemini",
+                "ai_source": ai_response.provider,
                 "ai_provider": ai_response.provider,
                 "ai_model": ai_response.model,
                 "finish_reason": ai_response.finish_reason,
@@ -296,7 +295,7 @@ async def generate_tutor_response(
             tutor_text = _fallback_text(event_type, language_code=language_code)
             next_phase_ready = False
             phase_reasoning = "fallback_due_to_empty_text"
-            audit["ai_source"] = "gemini_empty_fallback"
+            audit["ai_source"] = "ai_empty_fallback"
         tutor_text = _enforce_brevity(tutor_text, phase=phase)
         previous_tutor_text = _latest_tutor_text(events)
         if _is_repetitive_response(tutor_text, previous_tutor_text):
@@ -318,7 +317,7 @@ async def generate_tutor_response(
         ), audit
 
     except AIError as exc:
-        logger.warning("Gemini tutor call failed, using deterministic fallback: %s", exc)
+        logger.warning("AI tutor call failed, using deterministic fallback: %s", exc)
         audit["ai_source"] = "deterministic_fallback"
         audit["fallback_reason"] = str(exc)
         return _fallback_response(

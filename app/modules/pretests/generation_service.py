@@ -494,8 +494,8 @@ class AdaptivePretestGenerationService:
             "yes",
         }:
             return None, {"llm_attempted": False, "reason": "WICARA_PRETEST_LLM_GENERATION is not enabled."}
-        if not settings.gemini_api_key.strip():
-            return None, {"llm_attempted": False, "reason": "Gemini API key is not configured."}
+        if not settings.openrouter_api_key.strip():
+            return None, {"llm_attempted": False, "reason": "OpenRouter API key is not configured."}
         try:
             asyncio.get_running_loop()
             return None, {"llm_attempted": False, "reason": "Generation called inside a running event loop."}
@@ -515,7 +515,7 @@ class AdaptivePretestGenerationService:
                     ai_client.generate(
                         system_instruction="Return valid JSON only.",
                         user_instruction=prompt,
-                        params={"temperature": 0.15, "response_mime_type": "application/json"},
+                        params={"temperature": 0.15, "response_format": {"type": "json_object"}},
                     )
                 )
                 payload = json.loads(response.text)
@@ -604,8 +604,8 @@ class AdaptivePretestGenerationService:
         previous_questions: list[str],
     ) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
         settings = get_ai_settings()
-        if not settings.gemini_api_key.strip():
-            return None, {"llm_attempted": False, "reason": "AI question generation requires a configured Gemini API key."}
+        if not settings.openrouter_api_key.strip():
+            return None, {"llm_attempted": False, "reason": "AI question generation requires a configured OpenRouter API key."}
         try:
             asyncio.get_running_loop()
             return None, {"llm_attempted": False, "reason": "AI question generation cannot run inside an active event loop."}
@@ -631,7 +631,7 @@ class AdaptivePretestGenerationService:
                     ai_client.generate(
                         system_instruction=_fresh_question_system_instruction(),
                         user_instruction=prompt,
-                        params={"temperature": 0.25, "response_mime_type": "application/json"},
+                        params={"temperature": 0.25, "response_format": {"type": "json_object"}},
                     )
                 )
                 payload = json.loads(response.text)

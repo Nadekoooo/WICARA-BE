@@ -79,41 +79,25 @@ class AIGenerationParams(BaseModel):
         default=None,
         gt=0,
         validation_alias=AliasChoices("max_tokens", "maxOutputTokens"),
-        serialization_alias="maxOutputTokens",
     )
     top_p: float | None = Field(
         default=None,
         ge=0.0,
         le=1.0,
         validation_alias=AliasChoices("top_p", "topP"),
-        serialization_alias="topP",
     )
     top_k: int | None = Field(
         default=None,
         gt=0,
         validation_alias=AliasChoices("top_k", "topK"),
-        serialization_alias="topK",
     )
-    candidate_count: int | None = Field(
+    stop: str | list[str] | None = Field(
         default=None,
-        gt=0,
-        validation_alias=AliasChoices("candidate_count", "candidateCount"),
-        serialization_alias="candidateCount",
+        validation_alias=AliasChoices("stop", "stopSequences"),
     )
-    stop_sequences: list[str] | None = Field(
+    response_format: dict[str, Any] | None = Field(
         default=None,
-        validation_alias=AliasChoices("stop_sequences", "stopSequences"),
-        serialization_alias="stopSequences",
-    )
-    response_mime_type: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("response_mime_type", "responseMimeType"),
-        serialization_alias="responseMimeType",
-    )
-    response_schema: dict[str, Any] | None = Field(
-        default=None,
-        validation_alias=AliasChoices("response_schema", "responseSchema"),
-        serialization_alias="responseSchema",
+        validation_alias=AliasChoices("response_format", "responseFormat"),
     )
 
 
