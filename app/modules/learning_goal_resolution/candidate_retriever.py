@@ -180,6 +180,38 @@ class ConceptCandidate:
 
 
 class CandidateConceptRetriever:
+    def scope_candidates(
+        self,
+        session: Session,
+        *,
+        subject_code: str | None = None,
+        education_level: str | None = None,
+        grade_level: str | None = None,
+        grade_scope: str = "all",
+        limit: int | None = None,
+    ) -> list[ConceptCandidate]:
+        concepts = [
+            concept
+            for concept in self._load_concepts(session, subject_code=subject_code)
+            if _concept_matches_grade_scope(
+                concept,
+                grade_scope=grade_scope,
+                education_level=education_level,
+                grade_level=grade_level,
+            )
+        ]
+        candidates = [
+            ConceptCandidate(
+                concept=concept,
+                score=0.0,
+                matched_signals=(f"scope:{grade_scope}",),
+            )
+            for concept in concepts
+        ]
+        if limit is None:
+            return candidates
+        return candidates[:limit]
+
     def search(
         self,
         session: Session,

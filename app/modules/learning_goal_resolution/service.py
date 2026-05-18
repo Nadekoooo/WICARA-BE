@@ -145,7 +145,11 @@ class GoalResolverService:
         resolution = LearningGoalResolution(
             user_id=user.id,
             raw_query=raw_query.strip(),
-            subject_code=explicit_subject_code or (selected.concept.subject.code if selected.concept.subject else ""),
+            subject_code=_resolution_subject_code(
+                explicit_subject_code=explicit_subject_code,
+                selected=selected,
+                status=status,
+            ),
             education_level=education_level or "",
             grade_level=grade_level or "",
             language=response_language,
@@ -275,7 +279,7 @@ class GoalResolverService:
         if selected_snapshot is None:
             selected_snapshot = _snapshot_from_concept(concept, confidence=0.99)
 
-        selected_confidence = _snapshot_confidence(selected_snapshot)
+        selected_confidence = max(_snapshot_confidence(selected_snapshot), 0.99)
         selected_candidate = _candidate_from_concept_snapshot(concept, selected_snapshot)
         alternatives = [
             candidate
@@ -659,14 +663,12 @@ class GoalResolverService:
             language=language,
             allow_cross_subject=allow_cross_subject,
         ):
-            candidates = self.retriever.search(
+            candidates = self.retriever.scope_candidates(
                 session,
-                query=raw_query,
                 subject_code=scope["subject_code"],
                 education_level=education_level,
                 grade_level=grade_level,
                 grade_scope=scope["grade_scope"],
-                include_context_fallback=True,
                 limit=_candidate_limit_for_scope(str(scope["name"])),
             )
             if not candidates:
@@ -675,13 +677,14 @@ class GoalResolverService:
                 raw_query=raw_query,
                 candidates=candidates,
                 language=language,
+                search_scope=str(scope["name"]),
             )
             llm_status = _normalized_llm_status(llm_result)
             selected = _validated_candidate(llm_result, candidates)
             fallback_candidate = selected or candidates[0]
             confidence = _coerce_confidence(
                 llm_result.get("confidence"),
-                fallback=fallback_candidate.score if selected else 0.0,
+                fallback=0.0,
             )
             alternatives = _validated_alternatives(llm_result, candidates, selected=selected)
 
@@ -728,30 +731,31 @@ class GoalResolverService:
         raw_query: str,
         candidates: list[ConceptCandidate],
         language: str,
+        search_scope: str,
     ) -> dict[str, Any]:
         settings = get_ai_settings()
         if not settings.gemini_api_key.strip():
-            top = candidates[0]
-            confidence = score_to_confidence(top.score)
-            status = "exact_match" if confidence >= EXACT_MATCH_CONFIDENCE_THRESHOLD else "no_match"
             return {
-                "status": status,
-                "selected_concept_code": top.concept.code if status == "exact_match" else None,
-                "confidence": confidence,
-                "alternatives": [candidate.concept.code for candidate in candidates[1:4]],
-                "reason": "Deterministic fallback used because Gemini is not configured.",
-                "should_expand_scope": status == "no_match",
-                "clarification_question": None
-                if status == "exact_match"
-                else _localized_message(
+                "status": "no_match",
+                "selected_concept_code": None,
+                "confidence": 0.0,
+                "alternatives": [candidate.concept.code for candidate in candidates[:4]],
+                "reason": "LLM resolution unavailable because Gemini is not configured.",
+                "should_expand_scope": True,
+                "clarification_question": _localized_message(
                     language,
                     id_text="Coba tulis goal belajar yang lebih spesifik.",
                     en_text="Try writing a more specific learning goal.",
                 ),
-                "provider": "deterministic_fallback",
-                "model": "candidate_score",
+                "provider": "none",
+                "model": "none",
             }
-        prompt = build_goal_resolution_prompt(raw_query=raw_query, candidates=candidates)
+        prompt = build_goal_resolution_prompt(
+            raw_query=raw_query,
+            candidates=candidates,
+            language=language,
+            search_scope=search_scope,
+        )
         try:
             response = await ai_client.generate(
                 system_instruction="Return valid JSON only.",
@@ -763,25 +767,20 @@ class GoalResolverService:
             payload["model"] = response.model
             return payload
         except Exception as exc:
-            top = candidates[0]
-            confidence = score_to_confidence(top.score)
-            status = "exact_match" if confidence >= EXACT_MATCH_CONFIDENCE_THRESHOLD else "no_match"
             return {
-                "status": status,
-                "selected_concept_code": top.concept.code if status == "exact_match" else None,
-                "confidence": confidence,
-                "alternatives": [candidate.concept.code for candidate in candidates[1:4]],
-                "reason": "Deterministic fallback used because LLM resolution failed.",
-                "should_expand_scope": status == "no_match",
-                "clarification_question": None
-                if status == "exact_match"
-                else _localized_message(
+                "status": "no_match",
+                "selected_concept_code": None,
+                "confidence": 0.0,
+                "alternatives": [candidate.concept.code for candidate in candidates[:4]],
+                "reason": "LLM resolution failed.",
+                "should_expand_scope": True,
+                "clarification_question": _localized_message(
                     language,
                     id_text="Coba tulis goal belajar yang lebih spesifik.",
                     en_text="Try writing a more specific learning goal.",
                 ),
-                "provider": "deterministic_fallback",
-                "model": "candidate_score",
+                "provider": "none",
+                "model": "none",
                 "fallback_reason": str(exc),
             }
 
@@ -1144,8 +1143,7 @@ def _candidate_debug(
             "scope": scope,
             "concept_code": candidate.concept.code,
             "title": _concept_display_title(candidate.concept, language=language),
-            "score": round(candidate.score, 3),
-            "confidence": score_to_confidence(candidate.score),
+            "candidate_source": "scope_nodes",
             "matched_signals": list(candidate.matched_signals),
             "aliases": list(candidate.aliases[:8]),
         }
@@ -1224,7 +1222,21 @@ def _attempt_rank(attempt: ScopeAttempt | None) -> float:
     if attempt is None:
         return -1.0
     status_bonus = 2.0 if attempt.status == "needs_confirmation" else 0.0
-    return status_bonus + attempt.confidence + score_to_confidence(attempt.selected.score)
+    return status_bonus + attempt.confidence
+
+
+def _resolution_subject_code(
+    *,
+    explicit_subject_code: str | None,
+    selected: ConceptCandidate,
+    status: str,
+) -> str:
+    if explicit_subject_code:
+        return explicit_subject_code
+    if status != "needs_confirmation":
+        return ""
+    subject = selected.concept.subject
+    return subject.code if subject else ""
 
 
 def _candidate_limit_for_scope(scope_name: str) -> int:
