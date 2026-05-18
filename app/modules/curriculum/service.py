@@ -1131,13 +1131,7 @@ def _concept_status_label(
         return STATUS_LABELS.get(status, status.upper())
 
     if metadata.get("source_curriculum_graph"):
-        phase = str(metadata.get("phase") or "").strip()
-        grade_range = str(metadata.get("grade_range") or "").strip()
-        phase_label = "Phase" if _normalize_locale(locale) == "en" else "Fase"
-        if phase and grade_range:
-            return f"{phase_label} {phase} / {grade_range}"
-        if phase:
-            return f"{phase_label} {phase}"
+        return STATUS_LABELS.get(status, status.upper())
 
     return STATUS_LABELS.get(status, status.upper())
 
@@ -1305,21 +1299,8 @@ def _concept_display_description(
 
     domain_id = _localized(metadata, "domain", "id")
     domain = translate_curriculum_domain_to_english(domain_id) if domain_id else ""
-    phase = str(metadata.get("phase") or "").strip()
-    school_level = str(metadata.get("school_level") or "").strip()
-    grade_range = str(metadata.get("grade_range") or "").strip()
-    context_parts = [
-        part
-        for part in (
-            f"Phase {phase}" if phase else "",
-            school_level,
-            f"grades {grade_range}" if grade_range else "",
-        )
-        if part
-    ]
     domain_suffix = f" within {domain}" if domain else ""
-    context = f" for {' / '.join(context_parts)}" if context_parts else ""
-    return f"Build understanding of {label}{domain_suffix}{context}."
+    return f"Build understanding of {label}{domain_suffix}."
 
 
 def _group_display_label(group: dict[str, Any], *, locale: str = "id") -> str:
