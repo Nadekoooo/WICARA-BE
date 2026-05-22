@@ -27,7 +27,8 @@ The project was validated through a demo visit to Yayasan Kampus Diakoneia Moder
 | Evidence upload | Implemented | Image asset endpoint for worksheet/canvas evidence. |
 | Media artifacts | Implemented | Media artifact list/detail/status and worker-backed render lifecycle. |
 | Reports | Implemented | Weekly report endpoints and snapshot-backed reporting. |
-| Local/on-device Gemma via LiteRT-LM | Proposed architecture | Not implemented in this backend repo. Current backend AI provider is OpenRouter. |
+| On-device Gemma via LiteRT-LM | Implemented in mobile app repo | Mobile runs Gemma locally and calls backend services for structured context/data. |
+| OpenRouter provider | Legacy | Older backend-side AI integration retained in this repo from a previous architecture. |
 
 ## Architecture
 
