@@ -70,6 +70,7 @@ class OpenRouterProvider(AIProvider):
             messages.append({"role": "system", "content": request.system_instruction})
 
         content_parts: list[dict[str, Any]] = []
+        has_image_input = False
         if request.user_instruction:
             content_parts.append({"type": "text", "text": request.user_instruction})
 
@@ -77,6 +78,7 @@ class OpenRouterProvider(AIProvider):
             if isinstance(item, AITextInput):
                 content_parts.append({"type": "text", "text": item.text})
             elif isinstance(item, AIImageInput):
+                has_image_input = True
                 content_parts.append(
                     {
                         "type": "image_url",
@@ -86,7 +88,15 @@ class OpenRouterProvider(AIProvider):
                     }
                 )
 
-        messages.append({"role": "user", "content": content_parts})
+        if has_image_input:
+            user_content: str | list[dict[str, Any]] = content_parts
+        else:
+            user_content = "\n\n".join(
+                part["text"]
+                for part in content_parts
+                if part.get("type") == "text" and isinstance(part.get("text"), str)
+            )
+        messages.append({"role": "user", "content": user_content})
 
         payload: dict[str, Any] = {
             "model": request.model,

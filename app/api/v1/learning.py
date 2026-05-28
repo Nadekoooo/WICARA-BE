@@ -4,6 +4,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_session
@@ -12,6 +13,15 @@ from app.modules.accounts.models import UserAccount
 from app.modules.learning import schemas, service
 
 router = APIRouter()
+
+
+def _retry_after_connection_drop(session: Session, callback):
+    try:
+        return callback()
+    except OperationalError:
+        session.rollback()
+        session.close()
+        return callback()
 
 
 @router.post("/learning-goals", response_model=schemas.LearningGoalCreateResponse)
@@ -177,7 +187,10 @@ def media_artifacts(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.MediaArtifactListResponse:
-    return service.list_media_artifacts(session, user=account)
+    return _retry_after_connection_drop(
+        session,
+        lambda: service.list_media_artifacts(session, user=account),
+    )
 
 
 @router.get("/media-artifacts/{artifact_id}", response_model=schemas.MediaArtifactRead)
@@ -186,7 +199,10 @@ def media_artifact_detail(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.MediaArtifactRead:
-    artifact = service.get_media_artifact(session, user=account, artifact_id=artifact_id)
+    artifact = _retry_after_connection_drop(
+        session,
+        lambda: service.get_media_artifact(session, user=account, artifact_id=artifact_id),
+    )
     if artifact is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -204,7 +220,10 @@ def media_artifact_status(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.MediaArtifactStatusResponse:
-    artifact = service.get_media_artifact_status(session, user=account, artifact_id=artifact_id)
+    artifact = _retry_after_connection_drop(
+        session,
+        lambda: service.get_media_artifact_status(session, user=account, artifact_id=artifact_id),
+    )
     if artifact is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -218,7 +237,10 @@ def latest_weekly_report(
     account: UserAccount = Depends(get_current_account),
     session: Session = Depends(get_session),
 ) -> schemas.WeeklyReportResponse:
-    return service.get_latest_weekly_report(session, user=account)
+    return _retry_after_connection_drop(
+        session,
+        lambda: service.get_latest_weekly_report(session, user=account),
+    )
 
 
 @router.get("/reports/weekly", response_model=schemas.WeeklyReportResponse)
@@ -238,7 +260,10 @@ def weekly_report(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Weekly report range cannot exceed 31 days.",
         )
-    return service.get_weekly_report(session, user=account, start=start, end=end)
+    return _retry_after_connection_drop(
+        session,
+        lambda: service.get_weekly_report(session, user=account, start=start, end=end),
+    )
 
 
 @router.get("/pretests/{learning_goal_id}", response_model=schemas.PretestReadResponse)
